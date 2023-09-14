@@ -26,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -127,8 +129,21 @@ public class PunishmentService {
 
     public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        List<Punishment> find = punishRepository.findByStatus("OPEN");
+        System.out.println(find);
+        System.out.println(studentEmail);
+        System.out.println(infractionName);
+        System.out.println();
+        Stream<Punishment> filteredStudents = find.stream().filter(x -> x.getStudent().getStudentEmail().equals(studentEmail));
+        System.out.println(filteredStudents);
+        Stream<Punishment> filteredInfraction = filteredStudents.filter(x -> x.getInfraction().getInfractionName().equals(infractionName));
 
-        Punishment findMe = (Punishment) punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail, infractionName, "OPEN");
+
+        List<Punishment> findMePunish = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail, infractionName, "OPEN");
+        System.out.println(findMePunish);
+        Punishment findMe = filteredInfraction.toList().get(0);
+        findMe.setStatus("CLOSED");
+        System.out.println(findMe);
         if (findMe != null) {
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
@@ -185,10 +200,11 @@ public class PunishmentService {
 
         System.out.println(punishment);
 
-        var findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
+        System.out.println(findOpen);
 
-        if (findOpen == null) {
+        if (findOpen.isEmpty()) {
             punishment.setStatus("OPEN");
             punishRepository.save(punishment);
 
@@ -237,7 +253,7 @@ public class PunishmentService {
         int level = 1;
         for (Integer lev : levels) {
             if (lev > level) {
-                level = lev;
+                level = lev + 1;
             }
             return String.valueOf(level);
         }
