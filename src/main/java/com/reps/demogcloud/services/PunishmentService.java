@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -99,10 +100,11 @@ public class PunishmentService {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setMessage(" Hello," +
-                " This is to inform you that " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                " has received a REP for " + punishment.getInfraction().getInfractionName() + " and must complete "
-        + punishment.getInfraction().getInfractionAssign() + ". If you have any questions you may contact the school's main office." +
-                "This is an automated message DO NOT REPLY to this message.");
+                " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                " has been written up for " + punishment.getInfraction().getInfractionName() + ". \r\n" + " As a result they have received the following assignment, "
+                + punishment.getInfraction().getInfractionAssign() + "and lunch detention for tomorrow. The goal of the assignment is to provide" + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                "with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
+                "\r\n" + "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
         punishmentResponse.setSubject("REP " + punishment.getPunishmentId() + " for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
 
@@ -112,20 +114,21 @@ public class PunishmentService {
 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
         return punishmentResponse;
-        }
-
-    public String deletePunishment ( Punishment punishment ) throws ResourceNotFoundException {
-        try{punishRepository.delete(punishment);}
-        catch (Exception e) {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        } return "Punishment has been deleted";
     }
 
-    public PunishmentResponse closePunishment ( Punishment punishment ) throws  ResourceNotFoundException {
+    public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
+        try {
+            punishRepository.delete(punishment);
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+        return "Punishment has been deleted";
+    }
+
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
 
-        var findMe = punishRepository.findByPunishmentId(punishment.getPunishmentId());
-
+        Punishment findMe = (Punishment) punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail, infractionName, "OPEN");
         if (findMe != null) {
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
@@ -135,7 +138,7 @@ public class PunishmentService {
                     + findMe.getInfraction().getInfractionAssign() + " for " + findMe.getInfraction().getInfractionName() + ". If you have any questions you may contact the school's main office." +
                     "This is an automated message DO NOT REPLY to this message.");
             punishmentResponse.setSubject("REP " + findMe.getPunishmentId() + " for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + " CLOSED");
-            punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
+            punishmentResponse.setToEmail(findMe.getStudent().getParentEmail());
 
             emailService.sendEmail(punishmentResponse.getToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
@@ -145,8 +148,8 @@ public class PunishmentService {
 //        int closedPunishments = punishment.getClosedInfraction();
 //        punishment.setClosedInfraction(closedPunishments + 1);
 
-        return punishmentResponse;}
-        else {
+            return punishmentResponse;
+        } else {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
 
@@ -160,8 +163,16 @@ public class PunishmentService {
         System.out.println("REP CREATED");
 
         Student findMe = studentRepository.findByStudentEmail(formRequest.getStudentEmail());
-        System.out.println(findMe);
-        Infraction findInf = infractionRepository.findByInfractionName(formRequest.getInfractionName());
+        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
+        List<Integer> closedTimes = new ArrayList<>();
+        for(Punishment punishment : closedPunishments) {
+            closedTimes.add(punishment.getClosedTimes());
+        }
+
+        String level = levelCheck(closedTimes);
+        System.out.println(level);
+
+        Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         System.out.println(findInf);
         findInf.setInfractionDescription(formRequest.getInfractionDescription());
 
@@ -174,50 +185,62 @@ public class PunishmentService {
 
         System.out.println(punishment);
 
-        var findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentIdNumber(),
-                punishment.getInfraction().getInfractionId(), "OPEN");
+        var findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+                punishment.getInfraction().getInfractionName(), "OPEN");
 
-        if (findOpen != null) {
-            punishment.setStatus("CFR");
-            punishRepository.save(punishment);
-
-            PunishmentResponse punishmentResponse = new PunishmentResponse();
-            punishmentResponse.setPunishment(punishment);
-            //        punishmentResponse.setMessage(" Hello," +
-            //                " This is to inform you that " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-            //                " has received a REP for " + punishment.getInfraction().getInfractionName() + " and must complete "
-            //        + punishment.getInfraction().getAssignment() + ". If you have any questions you may contact the school's main office." +
-            //                "This is an automated message DO NOT REPLY to this message.");
-            //        punishmentResponse.setSubject("REP " + punishment.getPunishmentId() + " for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
-            //        punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
-            //
-            //        emailService.sendEmail(punishmentResponse.getToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            System.out.println(punishmentResponse);
-            return punishmentResponse;
-        } else {
+        if (findOpen == null) {
             punishment.setStatus("OPEN");
             punishRepository.save(punishment);
 
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(punishment);
-                    punishmentResponse.setMessage(" Hello," +
-                            " This is to inform you that " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                            " has received a REP for " + punishment.getInfraction().getInfractionName() + " and must complete "
-                    + punishment.getInfraction().getInfractionAssign() + ". If you have any questions you may contact the school's main office." +
-                            "This is an automated message DO NOT REPLY to this message.");
-                    punishmentResponse.setSubject("REP " + punishment.getPunishmentId() + " for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
-                    punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " has been written up for " + punishment.getInfraction().getInfractionName() + ". \r\n" + " As a result they have received the following assignment, "
+                    + punishment.getInfraction().getInfractionAssign() + "and lunch detention for tomorrow. The goal of the assignment is to provide" + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    "with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
+                    "\r\n" + "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+            punishmentResponse.setSubject("REP " + punishment.getPunishmentId() + " for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
 
-                    emailService.sendEmail(punishmentResponse.getToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             System.out.println(punishmentResponse);
             return punishmentResponse;
+
+
+        } else {
+            punishment.setStatus("CFR");
+            punishRepository.save(punishment);
+
+            PunishmentResponse punishmentResponse = new PunishmentResponse();
+            punishmentResponse.setPunishment(punishment);
+            punishmentResponse.setMessage(" Hello," +
+                    " This is to inform you that " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " has received a REP for " + punishment.getInfraction().getInfractionName() + " and must complete "
+                    + punishment.getInfraction().getInfractionAssign() + ". If you have any questions you can take them up with my mom.");
+            punishmentResponse.setSubject("REP " + punishment.getPunishmentId() + " for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            punishmentResponse.setToEmail(punishment.getStudent().getParentEmail());
+
+            emailService.sendEmail(punishmentResponse.getToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+//                    Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//                            new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            System.out.println(punishmentResponse);
+            return punishmentResponse;
         }
     }
 
+    private static String levelCheck(List<Integer> levels) {
+        int level = 1;
+        for (Integer lev : levels) {
+            if (lev > level) {
+                level = lev;
+            }
+            return String.valueOf(level);
+        }
+        return String.valueOf(level);
+    }
 }
