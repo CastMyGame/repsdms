@@ -2,10 +2,7 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
-import com.reps.demogcloud.models.punishment.PunishmentRequest;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
+import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,10 +29,9 @@ public class PunishController {
                 .body(message);
     }
 
-    @PostMapping("/punishId/close/{infractionName}/{studentEmail}")
-    public ResponseEntity<PunishmentResponse> closePunishment(@PathVariable String infractionName, @PathVariable String studentEmail) throws ResourceNotFoundException {
-        System.out.println(infractionName);
-        var message = punishmentService.closePunishment(infractionName, studentEmail);
+    @PostMapping("/punishId/close")
+    public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
+        var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail());
 
         return ResponseEntity
                 .accepted()
