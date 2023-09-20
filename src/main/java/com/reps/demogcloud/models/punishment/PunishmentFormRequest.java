@@ -14,5 +14,6 @@ public class PunishmentFormRequest {
     private String infractionName;
     private String infractionPeriod;
     private String infractionDescription;
+    private String teacherEmail;
 
 }

@@ -121,14 +121,15 @@ public class PunishmentService {
 
     public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-//        List<Punishment> find = punishRepository.findByStatus("OPEN");
-//        Stream<Punishment> filteredStudents = find.stream().filter(x -> x.getStudent().getStudentEmail().equals(studentEmail));
-//        Stream<Punishment> filteredInfraction = filteredStudents.filter(x -> x.getInfraction().getInfractionName().equals(infractionName));
         List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
 
         Punishment findMe = findOpen.get(0);
         findMe.setStatus("CLOSED");
+        System.out.println(findMe.getClosedTimes());
+        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
+        System.out.println(findMe.getClosedTimes());
+        System.out.println(findMe.getTeacherEmail());
         punishRepository.save(findMe);
         System.out.println(findMe);
         if (findMe != null) {
@@ -138,19 +139,18 @@ public class PunishmentService {
                     " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
                     " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
-                            "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly if you have any questions or concerns.");
+                            "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
             punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
             punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
             punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
+            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
 
             emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
             emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
 //            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
 //                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-//        int closedPunishments = punishment.getClosedInfraction();
-//        punishment.setClosedInfraction(closedPunishments + 1);
 
             return punishmentResponse;
         } else {
@@ -173,12 +173,15 @@ public class PunishmentService {
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
         }
+        System.out.println(closedPunishments);
 
         String level = levelCheck(closedTimes);
         System.out.println(level);
 
+
         Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         findInf.setInfractionDescription(formRequest.getInfractionDescription());
+        System.out.println(findInf);
 
         Punishment punishment = new Punishment();
         punishment.setStudent(findMe);
@@ -186,7 +189,8 @@ public class PunishmentService {
         punishment.setClassPeriod(formRequest.getInfractionPeriod());
         punishment.setPunishmentId(UUID.randomUUID().toString());
         punishment.setTimeCreated(now);
-
+        punishment.setClosedTimes(Integer.parseInt(level));
+        punishment.setTeacherEmail(formRequest.getTeacherEmail());
         List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
         System.out.println(findOpen);
@@ -199,6 +203,7 @@ public class PunishmentService {
 
             emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
             emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -213,6 +218,7 @@ public class PunishmentService {
 
             emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
             emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -222,12 +228,14 @@ public class PunishmentService {
 
     private static String levelCheck(List<Integer> levels) {
         int level = 1;
+        System.out.println(levels);
         for (Integer lev : levels) {
-            if (lev >= level) {
-                level = lev + 1;
+            if (lev>level) {
+                level = lev;
             }
             return String.valueOf(level);
         }
+        System.out.println(level);
         return String.valueOf(level);
     }
 
@@ -235,48 +243,32 @@ public class PunishmentService {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setParentToEmail(punishment.getStudent().getParentEmail());
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
+        punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if(punishment.getInfraction().getInfractionName().equals("Tardy")) {
-            if(punishment.getInfraction().getInfractionLevel().equals("1")) {
                 punishmentResponse.setMessage(" Hello," +
-                        " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                        " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                         " has been written up for being " + punishment.getInfraction().getInfractionName() + ". " + punishment.getInfraction().getInfractionDescription() +
                         ". " + "As a result they have received the following assignment, "
                         + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                         " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
                         " " +
-                        "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                        "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
 
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
                 return punishmentResponse;
-            } if(punishment.getInfraction().getInfractionLevel().equals("2")) {
-                punishmentResponse.setMessage("Hello , " +
-                "Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                ", has unfortunately not completed the assignment they received for offense #: " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
-                        "." + punishment.getInfraction().getInfractionDescription() + ". As a result they will be receiving an office referral for Failure to Comply with disciplinary action. " +
-                        punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " is still expected to complete the assignment as we believe it will help clarify the school’s expectations in addition to providing an explanation of why these expectations are upheld. We hope the assignment will provide beneficial tools for future decisions."
-                        + "At this time, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                        ", has been once again assigned lunch detention for tomorrow. If the assignment is completed before lunch tomorrow, you and " +
-                        punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " will receive an email confirming the completion of the assignment and the removal of any additional disciplinary action in regards to this offense. If the assignment is not completed, " +
-                        punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " will receive an additional office referral for Failure to Comply with disciplinary action which can result in your child receiving in school suspension. Please continue to encourage your child to complete their assignment and the school will continue to support" +
-                        punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " in every way we can." +
-                        "Do not respond to this message. Call the school at or email the teacher directly. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
-                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
-            }
         }
         if(punishment.getInfraction().getInfractionName().equals("Unauthorized Device/Cell Phone")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for using an " + punishment.getInfraction().getInfractionName() + " and this is offense # " + punishment.getInfraction().getInfractionLevel() + ". " + punishment.getInfraction().getInfractionDescription() +
                     ". " + "As a result they have received the following assignment, "
                     + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
                     " " +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -284,51 +276,51 @@ public class PunishmentService {
         }
         if(punishment.getInfraction().getInfractionName().equals("Disruptive Behavior")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for " + punishment.getInfraction().getInfractionName() + " and this is offense # " + punishment.getInfraction().getInfractionLevel() + " . " + punishment.getInfraction().getInfractionDescription() +
                     ". " + "As a result they have received the following assignment, "
                     + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
                     " " +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if(punishment.getInfraction().getInfractionName().equals("Horseplay")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for " + punishment.getInfraction().getInfractionName() + " and this is offense # " + punishment.getInfraction().getInfractionLevel() + ". " + punishment.getInfraction().getInfractionDescription() +
                     ". " + "As a result they have received the following assignment, "
                     + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
                     " " +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if(punishment.getInfraction().getInfractionName().equals("Dress Code")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for a violation of the school " + punishment.getInfraction().getInfractionName() + " and this is offense # " + punishment.getInfraction().getInfractionLevel() + ". " + punishment.getInfraction().getInfractionDescription() +
                     ". " + "As a result they have received the following assignment, "
                     + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
                     " " +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if(punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received Offense # " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
                     " " + "As a result they must complete the following assignment, "
                     + punishment.getInfraction().getInfractionDescription() + " during lunch detention tomorrow. If the assignment is completed prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive confirmation from the teacher the assignment is done. We believe that consistency in completing assignments will have a profound impact on their grade and understanding. Please continue to encourage them to finish the assignment. " +
                     " " +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
@@ -341,64 +333,65 @@ public class PunishmentService {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setParentToEmail(punishment.getStudent().getParentEmail());
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
+        punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if (punishment.getInfraction().getInfractionName().equals("Tardy")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for being " + punishment.getInfraction().getInfractionName() + ". " +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if (punishment.getInfraction().getInfractionName().equals("Unauthorized Device/Cell Phone")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for using an " + punishment.getInfraction().getInfractionName() + ". " +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if (punishment.getInfraction().getInfractionName().equals("Disruptive Behavior")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for " + punishment.getInfraction().getInfractionName() + ". " +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if (punishment.getInfraction().getInfractionName().equals("Horseplay")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for " + punishment.getInfraction().getInfractionName() + ". " +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if (punishment.getInfraction().getInfractionName().equals("Dress Code")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has been written up for a violation of the school " + punishment.getInfraction().getInfractionName() + ". " +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
         if (punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
             punishmentResponse.setMessage(" Hello," +
-                    " Your child," + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received Offense # " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
-                    "Do not respond to this message. Please contact the school/teacher if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;

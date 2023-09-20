@@ -12,6 +12,7 @@ public class PunishmentResponse {
     private String error;
     private String parentToEmail;
     private String studentToEmail;
+    private String teacherToEmail;
     private String subject;
     private String message;
 }

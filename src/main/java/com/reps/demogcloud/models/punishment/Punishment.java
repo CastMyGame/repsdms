@@ -27,4 +27,5 @@ public class Punishment {
 //    private int infractionTimes;
     private LocalDateTime timeCreated;
     private String classPeriod;
+    private String teacherEmail;
 }
