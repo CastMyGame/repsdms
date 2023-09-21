@@ -99,7 +99,7 @@ public class PunishmentService {
 
         punishRepository.save(punishment);
 
-        PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment);
+        PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment, punishRepository);
 
         emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
         emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
@@ -162,7 +162,8 @@ public class PunishmentService {
     //  -------------------CREATE PUNISHMENT WITH GOOGLE FORM SUBMISSION------------------------
 
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
-        System.out.println(formRequest);
+        System.out.println(formRequest.getInfractionName());
+        System.out.println(formRequest.getInfractionDescription());
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
@@ -199,7 +200,7 @@ public class PunishmentService {
             punishment.setStatus("OPEN");
             punishRepository.save(punishment);
 
-            PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment);
+            PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment, punishRepository);
 
             emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
             emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
@@ -236,39 +237,18 @@ public class PunishmentService {
         return String.valueOf(level);
     }
 
-    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment) {
+    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment, PunishRepository punishRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setParentToEmail(punishment.getStudent().getParentEmail());
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+        if(punishment.getClosedTimes() == 4) {
+            List<Punishment> punishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(
+                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED"
+            );
 
-        if(punishment.getClosedTimes() >= 4) {
-            punishmentResponse.setMessage("Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " has received their fourth or greater offense for "
-                    + punishment.getInfraction().getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. \n" +
-                    "\n" +
-                    punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " received their 4th or greater offense for" +
-                    punishment.getInfraction().getInfractionName() +" on " + punishment.getTimeCreated() + ".\n" +
-                    "A description of the event is as follows: " + punishment.getInfraction().getInfractionDescription() + "\n" +
-                    "\n" +
-                    "A summary of their previous infractions is listed below. \n" +
-                    "\n" +
-                    "First infraction took place on [insert first infraction date] the description of the event is as follows:\n" +
-                    "[insert teacher narrative first offense] \n" +
-                    "\n" +
-                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of completion]. \n" +
-                    "\n" +
-                    "Second infraction took place on [insert second infraction date] the description of the event is as follows:\n" +
-                    "[insert teacher narrative second offense] \n" +
-                    "\n" +
-                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of second completion]. \n" +
-                    "\n" +
-                    "Third infraction took place on [insert third infraction date] the description of the event is as follows:\n" +
-                    "[insert teacher narrative third offense] \n" +
-                    "\n" +
-                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of third completion]. \n" +
-                    "");
         }
         if(punishment.getInfraction().getInfractionName().equals("Tardy")) {
                 punishmentResponse.setMessage(" Hello," +
@@ -422,7 +402,7 @@ public class PunishmentService {
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received an infraction for " + punishment.getInfraction().getInfractionName() +
-                    " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
+                    " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. " + punishment.getInfraction().getInfractionDescription() + ". Record of this offense will be kept and this email is to inform you of this happening." +
                     "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
