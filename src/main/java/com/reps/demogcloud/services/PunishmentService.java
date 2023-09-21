@@ -228,14 +228,11 @@ public class PunishmentService {
 
     private static String levelCheck(List<Integer> levels) {
         int level = 1;
-        System.out.println(levels);
         for (Integer lev : levels) {
             if (lev>level) {
                 level = lev;
             }
-            return String.valueOf(level);
         }
-        System.out.println(level);
         return String.valueOf(level);
     }
 
@@ -246,6 +243,33 @@ public class PunishmentService {
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+
+        if(punishment.getClosedTimes() >= 4) {
+            punishmentResponse.setMessage("Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " has received their fourth or greater offense for "
+                    + punishment.getInfraction().getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. \n" +
+                    "\n" +
+                    punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " received their 4th or greater offense for" +
+                    punishment.getInfraction().getInfractionName() +" on " + punishment.getTimeCreated() + ".\n" +
+                    "A description of the event is as follows: " + punishment.getInfraction().getInfractionDescription() + "\n" +
+                    "\n" +
+                    "A summary of their previous infractions is listed below. \n" +
+                    "\n" +
+                    "First infraction took place on [insert first infraction date] the description of the event is as follows:\n" +
+                    "[insert teacher narrative first offense] \n" +
+                    "\n" +
+                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of completion]. \n" +
+                    "\n" +
+                    "Second infraction took place on [insert second infraction date] the description of the event is as follows:\n" +
+                    "[insert teacher narrative second offense] \n" +
+                    "\n" +
+                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of second completion]. \n" +
+                    "\n" +
+                    "Third infraction took place on [insert third infraction date] the description of the event is as follows:\n" +
+                    "[insert teacher narrative third offense] \n" +
+                    "\n" +
+                    "The student received a restorative assignment to complete. The restorative assignment was completed on [insert date of third completion]. \n" +
+                    "");
+        }
         if(punishment.getInfraction().getInfractionName().equals("Tardy")) {
                 punishmentResponse.setMessage(" Hello," +
                         " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
@@ -316,7 +340,7 @@ public class PunishmentService {
         if(punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    " has received Offense # " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
+                    " has received the infraction " + punishment.getInfraction().getInfractionName() +
                     " " + "As a result they must complete the following assignment, "
                     + punishment.getInfraction().getInfractionDescription() + " during lunch detention tomorrow. If the assignment is completed prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive confirmation from the teacher the assignment is done. We believe that consistency in completing assignments will have a profound impact on their grade and understanding. Please continue to encourage them to finish the assignment. " +
                     " " +
@@ -325,6 +349,14 @@ public class PunishmentService {
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
+        if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }cd ..
 
         return punishmentResponse;
     }
@@ -389,7 +421,7 @@ public class PunishmentService {
         if (punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    " has received Offense # " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
+                    " has received an infraction for " + punishment.getInfraction().getInfractionName() +
                     " " + "They currently have this Open assignment: " + punishment.getInfraction().getInfractionAssign() + " they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening." +
                     "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
