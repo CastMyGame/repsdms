@@ -85,4 +85,14 @@ public class StudentController {
                 .accepted()
                 .body(findAll);
     }
+
+    @PostMapping("/addStudents")
+    public ResponseEntity<List<Student>> addAllStudents(@RequestBody List<Student> students) {
+        for(Student student: students) {
+            studentService.createNewStudent(student);
+        }
+        return ResponseEntity
+                .accepted()
+                .body(students);
+    }
 }

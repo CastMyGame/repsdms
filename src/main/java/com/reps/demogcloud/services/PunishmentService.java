@@ -162,6 +162,7 @@ public class PunishmentService {
     //  -------------------CREATE PUNISHMENT WITH GOOGLE FORM SUBMISSION------------------------
 
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
+        System.out.println(formRequest);
         System.out.println(formRequest.getInfractionName());
         System.out.println(formRequest.getInfractionDescription());
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
@@ -248,6 +249,7 @@ public class PunishmentService {
             List<Punishment> punishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(
                     punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED"
             );
+            punishmentResponse.setMessage("Here is the list of punishments");
 
         }
         if(punishment.getInfraction().getInfractionName().equals("Tardy")) {
