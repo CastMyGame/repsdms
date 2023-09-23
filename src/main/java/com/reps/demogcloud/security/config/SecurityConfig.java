@@ -1,5 +1,6 @@
 package com.reps.demogcloud.security.config;
 
+import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -17,9 +19,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 @Autowired
 private UserService userService;
 
+@Autowired
+private JwtFilterRequest jwtFilterRequest;
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 http.csrf().disable().authorizeRequests().antMatchers("/register","/auth").permitAll().anyRequest().authenticated();
+http.addFilterBefore(jwtFilterRequest, UsernamePasswordAuthenticationFilter.class);
     }
 
     @Override
