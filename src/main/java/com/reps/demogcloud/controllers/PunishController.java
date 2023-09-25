@@ -99,4 +99,13 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
+
+    @GetMapping("/openPunishments")
+    public ResponseEntity<List<Punishment>> getOpenPunishments() {
+        var message = punishmentService.getAllOpenAssignments();
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 }
