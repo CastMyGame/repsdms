@@ -15,6 +15,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin
+
 @RequestMapping("/punish/v1")
 public class PunishController {
     @Autowired
@@ -23,6 +24,7 @@ public class PunishController {
     @GetMapping("/punishId")
     public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
         var message = punishmentService.findByPunishmentId(punishment);
+
 
         return ResponseEntity
                 .accepted()

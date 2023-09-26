@@ -19,3 +19,5 @@ add that toke to the header.
 User in mongodb rn
 {"username":"doc88",
 "password":"12345678"}
+
+Blocker on the front end /backend connection for accesing endpoints needed for authenticiation
