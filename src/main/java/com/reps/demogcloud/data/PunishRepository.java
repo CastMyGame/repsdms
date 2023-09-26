@@ -3,10 +3,12 @@ package com.reps.demogcloud.data;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
+import org.joda.time.DateTime;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,5 +22,6 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     List<Punishment> findByStudentStudentEmailAndInfractionInfractionNameAndStatus (String email, String infractionName, String status);
 
     List<Punishment> findByInfractionInfractionName (String infractionName);
-    List<Punishment> findByStatusAndTimeCreatedBefore (String status, LocalDateTime time);
+    List<Punishment> findByStatusAndTimeCreatedBefore (String status, DateTime time);
+    List<Punishment> findByStatusAndTimeCreatedBetween (String status, DateTime timeCreated, DateTime now);
 }

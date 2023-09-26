@@ -16,6 +16,7 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -163,7 +164,7 @@ public class PunishmentService {
         System.out.println(formRequest.getInfractionDescription());
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
+        DateTime now = DateTime.now();
 
         Student findMe = studentRepository.findByStudentEmail(formRequest.getStudentEmail());
         List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
@@ -226,7 +227,7 @@ public class PunishmentService {
 
     public List<Punishment> getAllOpenAssignments() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
+        DateTime now = DateTime.now();
         String subject = "Burke High School Open Referrals";
 
         List<Punishment> open = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
@@ -244,10 +245,32 @@ public class PunishmentService {
         return open;
     }
 
-    @Scheduled(cron = "0 30 11 * * MON-FRI")
+
+    public List<Punishment> getAllOpenForADay() {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+        DateTime now = DateTime.now();
+        String subject = "Burke High School Open Referrals";
+
+        List<Punishment> open = punishRepository.findByStatus("OPEN");
+
+        List<String> names = new ArrayList<>();
+
+        for(Punishment punishment: open) {
+//            if(punishment.getTimeCreated().compareTo(now))
+            System.out.println(punishment.getTimeCreated().compareTo(now));
+        }
+        Set<String> openNames = new HashSet<String>(names);
+        String email = "Here is the list of students who have open assignments" + openNames;
+
+//        emailService.sendEmail("jiverson22@gmail.com", subject, email);
+
+        return open;
+    }
+
+    @Scheduled(cron = "0 0 11 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now().minusHours(3);
+        DateTime now = DateTime.now().minusHours(3);
         String subject = "Burke High School Open Referrals";
 
         List<Punishment> open = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
@@ -261,7 +284,7 @@ public class PunishmentService {
 
         String email = "Here is the list of students who have open assignments" + openNames;
 
-        emailService.sendEmail("jiverson22@gmail.com", subject, email);
+        emailService.sendEmail("jiverson@saga.org", subject, email);
     }
 
     private static String levelCheck(List<Integer> levels) {

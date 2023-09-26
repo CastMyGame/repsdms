@@ -108,4 +108,13 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
+
+    @GetMapping("/compare")
+    public ResponseEntity<List<Punishment>> getOpenForADay() {
+        var message = punishmentService.getAllOpenForADay();
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 }
