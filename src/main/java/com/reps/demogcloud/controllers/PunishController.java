@@ -38,6 +38,24 @@ public class PunishController {
                 .body(message);
     }
 
+    @PostMapping("/close/{id}")
+    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
+        var message = punishmentService.closeByPunishmentId(id);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/ftc-close")
+    public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
+        var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
         var message = punishmentService.findAll();
