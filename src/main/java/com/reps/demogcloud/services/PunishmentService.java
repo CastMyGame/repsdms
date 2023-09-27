@@ -22,8 +22,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -328,21 +330,25 @@ public class PunishmentService {
 
         List<Punishment> open = punishRepository.findByStatus("OPEN");
 
-        List<String> names = new ArrayList<>();
+        List<Punishment> names = new ArrayList<>();
 
         for(Punishment punishment: open) {
-//            if(punishment.getTimeCreated().compareTo(now))
-            System.out.println(punishment.getTimeCreated().compareTo(now));
+            Duration duration = Duration.between(punishment.getTimeCreated(), now);
+            long hours = ChronoUnit.HOURS.between(punishment.getTimeCreated(), now);
+            if (hours >= 300) {
+                System.out.println(duration);
+                names.add(punishment);
+            }
         }
-        Set<String> openNames = new HashSet<String>(names);
-        String email = "Here is the list of students who have open assignments" + openNames;
 
-//        emailService.sendEmail("jiverson22@gmail.com", subject, email);
+        String email = "Here is the list of students who have open assignments" + names;
+
+        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
 
         return open;
     }
 
-    @Scheduled(cron = "0 52 13 * * MON-FRI")
+    @Scheduled(cron = "0 44 20 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now().minusHours(3);
@@ -353,7 +359,7 @@ public class PunishmentService {
         List<String> names = new ArrayList<>();
 
         for(Punishment punishment: open) {
-            names.add("||| Student: " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " Infraction: " + punishment.getInfraction().getInfractionName()
+            names.add("||| Student: " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "  |  " + punishment.getTeacherEmail() + " |  Infraction: " + punishment.getInfraction().getInfractionName()
             + " " + punishment.getInfraction().getInfractionDescription() + " " + punishment.getTimeCreated() + "|||");
         }
         Set<String> openNames = new HashSet<String>(names);
