@@ -73,8 +73,8 @@ public class PunishmentService {
         return punishRepository.findAll();
     }
 
-    public List<Punishment> findByInfraction(Infraction infraction) throws ResourceNotFoundException {
-        List<Punishment> findMe = punishRepository.findByInfraction(infraction);
+    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
+        List<Punishment> findMe = punishRepository.findByInfractionInfractionName(infractionName);
 
         if (findMe.isEmpty()) {
             throw new ResourceNotFoundException("No students with that Infraction exist");
@@ -251,44 +251,6 @@ public class PunishmentService {
         } else {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
-    }
-
-    public PunishmentResponse closeByPunishmentId(String punishmentId) throws ResourceNotFoundException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        Punishment findMe = punishRepository.findByPunishmentId(punishmentId);
-
-        findMe.setStatus("CLOSED");
-        System.out.println(findMe.getClosedTimes());
-        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-        System.out.println(findMe.getClosedTimes());
-        System.out.println(findMe.getTeacherEmail());
-        punishRepository.save(findMe);
-        System.out.println(findMe);
-        if (findMe != null) {
-            PunishmentResponse punishmentResponse = new PunishmentResponse();
-            punishmentResponse.setPunishment(findMe);
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
-                    " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-                    findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
-                    "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
-            punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
-            punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
-            punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
-            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
-
-            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-
-//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-            return punishmentResponse;
-        } else {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
-
     }
 
     //  -------------------CREATE PUNISHMENT WITH UI FORM SUBMISSION------------------------

@@ -2,6 +2,7 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,8 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/infractionName")
-    public ResponseEntity<List<Punishment>> getByInfractionName(@RequestBody String infractionName) throws ResourceNotFoundException {
+    @GetMapping("/{infractionName}")
+    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
         var message = punishmentService.findByInfractionName(infractionName);
 
         return ResponseEntity
@@ -68,15 +69,6 @@ public class PunishController {
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
         var message = punishmentService.findAll();
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PostMapping("/close/{id}")
-    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
-        var message = punishmentService.closeByPunishmentId(id);
 
         return ResponseEntity
                 .accepted()
