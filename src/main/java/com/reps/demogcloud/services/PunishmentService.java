@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,21 @@ public class PunishmentService {
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
     private final EmailService emailService;
+
+
+
+    public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionName) throws ResourceNotFoundException {
+        var findMe = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
+
+        if (findMe.isEmpty()) {
+            throw new ResourceNotFoundException("That student does not exist");
+        }
+        logger.debug(String.valueOf(findMe));
+        System.out.println(findMe);
+        return findMe;
+
+
+    }
 
     public List<Punishment> findByStudent(PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
         var findMe = punishRepository.findByStudent(punishmentRequest.getStudent());
