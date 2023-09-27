@@ -133,7 +133,7 @@ public class PunishmentService {
 
     public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail,
+        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
 
         Punishment findMe = findOpen.get(0);
@@ -220,7 +220,7 @@ public class PunishmentService {
         LocalDateTime now = LocalDateTime.now();
 
         Student findMe = studentRepository.findByStudentEmail(formRequest.getStudentEmail());
-        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
+        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
@@ -243,7 +243,7 @@ public class PunishmentService {
         punishment.setTimeCreated(now);
         punishment.setClosedTimes(Integer.parseInt(level));
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
         System.out.println(findOpen);
 
@@ -336,7 +336,7 @@ public class PunishmentService {
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if(punishment.getClosedTimes() == 4) {
-            List<Punishment> punishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(
+            List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(
                     punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED"
             );
             punishmentResponse.setMessage("Here is the list of punishments");
