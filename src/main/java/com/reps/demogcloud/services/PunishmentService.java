@@ -20,6 +20,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Hours;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -57,8 +58,8 @@ public class PunishmentService {
         return punishRepository.findAll();
     }
 
-    public List<Punishment> findByInfraction(PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByInfraction(punishmentRequest.getInfraction());
+    public List<Punishment> findByInfraction(Infraction infraction) throws ResourceNotFoundException {
+        List<Punishment> findMe = punishRepository.findByInfraction(infraction);
 
         if (findMe.isEmpty()) {
             throw new ResourceNotFoundException("No students with that Infraction exist");
@@ -326,25 +327,24 @@ public class PunishmentService {
         return open;
     }
 
-
     public List<Punishment> getAllOpenForADay() {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
         String subject = "Burke High School Open Referrals";
-
         List<Punishment> open = punishRepository.findByStatus("OPEN");
-
         List<Punishment> names = new ArrayList<>();
-
+        System.out.println(LocalDateTime.now());
         for(Punishment punishment: open) {
-            Duration duration = Duration.between(punishment.getTimeCreated(), now);
-            long hours = ChronoUnit.HOURS.between(punishment.getTimeCreated(), now);
-            if (hours >= 300) {
-                System.out.println(duration);
-                names.add(punishment);
-            }
-        }
+            String timeCreated = String.valueOf(punishment.getTimeCreated());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
+            LocalDateTime now = LocalDateTime.now();
 
+
+                Duration duration = Duration.between(timestamp, now);
+                long hours = duration.toHours();
+                if (hours >= 24) {
+                    names.add(punishment);
+                }
+            }
         String email = "Here is the list of students who have open assignments" + names;
 
         emailService.sendEmail("castmygameinc@gmail.com", subject, email);
@@ -352,7 +352,7 @@ public class PunishmentService {
         return open;
     }
 
-    @Scheduled(cron = "0 58 10 * * MON-FRI")
+    @Scheduled(cron = "0 01 11 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now().minusHours(3);

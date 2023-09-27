@@ -29,6 +29,15 @@ public class PunishController {
                 .body(message);
     }
 
+    @GetMapping("/infractionName")
+    public ResponseEntity<List<Punishment>> getByInfractionName(@RequestBody String infractionName) throws ResourceNotFoundException {
+        var message = punishmentService.findByInfractionName(infractionName);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @PostMapping("/punishId/close")
     public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
         var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail());
