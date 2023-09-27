@@ -26,7 +26,8 @@ public class Punishment {
     private String status;
     private int closedTimes;
 //    private int infractionTimes;
-    private DateTime timeCreated;
+    private LocalDateTime timeCreated;
+    private LocalDateTime timeClosed;
     private String classPeriod;
     private String teacherEmail;
 }
