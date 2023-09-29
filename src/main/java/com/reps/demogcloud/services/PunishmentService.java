@@ -16,15 +16,22 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
+import org.joda.time.Hours;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -39,6 +46,7 @@ public class PunishmentService {
 
 
 
+    // -----------------------------------------FIND BY METHODS-----------------------------------------
     public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionName) throws ResourceNotFoundException {
         var findMe = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
 
@@ -66,8 +74,8 @@ public class PunishmentService {
         return punishRepository.findAll();
     }
 
-    public List<Punishment> findByInfraction(PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByInfraction(punishmentRequest.getInfraction());
+    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
+        List<Punishment> findMe = punishRepository.findByInfractionInfractionName(infractionName);
 
         if (findMe.isEmpty()) {
             throw new ResourceNotFoundException("No students with that Infraction exist");
@@ -96,6 +104,8 @@ public class PunishmentService {
         return findMe;
     }
 
+    //-----------------------------------------------CREATE METHODS-------------------------------------------
+
     public PunishmentResponse createNewPunish(PunishmentRequest punishmentRequest) {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
@@ -122,57 +132,6 @@ public class PunishmentService {
         return punishmentResponse;
     }
 
-    public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
-        try {
-            punishRepository.delete(punishment);
-        } catch (Exception e) {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
-        return "Punishment has been deleted";
-    }
-
-    public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(studentEmail,
-                infractionName, "OPEN");
-
-        Punishment findMe = findOpen.get(0);
-        findMe.setStatus("CLOSED");
-        System.out.println(findMe.getClosedTimes());
-        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-        System.out.println(findMe.getClosedTimes());
-        System.out.println(findMe.getTeacherEmail());
-        punishRepository.save(findMe);
-        System.out.println(findMe);
-        if (findMe != null) {
-            PunishmentResponse punishmentResponse = new PunishmentResponse();
-            punishmentResponse.setPunishment(findMe);
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
-                    " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-                    findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
-                            "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
-            punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
-            punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
-            punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
-            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
-
-            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
-
-//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-            return punishmentResponse;
-        } else {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
-
-    }
-
-    //  -------------------CREATE PUNISHMENT WITH UI FORM SUBMISSION------------------------
-
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
         System.out.println(formRequest);
         System.out.println(formRequest.getInfractionName());
@@ -182,7 +141,7 @@ public class PunishmentService {
         LocalDateTime now = LocalDateTime.now();
 
         Student findMe = studentRepository.findByStudentEmail(formRequest.getStudentEmail());
-        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
+        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
@@ -205,9 +164,39 @@ public class PunishmentService {
         punishment.setTimeCreated(now);
         punishment.setClosedTimes(Integer.parseInt(level));
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
         System.out.println(findOpen);
+        if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+            punishment.setStatus("SO");
+            punishment.setTimeClosed(now);
+            punishRepository.save(punishment);
+
+            PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment, punishRepository);
+
+            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+            punishment.setStatus("CFR");
+            punishment.setTimeClosed(now);
+            punishRepository.save(punishment);
+
+            PunishmentResponse punishmentResponse = sendEmailBasedOnType(punishment, punishRepository);
+
+            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
 
         if (findOpen.isEmpty()) {
             punishment.setStatus("OPEN");
@@ -240,6 +229,134 @@ public class PunishmentService {
         }
     }
 
+    //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
+//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
+                infractionName, "OPEN");
+
+        Punishment findMe = findOpen.get(0);
+        findMe.setStatus("CLOSED");
+        System.out.println(findMe.getClosedTimes());
+        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
+        System.out.println(findMe.getClosedTimes());
+        System.out.println(findMe.getTeacherEmail());
+        punishRepository.save(findMe);
+        System.out.println(findMe);
+        if (findMe != null) {
+            PunishmentResponse punishmentResponse = new PunishmentResponse();
+            punishmentResponse.setPunishment(findMe);
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
+                    " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
+                    findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
+                    "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
+            punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
+            punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
+            punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
+            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
+
+            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            return punishmentResponse;
+        } else {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+    }
+
+    public PunishmentResponse closeFailureToComplete(String infractionName, String studentEmail, String teacherEmail) throws ResourceNotFoundException {
+//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        List<Punishment> findOpen = punishRepository.findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName("OPEN", teacherEmail, studentEmail,
+                infractionName);
+
+        Punishment findMe = findOpen.get(0);
+        findMe.setStatus("CLOSED");
+        System.out.println(findMe.getClosedTimes());
+        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
+        findMe.setTimeClosed(LocalDateTime.now());
+        punishRepository.save(findMe);
+        System.out.println(findMe);
+        if (findMe != null) {
+            PunishmentResponse punishmentResponse = new PunishmentResponse();
+            punishmentResponse.setPunishment(findMe);
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
+                    " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + " for " + findMe.getTeacherEmail() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
+                    findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
+                    "Do not respond to this message. Call the school at (843) 579-4815 if you have any questions or concerns.");
+            punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
+            punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
+            punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
+            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
+
+            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            return punishmentResponse;
+        } else {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+
+    }
+
+    public PunishmentResponse closeByPunishmentId(String punishmentId) throws ResourceNotFoundException {
+//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        Punishment findMe = punishRepository.findByPunishmentId(punishmentId);
+
+        findMe.setStatus("CLOSED");
+        System.out.println(findMe.getClosedTimes());
+        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
+        System.out.println(findMe.getClosedTimes());
+        System.out.println(findMe.getTeacherEmail());
+        punishRepository.save(findMe);
+        System.out.println(findMe);
+        if (findMe != null) {
+            PunishmentResponse punishmentResponse = new PunishmentResponse();
+            punishmentResponse.setPunishment(findMe);
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() +
+                    " has successfully completed the assignment given to them in response to the infraction: " + findMe.getInfraction().getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
+                    findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName() + "'s effort in completing the assignment. " +
+                    "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
+            punishmentResponse.setSubject("Burke High School referral for " + findMe.getStudent().getFirstName() + " " + findMe.getStudent().getLastName());
+            punishmentResponse.setParentToEmail(findMe.getStudent().getParentEmail());
+            punishmentResponse.setStudentToEmail(findMe.getStudent().getStudentEmail());
+            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
+
+            emailService.sendEmail(punishmentResponse.getParentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getStudentToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+            emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
+
+//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            return punishmentResponse;
+        } else {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+    }
+
+    public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
+        try {
+            punishRepository.delete(punishment);
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+        return "Punishment has been deleted";
+    }
+
+    //  --------------------------------------DURATION METHODS AND CRON JOBS----------------------------------------------------------
+
+
     public List<Punishment> getAllOpenAssignments() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
@@ -250,7 +367,7 @@ public class PunishmentService {
         List<String> names = new ArrayList<>();
 
         for(Punishment punishment: open) {
-            names.add(punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            names.add(punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " " + punishment.getInfraction().getInfractionName());
         }
         Set<String> openNames = new HashSet<String>(names);
         String email = "Here is the list of students who have open assignments" + openNames;
@@ -260,7 +377,57 @@ public class PunishmentService {
         return open;
     }
 
-    @Scheduled(cron = "0 30 11 * * MON-FRI")
+    public List<Punishment> getAllOpenForADay() {
+        String subject = "Burke High School Open Referrals";
+        List<Punishment> open = punishRepository.findByStatus("OPEN");
+        List<Punishment> names = new ArrayList<>();
+        System.out.println(LocalDateTime.now());
+        for(Punishment punishment: open) {
+            String timeCreated = String.valueOf(punishment.getTimeCreated());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
+            LocalDateTime now = LocalDateTime.now();
+
+
+            Duration duration = Duration.between(timestamp, now);
+            long hours = duration.toHours();
+            if (hours >= 24) {
+                names.add(punishment);
+            }
+        }
+        String email = "Here is the list of students who have open assignments" + names;
+
+        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
+
+        return open;
+    }
+    @Scheduled(cron = "0 31 14 * * MON-FRI")
+    public void TeacherWriteUpEmail() {
+        List<Punishment> open = punishRepository.findByStatus("OPEN");
+        System.out.println(LocalDateTime.now());
+        for(Punishment punishment: open) {
+            String timeCreated = String.valueOf(punishment.getTimeCreated());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
+            LocalDateTime now = LocalDateTime.now();
+
+
+            Duration duration = Duration.between(timestamp, now);
+            long hours = duration.toHours();
+            if (hours >= 6) {
+                String subject = "Failure to Comply with Disciplinary Action for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName();
+                String email = "Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                        "has not completed the teacher managed restorative assignment they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. || " +
+                        "During " + punishment.getClassPeriod() + " on " + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime() + " " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                        " received offense number " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() + ".  For the following incident: "
+                        + punishment.getInfraction().getInfractionDescription() + ". Student failed to complete the restorative assignment by the following day which is why the student is receiving this office referral for Failure to Comply with disciplinary action. Parent was emailed on "
+                        + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime();
+                emailService.sendEmail(punishment.getTeacherEmail(), subject, email);
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 01 11 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now().minusHours(3);
@@ -271,13 +438,14 @@ public class PunishmentService {
         List<String> names = new ArrayList<>();
 
         for(Punishment punishment: open) {
-            names.add(punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            names.add("||| Student: " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "  |  " + punishment.getTeacherEmail() + " |  Infraction: " + punishment.getInfraction().getInfractionName()
+                    + " " + punishment.getInfraction().getInfractionDescription() + " " + punishment.getTimeCreated() + "|||");
         }
         Set<String> openNames = new HashSet<String>(names);
 
         String email = "Here is the list of students who have open assignments" + openNames;
 
-        emailService.sendEmail("jiverson22@gmail.com", subject, email);
+        emailService.sendEmail("jiverson@saga.org", subject, email);
     }
 
     private static String levelCheck(List<Integer> levels) {
@@ -298,24 +466,24 @@ public class PunishmentService {
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if(punishment.getClosedTimes() == 4) {
-            List<Punishment> punishments = punishRepository.findByStudentStudentEmailAndInfractionInfractionNameAndStatus(
+            List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(
                     punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED"
             );
             punishmentResponse.setMessage("Here is the list of punishments");
 
         }
         if(punishment.getInfraction().getInfractionName().equals("Tardy")) {
-                punishmentResponse.setMessage(" Hello," +
-                        " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                        " has been written up for being " + punishment.getInfraction().getInfractionName() + ". " + punishment.getInfraction().getInfractionDescription() +
-                        ". " + "As a result they have received the following assignment, "
-                        + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                        " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
-                        " " +
-                        "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " has been written up for being " + punishment.getInfraction().getInfractionName() + ". " + punishment.getInfraction().getInfractionDescription() +
+                    ". " + "As a result they have received the following assignment, "
+                    + punishment.getInfraction().getInfractionAssign() + " and lunch detention for tomorrow. The goal of the assignment is to provide " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential." +
+                    " " +
+                    "Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns.");
 
-                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
         }
         if(punishment.getInfraction().getInfractionName().equals("Unauthorized Device/Cell Phone")) {
@@ -387,6 +555,16 @@ public class PunishmentService {
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+        }
+        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + punishment.getInfraction().getInfractionDescription() +
+                    " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail());
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
@@ -463,13 +641,23 @@ public class PunishmentService {
             return punishmentResponse;
         }
         if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
-        punishmentResponse.setMessage(" Hello," +
-                " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
-        //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-        //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-    }
+        }
+        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + punishment.getInfraction().getInfractionDescription() +
+                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+        }
         return punishmentResponse;
     }
 }

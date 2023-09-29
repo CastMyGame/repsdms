@@ -2,6 +2,7 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,6 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin
-
 @RequestMapping("/punish/v1")
 public class PunishController {
     @Autowired
@@ -25,6 +25,14 @@ public class PunishController {
     public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
         var message = punishmentService.findByPunishmentId(punishment);
 
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @GetMapping("/{infractionName}")
+    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
+        var message = punishmentService.findByInfractionName(infractionName);
 
         return ResponseEntity
                 .accepted()
@@ -34,6 +42,24 @@ public class PunishController {
     @PostMapping("/punishId/close")
     public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
         var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail());
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/close/{id}")
+    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
+        var message = punishmentService.closeByPunishmentId(id);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/ftc-close")
+    public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
+        var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
 
         return ResponseEntity
                 .accepted()
@@ -105,6 +131,15 @@ public class PunishController {
     @GetMapping("/openPunishments")
     public ResponseEntity<List<Punishment>> getOpenPunishments() {
         var message = punishmentService.getAllOpenAssignments();
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @GetMapping("/compare")
+    public ResponseEntity<List<Punishment>> getOpenForADay() {
+        var message = punishmentService.getAllOpenForADay();
 
         return ResponseEntity
                 .accepted()
