@@ -58,14 +58,14 @@ public class PunishController {
                 .body(message);
     }
 
-//    @GetMapping("/student")
-//    public ResponseEntity<List<Punishment>> getByStudent(@RequestBody PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
-//        var message = punishmentService.findByStudent(punishmentRequest);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
+    @GetMapping("/student/{email}")
+    public ResponseEntity<List<Punishment>> getByStudentEmailAndFailureToCompleteAssignments(@PathVariable String email) throws ResourceNotFoundException {
+        var message = punishmentService.findByStudentEmailAndInfraction(email,"Failure to Complete Work");
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 
     @PostMapping("/startPunish")
     public ResponseEntity<PunishmentResponse> createNewPunish(@RequestBody PunishmentRequest punishmentRequest) {
@@ -96,6 +96,15 @@ public class PunishController {
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @GetMapping("/openPunishments")
+    public ResponseEntity<List<Punishment>> getOpenPunishments() {
+        var message = punishmentService.getAllOpenAssignments();
 
         return ResponseEntity
                 .accepted()
