@@ -31,10 +31,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable()
+        http.cors().and().csrf().disable()
                 .authorizeRequests()
                 .antMatchers("/register", "/auth").permitAll()
                 .antMatchers("/student/v1/").authenticated() // Add this line
+                .antMatchers("/student/v1/allStudents").authenticated()
                 .anyRequest().authenticated();
         http.addFilterBefore(jwtFilterRequest, UsernamePasswordAuthenticationFilter.class);
     }
@@ -56,14 +57,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public CorsFilter corsFilter() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(Collections.singletonList("*")); // Allow requests from any origin
-        corsConfig.addAllowedHeader("*"); // Allow all headers
-        corsConfig.addAllowedMethod("*"); // Allow all HTTP methods
-        corsConfig.setAllowCredentials(true); // Allow sending cookies
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true); // Allow credentials (e.g., cookies, authentication headers)
+        config.addAllowedOrigin("http://localhost:3000"); // Replace with your frontend URL
+        config.addAllowedHeader("*"); // Allow all headers
+        config.addAllowedMethod("*"); // Allow all HTTP methods
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);
+        source.registerCorsConfiguration("/**", config);
 
         return new CorsFilter(source);
     }
