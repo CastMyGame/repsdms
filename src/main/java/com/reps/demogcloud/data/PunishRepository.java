@@ -8,7 +8,9 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PunishRepository extends MongoRepository<Punishment, String> {
@@ -18,9 +20,11 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     List<Punishment> findByStatus (String status);
     Punishment findByPunishmentId (String punishId);
     List<Punishment> findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus (String email, String infractionName, String status);
-    
+
+    List<Punishment> findByStudentStudentEmailAndInfractionInfractionName (String email, String infractionName);
+
+
     List<Punishment> findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName (String status, String studentEmail, String teacherEmail, String infractionName);
     List<Punishment> findByStatusAndTimeCreatedBefore (String status, LocalDateTime time);
     List<Punishment> findByStatusAndTimeCreatedBetween (String status, DateTime timeCreated, DateTime now);
 }
-
