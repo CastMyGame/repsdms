@@ -1,6 +1,7 @@
 package com.reps.demogcloud.security.controllers;
 
 
+import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.AuthenticationResponse;
 import com.reps.demogcloud.security.models.UserModel;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(
@@ -22,6 +24,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class AuthControllers {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtUtils jwtUtils;
@@ -40,24 +45,30 @@ public class AuthControllers {
         return "I WORKS";
     }
     @PostMapping("/register")
-    private ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest){
+    private ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
         String username = authenticationRequest.getUsername();
         String password = authenticationRequest.getPassword();
+
         UserModel userModel = new UserModel();
         userModel.setUsername(username);
-        userModel.setPassword(password);
-        try{
-            userRepository.save(userModel);
 
-        }catch (Exception e){
-            ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username));
+        // Use BCryptPasswordEncoder to encode the provided password
+        String encodedPassword = passwordEncoder.encode(password);
+        userModel.setPassword(encodedPassword);
+
+        try {
+            userRepository.save(userModel);
+            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username));
+        } catch (Exception e) {
+            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username));
         }
-        return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username));
     }
+
 
     @PostMapping("/auth")
     private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest){
         String username = authenticationRequest.getUsername();
+
         String password = authenticationRequest.getPassword();
         try{
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username,password));
