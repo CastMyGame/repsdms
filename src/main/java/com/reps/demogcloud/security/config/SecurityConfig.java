@@ -59,6 +59,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true); // Allow credentials (e.g., cookies, authentication headers)
+        config.addAllowedOrigin("http://localhost:3000"); // Allow localhost:3000
         config.addAllowedOrigin("https://reps-react-9g7fa23lu-davidaholliday.vercel.app"); // Replace with your frontend URL
         config.addAllowedHeader("*"); // Allow all headers
         config.addAllowedMethod("*"); // Allow all HTTP methods
