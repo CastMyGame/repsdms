@@ -14,8 +14,12 @@ public class UserModel {
 
     @Id
     private String id;
+    //UserName is the email address
     private String username;
     private String password;
+    private String firstName;
+    private String lastName;
+    private String schoolName;
 
 
 }

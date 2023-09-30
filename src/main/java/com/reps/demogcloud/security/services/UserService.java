@@ -44,4 +44,11 @@ public class UserService implements UserDetailsService {
         return new User(name, hashedPassword, new ArrayList<>());
     }
 
+    public UserModel loadUserModelByUsername(String username) {
+        // Implement the logic to load UserModel based on the username
+        // For example, fetch it from a UserRepository
+        return userRepository.findByUsername(username); // Assuming UserRepository has a method like findByUsername
+    }
+
+
 }

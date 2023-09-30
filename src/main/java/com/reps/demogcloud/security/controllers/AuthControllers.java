@@ -48,9 +48,15 @@ public class AuthControllers {
     private ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
         String username = authenticationRequest.getUsername();
         String password = authenticationRequest.getPassword();
+        String firstName = authenticationRequest.getFirstName();
+        String lastName = authenticationRequest.getLastName();
+        String school = authenticationRequest.getSchoolName();
 
         UserModel userModel = new UserModel();
         userModel.setUsername(username);
+        userModel.setFirstName(firstName);
+        userModel.setLastName(lastName);
+        userModel.setSchoolName(school);
 
         // Use BCryptPasswordEncoder to encode the provided password
         String encodedPassword = passwordEncoder.encode(password);
@@ -58,9 +64,9 @@ public class AuthControllers {
 
         try {
             userRepository.save(userModel);
-            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username));
+            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username,null));
         } catch (Exception e) {
-            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username));
+            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username,null));
         }
     }
 
@@ -73,12 +79,19 @@ public class AuthControllers {
         try{
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username,password));
         }catch (Exception e){
-            return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username));
+            return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username,null));
         }
         UserDetails loadedUser = userService.loadUserByUsername(username);
-       String generatedToken = jwtUtils.generateToken(loadedUser);
+        String generatedToken = jwtUtils.generateToken(loadedUser);
 
-        return ResponseEntity.ok(new AuthenticationResponse(generatedToken));
+        // Fetch additional user-related details (e.g., UserModel) based on the username
+        UserModel userModel = userService.loadUserModelByUsername(username);
+
+        // Create a response object that includes the token and user details
+        AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
+
+
+        return ResponseEntity.ok(response);
     }
 
 
