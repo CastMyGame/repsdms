@@ -30,8 +30,9 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/{infractionName}")
-    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
+
+    @GetMapping("/infractionName")
+    public ResponseEntity<List<Punishment>> getByInfractionName(@RequestBody String infractionName) throws ResourceNotFoundException {
         var message = punishmentService.findByInfractionName(infractionName);
 
         return ResponseEntity
@@ -145,4 +146,5 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
+
 }

@@ -13,4 +13,5 @@ public class ClosePunishmentRequest {
     private String infractionName;
     private String studentEmail;
     private DateTime timeClosed;
+
 }
