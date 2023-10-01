@@ -16,10 +16,13 @@ import java.util.Optional;
 public interface PunishRepository extends MongoRepository<Punishment, String> {
     //May need PunishResponse if that gets made for record keeping instead
     List<Punishment> findByStudent (Student student);
-    List<Punishment> findByInfraction (Infraction infraction);
+    List<Punishment> findByInfractionInfractionName (String infractionName);
     List<Punishment> findByStatus (String status);
     Punishment findByPunishmentId (String punishId);
-    List<Punishment> findByStudentStudentEmailAndInfractionInfractionNameAndStatus (String email, String infractionName, String status);
+    List<Punishment> findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus (String email, String infractionName, String status);
+
+    List<Punishment> findByStudentStudentEmailAndInfractionInfractionName (String email, String infractionName);
+
 
     List<Punishment> findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName (String status, String studentEmail, String teacherEmail, String infractionName);
     List<Punishment> findByStatusAndTimeCreatedBefore (String status, LocalDateTime time);

@@ -2,6 +2,7 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,8 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/infractionName")
-    public ResponseEntity<List<Punishment>> getByInfractionName(@RequestBody String infractionName) throws ResourceNotFoundException {
+    @GetMapping("/{infractionName}")
+    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
         var message = punishmentService.findByInfractionName(infractionName);
 
         return ResponseEntity
@@ -83,14 +84,14 @@ public class PunishController {
                 .body(message);
     }
 
-//    @GetMapping("/student")
-//    public ResponseEntity<List<Punishment>> getByStudent(@RequestBody PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
-//        var message = punishmentService.findByStudent(punishmentRequest);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
+    @GetMapping("/student/{email}")
+    public ResponseEntity<List<Punishment>> getByStudentEmailAndFailureToCompleteAssignments(@PathVariable String email) throws ResourceNotFoundException {
+        var message = punishmentService.findByStudentEmailAndInfraction(email,"Failure to Complete Work");
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 
     @PostMapping("/startPunish")
     public ResponseEntity<PunishmentResponse> createNewPunish(@RequestBody PunishmentRequest punishmentRequest) {
