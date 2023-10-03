@@ -12,4 +12,5 @@ public interface StudentRepository extends MongoRepository<Student,String> {
     //Select everything from students where last name is equal to our first argument
     List<Student> findByLastName(String lastName);
     Student findByStudentEmail(String email);
+    List<Student> findByParentEmail(String email);
 }

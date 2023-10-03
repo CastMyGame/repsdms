@@ -53,6 +53,15 @@ public class StudentController {
                 .body(message);
     }
 
+    @GetMapping("/parentEmail/{parentEmail}")
+    public ResponseEntity<List<Student>> getStudentByParentEmail (@PathVariable  String parentEmail) throws Exception {
+        var message = studentService.requestStudentByParentEmail(parentEmail);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteStudent (@RequestBody StudentRequest studentRequest) throws Exception {
         var delete = studentService.deleteStudent(studentRequest);
