@@ -139,10 +139,19 @@ public class PunishController {
 
     @GetMapping("/compare")
     public ResponseEntity<List<Punishment>> getOpenForADay() {
-        var message = punishmentService.getAllOpenForADay();
+        List<Punishment> message = punishmentService.getAllOpenForADay();
 
         return ResponseEntity
                 .accepted()
                 .body(message);
+    }
+
+    @PostMapping("/updateLevelThree")
+    public ResponseEntity<Punishment> updateLevelThree(@RequestBody LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
+        Punishment updated = punishmentService.updateLevelThreeCloseRequest(levelThreeCloseRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(updated);
     }
 }

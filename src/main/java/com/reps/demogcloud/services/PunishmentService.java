@@ -9,10 +9,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.infraction.Infraction;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
-import com.reps.demogcloud.models.punishment.PunishmentRequest;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
+import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -257,6 +254,29 @@ public class PunishmentService {
         } else {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
+    }
+
+    public Punishment updateLevelThreeCloseRequest(LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
+//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        Punishment punishment = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndInfractionInfractionLevelAndStatus(
+                levelThreeCloseRequest.getStudentEmail(),
+                levelThreeCloseRequest.getInfractionName(),
+                levelThreeCloseRequest.getInfractionLevel(),
+                "OPEN"
+        );
+
+        List<String> studentAnswer = new ArrayList<>();
+        studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
+        studentAnswer.add(levelThreeCloseRequest.getStudentAnswer().toString());
+
+        Infraction infraction = new Infraction();
+        infraction = punishment.getInfraction();
+        infraction.setInfractionDescription(studentAnswer);
+
+        punishment.setInfraction(infraction);
+        punishRepository.save(punishment);
+
+        return punishment;
     }
 
     public PunishmentResponse closeFailureToComplete(String infractionName, String studentEmail, String teacherEmail) throws ResourceNotFoundException {
