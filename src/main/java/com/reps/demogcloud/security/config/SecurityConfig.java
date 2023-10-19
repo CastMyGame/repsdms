@@ -34,9 +34,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.cors().and().csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/register", "/auth").permitAll()
-                .antMatchers("/student/v1/").authenticated() // Add this line
-                .antMatchers("/student/v1/allStudents").authenticated()
+                .antMatchers("/register", "/auth", "/student/v1/allStudents", "/punish/v1/startPunish/form", "/punish/v1/punishId/close").permitAll()
+//                .antMatchers("/student/v1/").authenticated() // Add this line
+//                .antMatchers("/student/v1/allStudents").authenticated()
                 .anyRequest().authenticated();
         http.addFilterBefore(jwtFilterRequest, UsernamePasswordAuthenticationFilter.class);
     }
@@ -64,6 +64,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         config.setAllowCredentials(true); // Allow credentials (e.g., cookies, authentication headers)
         config.addAllowedOrigin("http://localhost:3000"); // Allow localhost:3000
         config.addAllowedOrigin("https://reps-react-ui.vercel.app/"); // Replace with your frontend URL
+        config.addAllowedOrigin("https://repsdev.vercel.app/");
+        config.addAllowedOrigin("https://repsdiscipline.vercel.app/");
         config.addAllowedHeader("*"); // Allow all headers
         config.addAllowedMethod("*"); // Allow all HTTP methods
 

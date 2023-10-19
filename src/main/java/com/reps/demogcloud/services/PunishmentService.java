@@ -401,33 +401,33 @@ public class PunishmentService {
 
         return open;
     }
-    @Scheduled(cron = "0 31 14 * * MON-FRI")
-    public void TeacherWriteUpEmail() {
-        List<Punishment> open = punishRepository.findByStatus("OPEN");
-        System.out.println(LocalDateTime.now());
-        for(Punishment punishment: open) {
-            String timeCreated = String.valueOf(punishment.getTimeCreated());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
-            LocalDateTime now = LocalDateTime.now();
+//    @Scheduled(cron = "0 31 14 * * MON-FRI")
+//    public void TeacherWriteUpEmail() {
+//        List<Punishment> open = punishRepository.findByStatus("OPEN");
+//        System.out.println(LocalDateTime.now());
+//        for(Punishment punishment: open) {
+//            String timeCreated = String.valueOf(punishment.getTimeCreated());
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+//            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
+//            LocalDateTime now = LocalDateTime.now();
+//
+//
+//            Duration duration = Duration.between(timestamp, now);
+//            long hours = duration.toHours();
+//            if (hours >= 6) {
+//                String subject = "Failure to Comply with Disciplinary Action for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName();
+//                String email = "Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+//                        "has not completed the teacher managed restorative assignment they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. || " +
+//                        "During " + punishment.getClassPeriod() + " on " + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime() + " " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+//                        " received offense number " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() + ".  For the following incident: "
+//                        + punishment.getInfraction().getInfractionDescription() + ". Student failed to complete the restorative assignment by the following day which is why the student is receiving this office referral for Failure to Comply with disciplinary action. Parent was emailed on "
+//                        + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime();
+//                emailService.sendEmail(punishment.getTeacherEmail(), subject, email);
+//            }
+//        }
+//    }
 
-
-            Duration duration = Duration.between(timestamp, now);
-            long hours = duration.toHours();
-            if (hours >= 6) {
-                String subject = "Failure to Comply with Disciplinary Action for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName();
-                String email = "Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                        "has not completed the teacher managed restorative assignment they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. || " +
-                        "During " + punishment.getClassPeriod() + " on " + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime() + " " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                        " received offense number " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() + ".  For the following incident: "
-                        + punishment.getInfraction().getInfractionDescription() + ". Student failed to complete the restorative assignment by the following day which is why the student is receiving this office referral for Failure to Comply with disciplinary action. Parent was emailed on "
-                        + punishment.getTimeCreated().toLocalDate() + " " + " " + punishment.getTimeCreated().toLocalTime();
-                emailService.sendEmail(punishment.getTeacherEmail(), subject, email);
-            }
-        }
-    }
-
-    @Scheduled(cron = "0 01 11 * * MON-FRI")
+    @Scheduled(cron = "0 20 10 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now().minusHours(3);
@@ -439,7 +439,7 @@ public class PunishmentService {
 
         for(Punishment punishment: open) {
             names.add("||| Student: " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "  |  " + punishment.getTeacherEmail() + " |  Infraction: " + punishment.getInfraction().getInfractionName()
-                    + " " + punishment.getInfraction().getInfractionDescription() + " " + punishment.getTimeCreated() + "|||");
+                    + " " + punishment.getInfraction().getInfractionLevel() + " " + punishment.getInfraction().getInfractionDescription() + " " + punishment.getTimeCreated() + "|||");
         }
         Set<String> openNames = new HashSet<String>(names);
 
