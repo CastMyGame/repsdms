@@ -223,9 +223,11 @@ public class PunishmentService {
 
         Punishment findMe = findOpen.get(0);
 
-        if(studentAnswers == null) {
+        if(studentAnswers != null) {
+            List<String> answers = findMe.getInfraction().getInfractionDescription();
+            answers.add(studentAnswers.toString());
             Infraction answer = findMe.getInfraction();
-            answer.setInfractionDescription(studentAnswers);
+            answer.setInfractionDescription(answers);
             findMe.setInfraction(answer);
             punishRepository.save(findMe);
 
