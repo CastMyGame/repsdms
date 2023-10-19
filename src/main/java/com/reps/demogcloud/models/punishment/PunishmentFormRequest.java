@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,7 +15,7 @@ public class PunishmentFormRequest {
     private String studentEmail;
     private String infractionName;
     private String infractionPeriod;
-    private String infractionDescription;
+    private List<String> infractionDescription;
     private String teacherEmail;
 
 }
