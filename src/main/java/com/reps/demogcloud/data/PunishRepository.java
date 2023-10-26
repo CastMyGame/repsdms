@@ -23,7 +23,7 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
 
     List<Punishment> findByStudentStudentEmailAndInfractionInfractionName (String email, String infractionName);
 
-
+    List<Punishment> findByStudentStudentEmailIgnoreCase (String email);
     List<Punishment> findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName (String status, String studentEmail, String teacherEmail, String infractionName);
     List<Punishment> findByStatusAndTimeCreatedBefore (String status, LocalDateTime time);
     Punishment findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndInfractionInfractionLevelAndStatus (String studentEmail, String infractionName, String infractionLevel, String status);

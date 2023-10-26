@@ -65,7 +65,7 @@ public class StudentService {
     }
 
     public Student requestStudentEmail(String email) throws Exception {
-        var findMe = studentRepository.findByStudentEmail(email);
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");

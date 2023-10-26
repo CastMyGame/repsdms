@@ -154,4 +154,13 @@ public class PunishController {
                 .accepted()
                 .body(updated);
     }
+
+    @PostMapping("/studentsReport/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
+        List<Punishment> message = punishmentService.getAllPunishmentsForStudents(studentEmail);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 }
