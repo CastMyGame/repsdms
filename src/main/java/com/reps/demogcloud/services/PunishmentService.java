@@ -217,12 +217,25 @@ public class PunishmentService {
     }
 
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
-    public PunishmentResponse closePunishment(String infractionName, String studentEmail) throws ResourceNotFoundException {
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<String> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
 
         Punishment findMe = findOpen.get(0);
+
+        if(studentAnswers != null) {
+            List<String> answers = findMe.getInfraction().getInfractionDescription();
+            answers.add(studentAnswers.toString());
+            Infraction answer = findMe.getInfraction();
+            answer.setInfractionDescription(answers);
+            findMe.setInfraction(answer);
+            punishRepository.save(findMe);
+
+            PunishmentResponse response = new PunishmentResponse();
+            response.setPunishment(findMe);
+            return response;
+        } else {
         findMe.setStatus("CLOSED");
         System.out.println(findMe.getClosedTimes());
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
@@ -255,30 +268,29 @@ public class PunishmentService {
         } else {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
-    }
+    }};
 
-    public Punishment updateLevelThreeCloseRequest(LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        Punishment punishment = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndInfractionInfractionLevelAndStatus(
-                levelThreeCloseRequest.getStudentEmail(),
-                levelThreeCloseRequest.getInfractionName(),
-                levelThreeCloseRequest.getInfractionLevel(),
-                "OPEN"
-        );
-
-        List<String> studentAnswer = new ArrayList<>();
-        studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
-        studentAnswer.add(levelThreeCloseRequest.getStudentAnswer().toString());
-
-        Infraction infraction = new Infraction();
-        infraction = punishment.getInfraction();
-        infraction.setInfractionDescription(studentAnswer);
-
-        punishment.setInfraction(infraction);
-        punishRepository.save(punishment);
-
-        return punishment;
-    }
+//    public Punishment updateLevelThreeCloseRequest(List<String> studentAnswers) throws ResourceNotFoundException {
+////        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+//        Punishment punishment = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndInfractionInfractionLevelAndStatus(
+//                levelThreeCloseRequest.getStudentEmail(),
+//                levelThreeCloseRequest.getInfractionName(),
+//                "OPEN"
+//        );
+//
+//        List<String> studentAnswer = new ArrayList<>();
+//        studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
+//        studentAnswer.add(levelThreeCloseRequest.getStudentAnswer().toString());
+//
+//        Infraction infraction = new Infraction();
+//        infraction = punishment.getInfraction();
+//        infraction.setInfractionDescription(studentAnswer);
+//
+//        punishment.setInfraction(infraction);
+//        punishRepository.save(punishment);
+//
+//        return punishment;
+//    }
 
     public PunishmentResponse closeFailureToComplete(String infractionName, String studentEmail, String teacherEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
