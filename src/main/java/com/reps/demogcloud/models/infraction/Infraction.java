@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -18,7 +19,7 @@ public class Infraction {
     @Id
     private String infractionId;
     private String infractionName;
-    private List<String> infractionDescription;
+    private ArrayList<String> infractionDescription;
     private String infractionLevel;
 //    private String infractionUrl;
     private String infractionAssign;

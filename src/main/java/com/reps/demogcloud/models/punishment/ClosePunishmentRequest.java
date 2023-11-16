@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.joda.time.DateTime;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -15,6 +16,5 @@ public class ClosePunishmentRequest {
 
     private String infractionName;
     private String studentEmail;
-    private List<String> studentAnswer;
-    private LocalDateTime timeClosed;
+    private ArrayList<String> studentAnswer;
 }

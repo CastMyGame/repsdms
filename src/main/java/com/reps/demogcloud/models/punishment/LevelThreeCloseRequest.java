@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 @Data
 @NoArgsConstructor
@@ -15,5 +16,5 @@ public class LevelThreeCloseRequest {
     private String studentEmail;
     private String infractionLevel;
     private LocalDateTime timeClosed;
-    private List<String> studentAnswer;
+    private ArrayList<String> studentAnswer;
 }
