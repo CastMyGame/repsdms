@@ -4,11 +4,12 @@ import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,9 +24,11 @@ public class StudentService {
 //            .buildClient();
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
+    private final EmailService emailService;
 
-    public StudentService(StudentRepository studentRepository) {
+    public StudentService(StudentRepository studentRepository, EmailService emailService) {
         this.studentRepository = studentRepository;
+        this.emailService = emailService;
     }
 
     public Student requestStudentIdNumber(String studentId) throws Exception {
@@ -35,6 +38,20 @@ public class StudentService {
             throw new Exception("No student with that Id exists");
         }
         logger.debug(String.valueOf(findMe));
+        return findMe;
+    }
+
+    public List<Student> requestStudentByParentEmail(String parentEmail) throws Exception {
+        List<Student> findMe = studentRepository.findByParentEmail(parentEmail);
+        List<String> names = new ArrayList<>();
+        for (Student student : findMe) {
+            names.add(student.getFirstName() + " " + student.getLastName() + " \n");
+        }
+//        System.out.println(secretClient.getSecret("TWILIO-ACCOUNT-SID"));  Not working because it isn't even accessing it
+        if (findMe.isEmpty()) {
+            throw new Exception("No student with that Last Name exists");
+        }
+        emailService.sendEmail("jiverson@saga.org", "Students who need parent email", names.toString());
         return findMe;
     }
     public List<Student> requestStudentLastName(String lastName) throws Exception {
@@ -48,7 +65,7 @@ public class StudentService {
     }
 
     public Student requestStudentEmail(String email) throws Exception {
-        var findMe = studentRepository.findByStudentEmail(email);
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");
