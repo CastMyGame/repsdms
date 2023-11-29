@@ -147,11 +147,6 @@ public class PunishmentService {
         String level = levelCheck(closedTimes);
         System.out.println(level);
 
-
-        Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
-        findInf.setInfractionDescription(formRequest.getInfractionDescription());
-        System.out.println(findInf);
-
         Punishment punishment = new Punishment();
         punishment.setStudent(findMe);
         punishment.setClassPeriod(formRequest.getInfractionPeriod());
