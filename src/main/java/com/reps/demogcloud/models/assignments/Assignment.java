@@ -14,6 +14,7 @@ import java.util.List;
 @Document(collection = "assignments")
 public class Assignment {
     @Id
+    private String assignmentId;
     private String assignmentName;
     private int level;
     private List<Question> questions;
