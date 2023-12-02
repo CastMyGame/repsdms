@@ -29,4 +29,9 @@ public class AssignmentService {
     public  Assignment createNewAssignment(Assignment assignments){
         return assignmentRepository.save(assignments);
     }
+
+
+    public  Assignment deleteAssignment(String assignmentName){
+        return assignmentRepository.deleteByAssignmentName(assignmentName);
+    }
 }

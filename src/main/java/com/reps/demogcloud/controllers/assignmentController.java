@@ -41,4 +41,13 @@ public class assignmentController {
                 .accepted()
                 .body(message);
     }
+
+
+    @DeleteMapping("/delete/{assignmentName}")
+    public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
+        var message = assignmentService.deleteAssignment(assignmentName);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 }
