@@ -227,8 +227,9 @@ public class PunishmentService {
                 infractionName, "OPEN");
         System.out.println("Student Answers " + studentAnswers);
         Punishment findMe = findOpen.get(0);
+        System.out.println(studentAnswers.size() + "size of array");
 
-        if(studentAnswers != null) {
+        if(studentAnswers.size() != 0) {
             System.out.println(studentAnswers + " Not Null");
             ArrayList<String> answers = findMe.getInfraction().getInfractionDescription();
             answers.add(studentAnswers.toString());
