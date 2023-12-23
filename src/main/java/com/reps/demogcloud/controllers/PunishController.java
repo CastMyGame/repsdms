@@ -8,6 +8,7 @@ import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class PunishController {
                 .body(message);
     }
 
+    @PreAuthorize("hasRole('STUDENT')")
     @PostMapping("/punishId/close")
     public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
         System.out.println(closePunishmentRequest);
@@ -120,6 +122,7 @@ public class PunishController {
 //    }
 
     @CrossOrigin
+    @PreAuthorize("hasRole('TEACHER')")
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
