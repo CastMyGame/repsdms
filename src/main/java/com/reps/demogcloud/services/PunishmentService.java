@@ -442,8 +442,8 @@ public class PunishmentService {
                         + " " + punishment.getInfraction().getInfractionDescription() + "\n";
                 messages.add(punishmentMessage);
             }
-            String emailMessage = intro + "\n" + messages;
-            emailService.sendEmail("jiverson22@gmail.com", subject, emailMessage);
+//            String emailMessage = intro + "\n" + messages;
+//            emailService.sendEmail("jiverson22@gmail.com", subject, emailMessage);
 //        String email = "Here is the list of students who have open assignments" + names;
 //
 //        emailService.sendEmail("castmygameinc@gmail.com", subject, email);

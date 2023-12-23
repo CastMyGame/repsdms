@@ -3,20 +3,16 @@ package com.reps.demogcloud.security.models;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.HashSet;
 import java.util.Set;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
-@Document(collection = "users")
-public class UserModel {
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserDto {
 
-    @Id
     private String id;
     //UserName is the email address
     private String username;
@@ -27,9 +23,15 @@ public class UserModel {
     @DBRef
     private Set<RoleModel> roles = new HashSet<>();
 
-    public UserModel(String username, String password) {
-        this.username = username;
-        this.password = password;
-    }
+    public UserModel getUserFromDto(){
+        UserModel user = new UserModel();
+        user.setUsername(username);
+        user.setPassword(password);
+        user.setRoles(roles);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setSchoolName(schoolName);
 
+        return user;
+    }
 }
