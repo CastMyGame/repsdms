@@ -12,6 +12,6 @@ import java.util.Optional;
 @AllArgsConstructor
 public class AuthenticationResponse {
     private String response;
-    private Optional<UserModel> userModel;
+    private UserModel userModel;
 
 }

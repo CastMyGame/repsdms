@@ -1,4 +1,4 @@
-package com.reps.demogcloud.security.repository;
+package com.reps.demogcloud.security.models;
 
 import com.reps.demogcloud.security.models.UserModel;
 import org.springframework.data.mongodb.repository.MongoRepository;
