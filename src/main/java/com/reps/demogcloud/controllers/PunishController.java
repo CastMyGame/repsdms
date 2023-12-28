@@ -132,6 +132,16 @@ public class PunishController {
                 .body(message);
     }
 
+    @CrossOrigin
+    @PostMapping("/startPunish/formList")
+    public ResponseEntity<PunishmentResponse> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
+        var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @GetMapping("/openPunishments")
     public ResponseEntity<List<Punishment>> getOpenPunishments() {
         var message = punishmentService.getAllOpenAssignments();
