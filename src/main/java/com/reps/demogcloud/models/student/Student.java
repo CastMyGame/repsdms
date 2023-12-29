@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -25,4 +27,8 @@ public class Student {
     private String grade;
     private String parentPhoneNumber;
     private String studentPhoneNumber;
+    private boolean isArchived;
+    private String archivedBy;
+    private LocalDateTime archivedOn;
+
 }
