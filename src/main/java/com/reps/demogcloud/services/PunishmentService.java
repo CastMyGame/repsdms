@@ -220,6 +220,104 @@ public class PunishmentService {
         }
     }
 
+    public PunishmentResponse createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) {
+        PunishmentResponse punishmentResponse = new PunishmentResponse();
+        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
+//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+            LocalDateTime now = LocalDateTime.now();
+
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishmentFormRequest.getStudentEmail());
+            List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishmentFormRequest.getStudentEmail(), punishmentFormRequest.getInfractionName(), "CLOSED");
+            List<Integer> closedTimes = new ArrayList<>();
+            for (Punishment punishment : closedPunishments) {
+//            if (punishments.getInfraction().getInfractionName().equals("Failure to Complete Work") | punishments.getInfraction().getInfractionName().equals("Behavioral Concern")
+//                    | punishments.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+//                Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), "1");
+//                findInf.setInfractionDescription(formRequest.getInfractionDescription());
+//                punishments.setInfraction(findInf);
+//            } else {
+                closedTimes.add(punishment.getClosedTimes());
+            }
+            System.out.println(closedPunishments);
+
+            String level = levelCheck(closedTimes);
+            System.out.println(level);
+
+            Punishment punishment = new Punishment();
+            punishment.setStudent(findMe);
+            punishment.setClassPeriod(punishmentFormRequest.getInfractionPeriod());
+            punishment.setPunishmentId(UUID.randomUUID().toString());
+            punishment.setTimeCreated(now);
+            punishment.setClosedTimes(Integer.parseInt(level));
+            punishment.setTeacherEmail(punishmentFormRequest.getTeacherEmail());
+
+            Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(punishmentFormRequest.getInfractionName(), level);
+            List<String> description = findInf.getInfractionDescription();
+            description.add(punishmentFormRequest.getInfractionDescription());
+            System.out.println(findInf);
+            punishment.setInfraction(findInf);
+            List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+                    punishment.getInfraction().getInfractionName(), "OPEN");
+            System.out.println(findOpen);
+            if (punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+                punishment.setStatus("SO");
+                punishment.setTimeClosed(now);
+                punishRepository.save(punishment);
+
+                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+
+                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+                return punishmentResponse;
+            }
+            if (punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+                punishment.setStatus("CFR");
+                punishment.setTimeClosed(now);
+                punishRepository.save(punishment);
+
+                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+                return punishmentResponse;
+            }
+            if (punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
+                punishment.setStatus("CFR");
+                punishment.setTimeClosed(now);
+                punishRepository.save(punishment);
+
+                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+
+                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+                return punishmentResponse;
+            }
+
+            if (findOpen.isEmpty()) {
+                punishment.setStatus("OPEN");
+                punishRepository.save(punishment);
+
+                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+
+                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+                return punishmentResponse;
+
+
+            } else {
+                punishment.setStatus("CFR");
+                punishment.setTimeClosed(LocalDateTime.now());
+                punishRepository.save(punishment);
+
+                punishmentResponse = sendCFREmailBasedOnType(punishment);
+
+                //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+                //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+                return punishmentResponse;
+            }
+        } return  punishmentResponse;
+    }
+
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, ArrayList<String> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
