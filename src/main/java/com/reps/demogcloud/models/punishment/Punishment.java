@@ -30,4 +30,7 @@ public class Punishment {
     private LocalDateTime timeClosed;
     private String classPeriod;
     private String teacherEmail;
+    private boolean isArchived;
+    private String archivedBy;
+    private LocalDateTime archivedOn;
 }
