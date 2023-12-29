@@ -134,7 +134,7 @@ public class PunishController {
 
     @CrossOrigin
     @PostMapping("/startPunish/formList")
-    public ResponseEntity<PunishmentResponse> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
+    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
         var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
 
         return ResponseEntity

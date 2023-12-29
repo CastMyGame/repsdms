@@ -220,8 +220,8 @@ public class PunishmentService {
         }
     }
 
-    public PunishmentResponse createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) {
-        PunishmentResponse punishmentResponse = new PunishmentResponse();
+    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) {
+        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
         for(PunishmentFormRequest punishmentFormRequest : listRequest) {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
@@ -265,43 +265,43 @@ public class PunishmentService {
                 punishment.setTimeClosed(now);
                 punishRepository.save(punishment);
 
-                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+                punishmentResponse.add(sendEmailBasedOnType(punishment, punishRepository, emailService));
 
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
+
             }
             if (punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
                 punishment.setStatus("CFR");
                 punishment.setTimeClosed(now);
                 punishRepository.save(punishment);
 
-                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+                punishmentResponse .add(sendEmailBasedOnType(punishment, punishRepository, emailService));
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
+
             }
             if (punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
                 punishment.setStatus("CFR");
                 punishment.setTimeClosed(now);
                 punishRepository.save(punishment);
 
-                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+                punishmentResponse.add(sendEmailBasedOnType(punishment, punishRepository, emailService));
 
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
+
             }
 
             if (findOpen.isEmpty()) {
                 punishment.setStatus("OPEN");
                 punishRepository.save(punishment);
 
-                punishmentResponse = sendEmailBasedOnType(punishment, punishRepository, emailService);
+                punishmentResponse.add(sendEmailBasedOnType(punishment, punishRepository, emailService));
 
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
+
 
 
             } else {
@@ -309,11 +309,11 @@ public class PunishmentService {
                 punishment.setTimeClosed(LocalDateTime.now());
                 punishRepository.save(punishment);
 
-                punishmentResponse = sendCFREmailBasedOnType(punishment);
+                punishmentResponse.add(sendCFREmailBasedOnType(punishment));
 
                 //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
                 //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-                return punishmentResponse;
+
             }
         } return  punishmentResponse;
     }
