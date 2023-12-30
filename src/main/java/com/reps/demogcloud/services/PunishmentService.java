@@ -55,13 +55,17 @@ public class PunishmentService {
     }
 
     public List<Punishment> findByStudent(PunishmentRequest punishmentRequest) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByStudent(punishmentRequest.getStudent());
+        var fetchData = punishRepository.findByStudent(punishmentRequest.getStudent());
+        var punishmentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
-        if (findMe.isEmpty()) {
+
+        if (punishmentRecord.isEmpty()) {
             throw new ResourceNotFoundException("That student does not exist");
         }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
+        logger.debug(String.valueOf(punishmentRecord));
+        return punishmentRecord;
     }
 
     public List<Punishment> findAll() {
@@ -69,43 +73,61 @@ public class PunishmentService {
     }
 
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
-        List<Punishment> findMe = punishRepository.findByInfractionInfractionName(infractionName);
+        List<Punishment> fetchData = punishRepository.findByInfractionInfractionName(infractionName);
+        var punishmentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
-        if (findMe.isEmpty()) {
+
+        if (punishmentRecord.isEmpty()) {
             throw new ResourceNotFoundException("No students with that Infraction exist");
         }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
+        logger.debug(String.valueOf(punishmentRecord));
+        return punishmentRecord;
     }
 
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByStatus(status);
+        var fetchData = punishRepository.findByStatus(status);
+        var punishmentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
-        if (findMe.isEmpty()) {
+        if (punishmentRecord.isEmpty()) {
             throw new ResourceNotFoundException("No punishments with that status exist");
         }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
+        logger.debug(String.valueOf(punishmentRecord));
+        return punishmentRecord;
     }
 
     public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByPunishmentId(punishment.getPunishmentId());
+        var fetchData = punishRepository.findByPunishmentId(punishment.getPunishmentId());
 
-        if (findMe == null) {
+        if (fetchData == null) {
             throw new ResourceNotFoundException("No punishments with that ID exist");
         }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
+        if(fetchData.isArchived()){
+            throw new ResourceNotFoundException("Punishment with that Id is archived");
+        }
+
+
+
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
     }
 
     public Punishment findByPunishmentId(String punishmentId) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByPunishmentId(punishmentId);
-
-        if (findMe == null) {
+        var fetchData = punishRepository.findByPunishmentId(punishmentId);
+        if (fetchData == null) {
             throw new ResourceNotFoundException("No punishments with that ID exist");
         }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
+
+        if(fetchData.isArchived()){
+            throw new ResourceNotFoundException("No punishments with that ID exist");
+
+        }
+
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
     }
 
 
@@ -175,8 +197,12 @@ public class PunishmentService {
             description.add(formRequest.getInfractionDescription());
             System.out.println(findInf);
             punishment.setInfraction(findInf);
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
+        var findOpen = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
+
         System.out.println(findOpen);
         if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
             punishment.setStatus("SO");
@@ -272,8 +298,14 @@ public class PunishmentService {
             description.add(punishmentFormRequest.getInfractionDescription());
             System.out.println(findInf);
             punishment.setInfraction(findInf);
-            List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+            List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                     punishment.getInfraction().getInfractionName(), "OPEN");
+
+            var findOpen = fetchPunishmentData.stream()
+                    .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                    .toList();  // Collect the filtered punishments into a list
+
+
             System.out.println(findOpen);
             if (punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
                 punishment.setStatus("SO");
@@ -336,8 +368,13 @@ public class PunishmentService {
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, ArrayList<String> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> findOpen = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
+
+        var findOpen = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
+
         System.out.println("Student Answers " + studentAnswers);
         Punishment findMe = findOpen.get(0);
         System.out.println(studentAnswers.size() + "size of array");
@@ -414,8 +451,12 @@ public class PunishmentService {
 
     public PunishmentResponse closeFailureToComplete(String infractionName, String studentEmail, String teacherEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> findOpen = punishRepository.findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName("CFR", teacherEmail, studentEmail,
+        List<Punishment> fetchPunishmentData = punishRepository.findByStatusAndTeacherEmailAndStudentStudentEmailAndInfractionInfractionName("CFR", teacherEmail, studentEmail,
                  infractionName);
+
+        var findOpen = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
         Punishment findMe = findOpen.get(0);
         findMe.setStatus("COMPLETED");
@@ -504,7 +545,10 @@ public class PunishmentService {
         LocalDateTime now = LocalDateTime.now();
         String subject = "Burke High School Open Referrals";
 
-        List<Punishment> open = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
+        List<Punishment> fetchPunishmentData = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
+        var open = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
         List<String> names = new ArrayList<>();
 
@@ -521,7 +565,11 @@ public class PunishmentService {
 
     public List<Punishment> getAllOpenForADay() {
         String subject = "Burke High School Open Referrals";
-        List<Punishment> open = punishRepository.findByStatus("OPEN");
+        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
+        var open = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
+
         List<Punishment> names = new ArrayList<>();
         System.out.println(LocalDateTime.now());
         for(Punishment punishment: open) {
@@ -549,7 +597,11 @@ public class PunishmentService {
             Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
             String subject = "Burke High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
             String intro = "Punishment report for: " + student.getFirstName() + " " + student.getLastName();
-            List<Punishment> studentPunishments = punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
+            List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
+        var studentPunishments = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
+
             for(Punishment punishment : studentPunishments) {
                 String punishmentMessage = punishment.getTimeCreated() + " " + punishment.getInfraction().getInfractionName()
                         + " " + punishment.getInfraction().getInfractionDescription() + "\n";
@@ -591,7 +643,10 @@ public class PunishmentService {
 
     @Scheduled(cron = "0 00 11 * * MON-FRI")
     public void getAllOpenAssignmentsBeforeNow() {
-        List<Punishment> open = punishRepository.findByStatus("OPEN");
+        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
+        var open = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
         List<String> names = new ArrayList<>();
 
@@ -638,14 +693,14 @@ public class PunishmentService {
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if(punishment.getClosedTimes() == 4) {
-            List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(
-                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED"
+            List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED",false
             );
-            List<Punishment> referrals = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(
-                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "REFERRAL"
+            List<Punishment> referrals = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "REFERRAL",false
             );
-            List<Punishment> cfr = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(
-                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CFR"
+            List<Punishment> cfr = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+                    punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CFR",false
             );
             System.out.println(referrals);
             System.out.println(cfr);
@@ -900,7 +955,10 @@ public class PunishmentService {
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
-        List<Punishment> likeWise = punishRepostory.findByInfractionInfractionName(punishment.getInfraction().getInfractionName());
+        List<Punishment> fetchPunishmentData = punishRepostory.findByInfractionInfractionName(punishment.getInfraction().getInfractionName());
+        var likeWise = fetchPunishmentData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
         List<String> message = new ArrayList<>();
         for(Punishment punishments : likeWise) {
             message.add("First infraction took place on" + punishments.getTimeCreated().toLocalDate() + " " + punishments.getTimeCreated().toLocalTime() + " the description of the event is as follows: " + punishments.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + punishments.getTimeClosed().toLocalDate() + " " + punishments.getTimeClosed().toLocalTime() + ". ");

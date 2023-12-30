@@ -64,7 +64,6 @@ public class PunishController {
     @PostMapping("/ftc-close")
     public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
         var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
-
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -73,7 +72,6 @@ public class PunishController {
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
         var message = punishmentService.findAll();
-
         return ResponseEntity
                 .accepted()
                 .body(message);
