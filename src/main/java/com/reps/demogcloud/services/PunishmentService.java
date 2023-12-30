@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -38,14 +39,17 @@ public class PunishmentService {
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
     public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionName) throws ResourceNotFoundException {
-        var findMe = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
+        var fetchData = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
+        var punishmentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
-        if (findMe.isEmpty()) {
+        if (punishmentRecord.isEmpty()) {
             throw new ResourceNotFoundException("That student does not exist");
         }
-        logger.debug(String.valueOf(findMe));
-        System.out.println(findMe);
-        return findMe;
+        logger.debug(String.valueOf(punishmentRecord));
+        System.out.println(punishmentRecord);
+        return punishmentRecord;
 
 
     }
@@ -61,7 +65,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-        return punishRepository.findAll();
+       return punishRepository.findByIsArchived(false);
     }
 
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
