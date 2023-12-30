@@ -30,7 +30,8 @@ public class Punishment {
     private LocalDateTime timeClosed;
     private String classPeriod;
     private String teacherEmail;
-    private boolean isArchived;
+    //Set initial value to true
+    private boolean isArchived = false;
     private String archivedBy;
     private LocalDateTime archivedOn;
 }
