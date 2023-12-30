@@ -984,7 +984,7 @@ public class PunishmentService {
         }
 
 
-    public Punishment archiveRecord(String punishmentId, String userId) {
+    public Punishment archiveRecord(String punishmentId, String userId, String explanation) {
         //Check for existing record
         Punishment existingRecord = findByPunishmentId(punishmentId);
         //Updated Record
@@ -992,6 +992,7 @@ public class PunishmentService {
         LocalDateTime createdOn = LocalDateTime.now();
         existingRecord.setArchivedOn(createdOn);
         existingRecord.setArchivedBy(userId);
+        existingRecord.setArchivedExplanation(explanation);
         return punishRepository.save(existingRecord);
 
 
@@ -1004,6 +1005,7 @@ public class PunishmentService {
         existingRecord.setArchived(false);
         existingRecord.setArchivedOn(null);
         existingRecord.setArchivedBy(null);
+        existingRecord.setArchivedExplanation(null);
         return punishRepository.save(existingRecord);
 
 

@@ -187,8 +187,8 @@ public class PunishController {
     }
 
     @PutMapping("/archived/{userId}/{punishmentId}")
-    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId ) {
-        Punishment response = punishmentService.archiveRecord(punishmentId,userId);
+    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explaination ) {
+        Punishment response = punishmentService.archiveRecord(punishmentId,userId,explaination);
         return ResponseEntity
                 .accepted()
                 .body(response);
