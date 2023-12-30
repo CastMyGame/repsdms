@@ -195,7 +195,7 @@ public class PunishController {
     }
 
     @PutMapping("/archived/restore/{punishmentId}")
-    public ResponseEntity<Punishment> restoreArchivedDeleted(@PathVariable String punishmentId, @PathVariable String userId ) {
+    public ResponseEntity<Punishment> restoreArchivedDeleted(@PathVariable String punishmentId) {
         Punishment response = punishmentService.restoreRecord(punishmentId);
         return ResponseEntity
                 .accepted()

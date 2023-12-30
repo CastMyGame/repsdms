@@ -999,7 +999,7 @@ public class PunishmentService {
 
     public Punishment restoreRecord(String punishmentId) {
         //Check for existing record
-        Punishment existingRecord = findByPunishmentId(punishmentId);
+        Punishment existingRecord = punishRepository.findByPunishmentIdAndIsArchived(punishmentId,true);
         //Updated Record
         existingRecord.setArchived(false);
         existingRecord.setArchivedOn(null);
