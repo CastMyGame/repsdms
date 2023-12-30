@@ -996,4 +996,16 @@ public class PunishmentService {
 
 
     }
+
+    public Punishment restoreRecord(String punishmentId) {
+        //Check for existing record
+        Punishment existingRecord = findByPunishmentId(punishmentId);
+        //Updated Record
+        existingRecord.setArchived(false);
+        existingRecord.setArchivedOn(null);
+        existingRecord.setArchivedBy(null);
+        return punishRepository.save(existingRecord);
+
+
+    }
 }
