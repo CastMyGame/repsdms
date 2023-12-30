@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -176,5 +177,22 @@ public class PunishController {
         return ResponseEntity
                 .accepted()
                 .body(message);
+    }
+
+
+    @GetMapping("/archived")
+    public ResponseEntity<List<Punishment>> getAllArchived() {
+        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PutMapping("/archived/{userId}/{punishmentId}")
+    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId ) {
+        Punishment response = punishmentService.archiveRecord(punishmentId,userId);
+        return ResponseEntity
+                .accepted()
+                .body(response);
     }
 }

@@ -94,6 +94,17 @@ public class PunishmentService {
         return findMe;
     }
 
+    public Punishment findByPunishmentId(String punishmentId) throws ResourceNotFoundException {
+        var findMe = punishRepository.findByPunishmentId(punishmentId);
+
+        if (findMe == null) {
+            throw new ResourceNotFoundException("No punishments with that ID exist");
+        }
+        logger.debug(String.valueOf(findMe));
+        return findMe;
+    }
+
+
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
     public PunishmentResponse createNewPunish(PunishmentRequest punishmentRequest) {
@@ -900,5 +911,27 @@ public class PunishmentService {
         //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
         //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
         return punishmentResponse;
+    }
+
+        public List<Punishment> findAllPunishmentIsArchived(boolean bool) throws ResourceNotFoundException {
+            List<Punishment> archivedRecords = punishRepository.findByIsArchived(bool);
+            if (archivedRecords.isEmpty()) {
+                throw new ResourceNotFoundException("No Archived Records exist in punihsment table");
+            }
+            return archivedRecords;
+        }
+
+
+    public Punishment archiveRecord(String punishmentId, String userId) {
+        //Check for existing record
+        Punishment existingRecord = findByPunishmentId(punishmentId);
+        //Updated Record
+        existingRecord.setArchived(true);
+        LocalDateTime createdOn = LocalDateTime.now();
+        existingRecord.setArchivedOn(createdOn);
+        existingRecord.setArchivedBy(userId);
+        return punishRepository.save(existingRecord);
+
+
     }
 }
