@@ -22,8 +22,10 @@ public class Employee {
     private String email;
     private String address;
     private RoleModel role;
-    private boolean isArchived;
+    //Set initial value to true
+    private boolean isArchived = false;
     private String archivedBy;
+    private String archivedExplanation;
     private LocalDateTime archivedOn;
 
 }

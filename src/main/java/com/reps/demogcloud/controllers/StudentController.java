@@ -31,7 +31,7 @@ public class StudentController {
 
     @GetMapping("/studentid/{studentId}")
     public ResponseEntity<Student> getStudentByIdNumber(@PathVariable String studentId) throws Exception {
-        var message = studentService.requestStudentIdNumber(studentId);
+        var message = studentService.findByStudentId(studentId);
 
         return ResponseEntity
                 .accepted()
@@ -40,7 +40,7 @@ public class StudentController {
 
     @GetMapping("/lastname/{lastName}")
     public ResponseEntity<List<Student>> getStudentByLastName (@PathVariable String lastName) throws Exception {
-        var message = studentService.requestStudentLastName(lastName);
+        var message = studentService.findByStudentLastName(lastName);
 
         return ResponseEntity
                 .accepted()
@@ -49,7 +49,7 @@ public class StudentController {
 
     @GetMapping("/email/{email}")
     public ResponseEntity<Student> getStudentByEmail (@PathVariable  String email) throws Exception {
-        var message = studentService.requestStudentEmail(email);
+        var message = studentService.findByStudentEmail(email);
 
         return ResponseEntity
                 .accepted()
@@ -58,7 +58,7 @@ public class StudentController {
 
     @GetMapping("/parentEmail/{parentEmail}")
     public ResponseEntity<List<Student>> getStudentByParentEmail (@PathVariable  String parentEmail) throws Exception {
-        var message = studentService.requestStudentByParentEmail(parentEmail);
+        var message = studentService.findStudentByParentEmail(parentEmail);
 
         return ResponseEntity
                 .accepted()
@@ -106,5 +106,21 @@ public class StudentController {
         return ResponseEntity
                 .accepted()
                 .body(students);
+    }
+
+    @GetMapping("/archived")
+    public ResponseEntity<List<Student>> getAllArchived() {
+        List<Student> message = studentService.findAllStudentIsArchived(true);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PutMapping("/archived/{studentId}")
+    public ResponseEntity<Student> archivedDeleted(@PathVariable String studentId) {
+        Student response = studentService.archiveRecord(studentId);
+        return ResponseEntity
+                .accepted()
+                .body(response);
     }
 }
