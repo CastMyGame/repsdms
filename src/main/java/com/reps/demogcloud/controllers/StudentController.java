@@ -123,4 +123,14 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
+    // Points Controllers
+
+    @PostMapping("/points/{studentId}/{points}")
+    public ResponseEntity<Student> addPoints (@PathVariable String studentId, @PathVariable Integer points) {
+        Student response = studentService.addPoints(studentId, points);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 }

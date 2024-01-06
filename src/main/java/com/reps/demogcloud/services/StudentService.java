@@ -136,7 +136,12 @@ public class StudentService {
         existingRecord.setArchivedOn(createdOn);
         existingRecord.setArchivedBy(studentId);
         return studentRepository.save(existingRecord);
+    }
 
+    public Student addPoints(String studentEmail, Integer points) {
+        Student goodStudent = studentRepository.findByStudentIdNumber(studentEmail);
+        goodStudent.setPoints(goodStudent.getPoints() + points);
 
+        return goodStudent;
     }
 }

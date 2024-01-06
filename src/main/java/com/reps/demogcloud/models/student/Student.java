@@ -32,5 +32,6 @@ public class Student {
     private String archivedBy;
     private String archivedExplanation;
     private LocalDateTime archivedOn;
+    private Integer points;
 
 }
