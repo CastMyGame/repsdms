@@ -126,9 +126,29 @@ public class StudentController {
 
     // Points Controllers
 
-    @PostMapping("/points/{studentId}/{points}")
-    public ResponseEntity<Student> addPoints (@PathVariable String studentId, @PathVariable Integer points) {
-        Student response = studentService.addPoints(studentId, points);
+    @PostMapping("/points/add")
+    public ResponseEntity<Student> addPoints (@RequestParam String studentEmail, @RequestParam Integer points) {
+        Student response = studentService.addPoints(studentEmail, points);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PostMapping("/points/delete")
+    public ResponseEntity<Student> deletePoints (@RequestParam String studentEmail,@RequestParam Integer points) {
+        Student response = studentService.deletePoints(studentEmail, points);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PostMapping("/points/transfer")
+    public ResponseEntity<List<Student>> transferPoints (@RequestParam String givingStudentEmail,
+    @RequestParam String receivingStudentEmail,
+    @RequestParam Integer pointsTransferred) {
+        List<Student> response = studentService.transferPoints(givingStudentEmail,
+                receivingStudentEmail,
+                pointsTransferred);
         return ResponseEntity
                 .accepted()
                 .body(response);

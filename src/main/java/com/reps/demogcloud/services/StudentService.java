@@ -138,10 +138,41 @@ public class StudentService {
         return studentRepository.save(existingRecord);
     }
 
-    public Student addPoints(String studentEmail, Integer points) {
-        Student goodStudent = studentRepository.findByStudentIdNumber(studentEmail);
+    // POINTS SERVICES
+    public Student addPoints(String studentEmail, Integer points) throws ResourceNotFoundException{
+        Student goodStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if (goodStudent == null){
+            throw new ResourceNotFoundException("Student can not be found");
+        }
         goodStudent.setPoints(goodStudent.getPoints() + points);
+        studentRepository.save(goodStudent);
 
         return goodStudent;
+    }
+
+    public Student deletePoints(String studentEmail, Integer points) throws ResourceNotFoundException {
+        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if(badStudent.getPoints() < points) {
+            throw new ResourceNotFoundException("You do not have enough points to redeem this");
+        }
+        badStudent.setPoints(badStudent.getPoints() - points);
+        studentRepository.save(badStudent);
+        return badStudent;
+    }
+
+    public List<Student> transferPoints(String givingStudentEmail, String receivingStudentEmail, Integer pointsGiven) throws ResourceNotFoundException {
+        Student givingStudent = studentRepository.findByStudentEmailIgnoreCase(givingStudentEmail);
+        Student receivingStudent = studentRepository.findByStudentEmailIgnoreCase(receivingStudentEmail);
+        if(givingStudent.getPoints() < pointsGiven) {
+            throw new ResourceNotFoundException("You do not have enough points to give");
+        }
+        List<Student> transferReceipt = new ArrayList<>();
+        givingStudent.setPoints(givingStudent.getPoints() - pointsGiven);
+        studentRepository.save(givingStudent);
+        receivingStudent.setPoints(receivingStudent.getPoints() + pointsGiven);
+        studentRepository.save(receivingStudent);
+        transferReceipt.add(givingStudent);
+        transferReceipt.add(receivingStudent);
+        return transferReceipt;
     }
 }
