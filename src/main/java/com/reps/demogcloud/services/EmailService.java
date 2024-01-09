@@ -22,4 +22,18 @@ public class EmailService {
         mailMessage.setFrom("REPS.DMS@gmail.com");
         javaMailSender.send(mailMessage);
     }
+    @Async
+    public void sendPtsEmail (String parentEmail,
+                              String teacherEmail,
+                              String studentEmail,
+                              String subject,
+                              String message) {
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(parentEmail);
+        mailMessage.setCc(teacherEmail, studentEmail);
+        mailMessage.setSubject(subject);
+        mailMessage.setText(message);
+        mailMessage.setFrom("REPS.DMS@gmail.com");
+        javaMailSender.send(mailMessage);
+    }
 }
