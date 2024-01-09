@@ -1,6 +1,7 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -9,8 +10,8 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -31,40 +32,43 @@ public class StudentService {
         this.emailService = emailService;
     }
 
-    public Student requestStudentIdNumber(String studentId) throws Exception {
+    public Student findByStudentIdNumber(String studentId) throws ResourceNotFoundException {
         var findMe = studentRepository.findByStudentIdNumber(studentId);
 
         if (findMe == null) {
-            throw new Exception("No student with that Id exists");
+            throw new ResourceNotFoundException("No student with that Id exists");
         }
         logger.debug(String.valueOf(findMe));
         return findMe;
     }
 
-    public List<Student> requestStudentByParentEmail(String parentEmail) throws Exception {
-        List<Student> findMe = studentRepository.findByParentEmail(parentEmail);
-        List<String> names = new ArrayList<>();
-        for (Student student : findMe) {
-            names.add(student.getFirstName() + " " + student.getLastName() + " \n");
-        }
-//        System.out.println(secretClient.getSecret("TWILIO-ACCOUNT-SID"));  Not working because it isn't even accessing it
-        if (findMe.isEmpty()) {
-            throw new Exception("No student with that Last Name exists");
-        }
-        emailService.sendEmail("jiverson@saga.org", "Students who need parent email", names.toString());
-        return findMe;
-    }
-    public List<Student> requestStudentLastName(String lastName) throws Exception {
-        var findMe = studentRepository.findByLastName(lastName);
-//        System.out.println(secretClient.getSecret("TWILIO-ACCOUNT-SID"));  Not working because it isn't even accessing it
-        if (findMe.isEmpty()) {
-            throw new Exception("No student with that Last Name exists");
-        }
+    public List<Student> findStudentByParentEmail(String parentEmail) throws Exception {
+        List<Student> fetchData = studentRepository.findByParentEmail(parentEmail);
+        List<Student> studentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList();  // Collect the filtered punishments into a list
 
-        return findMe;
+        if (studentRecord.isEmpty()) {
+            throw new ResourceNotFoundException("That student does not exist");
+        }
+        logger.debug(String.valueOf(studentRecord));
+        System.out.println(studentRecord);
+        return studentRecord;
+    }
+    public List<Student> findByStudentLastName(String lastName) throws Exception {
+        List<Student> fetchData = studentRepository.findByLastName(lastName);
+        List<Student> studentRecord = fetchData.stream()
+                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .toList(); // Collect the filtered punishments into a list
+        if (studentRecord.isEmpty()) {
+            throw new ResourceNotFoundException("That student does not exist");
+        }
+        logger.debug(String.valueOf(studentRecord));
+        System.out.println(studentRecord);
+        return studentRecord;
     }
 
-    public Student requestStudentEmail(String email) throws Exception {
+    public Student findByStudentEmail(String email) throws Exception {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
@@ -97,10 +101,78 @@ public class StudentService {
     }
 
     public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+        return studentRepository.findByIsArchived(false);
     }
 
     private Student ensureStudentExists(Student student) {
         return null;
+    }
+
+    public Student findByStudentId(String studentId) throws ResourceNotFoundException {
+        var findMe = studentRepository.findByStudentIdNumber(studentId);
+
+        if (findMe == null) {
+            throw new ResourceNotFoundException("No students with that ID exist");
+        }
+        logger.debug(String.valueOf(findMe));
+        return findMe;
+    }
+
+    public List<Student> findAllStudentIsArchived(boolean bool) throws ResourceNotFoundException {
+        List<Student> archivedRecords = studentRepository.findByIsArchived(bool);
+        if (archivedRecords.isEmpty()) {
+            throw new ResourceNotFoundException("No Archived Records exist in students table");
+        }
+        return archivedRecords;
+    }
+
+
+    public Student archiveRecord(String studentId) {
+        //Check for existing record
+        Student existingRecord = findByStudentId(studentId);
+        //Updated Record
+        existingRecord.setArchived(true);
+        LocalDateTime createdOn = LocalDateTime.now();
+        existingRecord.setArchivedOn(createdOn);
+        existingRecord.setArchivedBy(studentId);
+        return studentRepository.save(existingRecord);
+    }
+
+    // POINTS SERVICES
+    public Student addPoints(String studentEmail, Integer points) throws ResourceNotFoundException{
+        Student goodStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if (goodStudent == null){
+            throw new ResourceNotFoundException("Student can not be found");
+        }
+        goodStudent.setPoints(goodStudent.getPoints() + points);
+        studentRepository.save(goodStudent);
+
+        return goodStudent;
+    }
+
+    public Student deletePoints(String studentEmail, Integer points) throws ResourceNotFoundException {
+        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if(badStudent.getPoints() < points) {
+            throw new ResourceNotFoundException("You do not have enough points to redeem this");
+        }
+        badStudent.setPoints(badStudent.getPoints() - points);
+        studentRepository.save(badStudent);
+        return badStudent;
+    }
+
+    public List<Student> transferPoints(String givingStudentEmail, String receivingStudentEmail, Integer pointsGiven) throws ResourceNotFoundException {
+        Student givingStudent = studentRepository.findByStudentEmailIgnoreCase(givingStudentEmail);
+        Student receivingStudent = studentRepository.findByStudentEmailIgnoreCase(receivingStudentEmail);
+        if(givingStudent.getPoints() < pointsGiven) {
+            throw new ResourceNotFoundException("You do not have enough points to give");
+        }
+        List<Student> transferReceipt = new ArrayList<>();
+        givingStudent.setPoints(givingStudent.getPoints() - pointsGiven);
+        studentRepository.save(givingStudent);
+        receivingStudent.setPoints(receivingStudent.getPoints() + pointsGiven);
+        studentRepository.save(receivingStudent);
+        transferReceipt.add(givingStudent);
+        transferReceipt.add(receivingStudent);
+        return transferReceipt;
     }
 }

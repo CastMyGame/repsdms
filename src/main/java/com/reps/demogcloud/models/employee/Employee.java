@@ -1,5 +1,6 @@
-package com.reps.demogcloud.models.student;
+package com.reps.demogcloud.models.employee;
 
+import com.reps.demogcloud.security.models.RoleModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -8,30 +9,23 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Document(collection = "students")
-public class Student {
+@Document(collection = "employee")
+public class Employee {
     @Id
-    private String studentIdNumber;
+    private String employeeId;
     private String firstName;
     private String lastName;
-    private String parentEmail;
-    private String studentEmail;
-    private String guidanceEmail;
-    private String adminEmail;
+    private String email;
     private String address;
-    private String grade;
-    private String parentPhoneNumber;
-    private String studentPhoneNumber;
+    private RoleModel role;
     //Set initial value to true
     private boolean isArchived = false;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDateTime archivedOn;
-    private Integer points;
 
 }

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +64,6 @@ public class PunishController {
     @PostMapping("/ftc-close")
     public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
         var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
-
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -72,7 +72,6 @@ public class PunishController {
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
         var message = punishmentService.findAll();
-
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -176,5 +175,30 @@ public class PunishController {
         return ResponseEntity
                 .accepted()
                 .body(message);
+    }
+
+
+    @GetMapping("/archived")
+    public ResponseEntity<List<Punishment>> getAllArchived() {
+        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PutMapping("/archived/{userId}/{punishmentId}")
+    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explaination ) {
+        Punishment response = punishmentService.archiveRecord(punishmentId,userId,explaination);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/archived/restore/{punishmentId}")
+    public ResponseEntity<Punishment> restoreArchivedDeleted(@PathVariable String punishmentId) {
+        Punishment response = punishmentService.restoreRecord(punishmentId);
+        return ResponseEntity
+                .accepted()
+                .body(response);
     }
 }
