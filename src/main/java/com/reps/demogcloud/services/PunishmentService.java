@@ -264,7 +264,10 @@ public class PunishmentService {
         if(!studentAnswers.isEmpty()) {
             System.out.println(studentAnswers + " Not Null");
             ArrayList<String> answers = findMe.getInfraction().getInfractionDescription();
-            answers.add(studentAnswers.toString());
+            for (StudentAnswer answer:studentAnswers
+                 ) {
+                answers.add(studentAnswers.toString());
+            }
             Infraction answer = findMe.getInfraction();
             answer.setInfractionDescription(answers);
             findMe.setInfraction(answer);
