@@ -16,5 +16,6 @@ public class LevelThreeCloseRequest {
     private String studentEmail;
     private String infractionLevel;
     private LocalDateTime timeClosed;
-    private ArrayList<String> studentAnswer;
+    private List<StudentAnswer> studentAnswer;
 }
+
