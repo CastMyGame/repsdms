@@ -266,7 +266,7 @@ public class PunishmentService {
             ArrayList<String> answers = findMe.getInfraction().getInfractionDescription();
             for (StudentAnswer answer:studentAnswers
                  ) {
-                answers.add(studentAnswers.toString());
+                answers.add(answer.toString());
             }
             Infraction answer = findMe.getInfraction();
             answer.setInfractionDescription(answers);
