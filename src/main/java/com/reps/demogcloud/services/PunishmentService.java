@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -249,7 +248,7 @@ public class PunishmentService {
     }
 
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
-    public PunishmentResponse closePunishment(String infractionName, String studentEmail, ArrayList<String> studentAnswers) throws ResourceNotFoundException {
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
@@ -265,7 +264,10 @@ public class PunishmentService {
         if(!studentAnswers.isEmpty()) {
             System.out.println(studentAnswers + " Not Null");
             ArrayList<String> answers = findMe.getInfraction().getInfractionDescription();
-            answers.add(studentAnswers.toString());
+            for (StudentAnswer answer:studentAnswers
+                 ) {
+                answers.add(answer.toString());
+            }
             Infraction answer = findMe.getInfraction();
             answer.setInfractionDescription(answers);
             findMe.setInfraction(answer);
