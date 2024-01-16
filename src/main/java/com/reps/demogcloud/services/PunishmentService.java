@@ -271,6 +271,8 @@ public class PunishmentService {
             Infraction answer = findMe.getInfraction();
             answer.setInfractionDescription(answers);
             findMe.setInfraction(answer);
+            findMe.setStatus("PENDING");
+
             punishRepository.save(findMe);
 
             PunishmentResponse response = new PunishmentResponse();
