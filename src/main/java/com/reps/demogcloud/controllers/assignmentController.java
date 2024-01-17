@@ -43,6 +43,17 @@ public class assignmentController {
     }
 
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Assignment> updateAssignment(@RequestBody Assignment assignment,@PathVariable String id) throws Exception {
+        System.out.println(assignment);
+        var message = assignmentService.updateNewAssignment(assignment,id);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
+
     @DeleteMapping("/delete/{assignmentName}")
     public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
         var message = assignmentService.deleteAssignment(assignmentName);
