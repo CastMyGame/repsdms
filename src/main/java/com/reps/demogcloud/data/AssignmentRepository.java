@@ -8,5 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AssignmentRepository extends MongoRepository<Assignment, String> {
 
-    Assignment deleteByAssignmentName(String assignmentName);
+
+    Assignment deleteByInfractionName(String assignmentName);
 }
