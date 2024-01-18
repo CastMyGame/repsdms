@@ -9,6 +9,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,8 +22,7 @@ public class Employee {
     private String firstName;
     private String lastName;
     private String email;
-    private String address;
-    private RoleModel role;
+    private Set<RoleModel> roles;
     //Set initial value to true
     private boolean isArchived = false;
     private String archivedBy;
