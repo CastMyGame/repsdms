@@ -187,6 +187,9 @@ public class PunishmentService {
             punishment.setInfraction(findInf);
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
+        List<Punishment> pendingPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
+                punishment.getInfraction().getInfractionName(), "PENDING");
+        fetchPunishmentData.addAll(pendingPunishmentData);
         var findOpen = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
