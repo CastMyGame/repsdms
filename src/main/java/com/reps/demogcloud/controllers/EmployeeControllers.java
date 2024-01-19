@@ -72,7 +72,7 @@ public class EmployeeControllers {
     }
 
 
-    @DeleteMapping("/employee/{id}")
+    @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
         try {
             String employeeToDelete = employeeService.deleteEmployee(id);
@@ -87,7 +87,7 @@ public class EmployeeControllers {
 
 
 
-    @GetMapping("/employee/{role}")
+    @GetMapping("/employees/{role}")
     private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
         Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
 
