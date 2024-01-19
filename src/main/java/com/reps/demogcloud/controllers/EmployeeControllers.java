@@ -93,7 +93,13 @@ public class EmployeeControllers {
 
         if (employeesOptional.isPresent()) {
             List<Employee> employees = employeesOptional.get();
-            return ResponseEntity.ok(employees);
+            if(employees.isEmpty()){
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
+
+            }else{
+                return ResponseEntity.ok(employees);
+
+            }
         } else {
             // If no employees with the specified role are found, return a 404 Not Found response
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
