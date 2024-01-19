@@ -1,10 +1,9 @@
-package com.reps.demogcloud.security.controllers;
+package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.security.models.RoleModel;
-import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.models.UserRepository;
-import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.services.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
                 "http://localhost:3000"
         }
 )
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/employees/v1")
@@ -37,7 +35,7 @@ public class EmployeeControllers {
 
     @GetMapping("/employees")
     private ResponseEntity<List<Employee>> getAllUsers(){
-        List<UserModel> employees =  employeeRepository.findAll();
+        List<Employee> employees =  employeeRepository.findAll();
         return ResponseEntity.ok(employees);
     }
 
@@ -45,7 +43,7 @@ public class EmployeeControllers {
 
     @PutMapping("/employees/{id}/roles")
     private ResponseEntity<Employee> updateEmployeesRole(@PathVariable String id, @RequestBody Set<RoleModel> roles) {
-        Optional<UserModel> optionalEmployee = employeeRepository.findById(id);
+        Optional<Employee> optionalEmployee = employeeRepository.findById(id);
 
         if (optionalEmployee.isPresent()) {
             Employee employee = optionalEmployee.get();
