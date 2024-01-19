@@ -56,13 +56,20 @@ public class EmployeeService {
     }
 
     public EmployeeResponse createNewEmployee (Employee request ) {
-        System.out.println("service " +request);
+        //Check it email exist in system
+        Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
+        if(doesEmployeeExist == null){
+            try {
+                return new EmployeeResponse("", employeeRepository.save(request));
+            } catch (IllegalArgumentException e) {
+                logger.error(e.getMessage());
+                return new EmployeeResponse(e.getMessage(), null);
+            }
 
-        try {
-            return new EmployeeResponse("", employeeRepository.save(request));
-        } catch (IllegalArgumentException e) {
-            logger.error(e.getMessage());
-            return new EmployeeResponse(e.getMessage(), null);
+        }
+        else{
+            return new EmployeeResponse("Error: Email Already Registered In System", null);
+
         }
     }
 
