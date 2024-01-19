@@ -2,18 +2,17 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.models.employee.EmployeeResponse;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.services.EmployeeService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @CrossOrigin(
         origins = {
@@ -21,16 +20,17 @@ import java.util.stream.Collectors;
         }
 )
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/employees/v1")
 public class EmployeeControllers {
 
+    private final EmployeeService employeeService;
 
+    private final EmployeeRepository employeeRepository;
 
-    @Autowired
-    EmployeeService employeeService;
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    public EmployeeControllers(EmployeeService employeeService, EmployeeRepository employeeRepository) {
+        this.employeeService = employeeService;
+        this.employeeRepository = employeeRepository;
+    }
 
 
     @GetMapping("/employees")
@@ -38,6 +38,15 @@ public class EmployeeControllers {
         List<Employee> employees =  employeeRepository.findAll();
         return ResponseEntity.ok(employees);
     }
+
+    @PostMapping("/employees")
+    private ResponseEntity<EmployeeResponse> createEmployee(@RequestBody Employee employee){
+        System.out.println("controller " +employee);
+
+        EmployeeResponse employees =  employeeService.createNewEmployee(employee);
+        return ResponseEntity.ok(employees);
+    }
+
 
 
 
@@ -65,37 +74,34 @@ public class EmployeeControllers {
 
     @DeleteMapping("/employee/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
+        try {
+            String employeeToDelete = employeeService.deleteEmployee(id);
 
-        // Check if user exists
-        Optional<Employee> optionalEmployee = employeeRepository.findById(id);
-
-        if (optionalEmployee.isPresent()) {
-            // If user exists, delete the user
-            employeeRepository.deleteById(id);
-
-            // Return confirmation message
-            return ResponseEntity.ok("User with ID " + id + " has been deleted.");
-        } else {
-            // If user not found, return a 404 Not Found response
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User with ID " + id + " not found.");
+            // If the service method executed successfully, return a 200 OK response
+            return ResponseEntity.ok("Employee with ID " + id + " has been deleted.");
+        } catch (Exception e) {
+            // If an exception occurred, handle it and return a 404 Not Found response
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Employee with ID " + id + " not found.");
         }
     }
 
 
+
     @GetMapping("/employee/{role}")
     private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
-        List<Employee> employees = employeeRepository.findAll().stream()
-                .filter(employee -> {
-                    Set<RoleModel> userRoles = employee.getRoles();
-                    if (userRoles != null) {
-                        return userRoles.stream().anyMatch(roleModel -> roleModel.getRole().equals(role));
-                    }
-                    return false; // Return false if userRoles is null
-                })
-                .collect(Collectors.toList());
+        Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
 
-        return ResponseEntity.ok(employees);
+        if (employeesOptional.isPresent()) {
+            List<Employee> employees = employeesOptional.get();
+            return ResponseEntity.ok(employees);
+        } else {
+            // If no employees with the specified role are found, return a 404 Not Found response
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
+        }
     }
+
+
+
 
 
 

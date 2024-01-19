@@ -13,5 +13,4 @@ import lombok.Setter;
 public class EmployeeRequest {
 
     private Employee employee;
-    private String error;
 }
