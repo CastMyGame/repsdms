@@ -698,9 +698,9 @@ public class PunishmentService {
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-                    punishmentResponse.getSubject(),
                     punishmentResponse.getTeacherToEmail(),
                     punishmentResponse.getStudentToEmail(),
+                    punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
         if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
