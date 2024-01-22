@@ -873,4 +873,8 @@ public class PunishmentService {
 
 
     }
+
+    public List<Punishment> getAllPunishmentByStudentEmail(String studentEmail) {
+        return punishRepository.getAllPunishmentByStudentStudentEmail(studentEmail);
+    }
 }
