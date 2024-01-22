@@ -177,6 +177,15 @@ public class PunishController {
                 .body(message);
     }
 
+    @GetMapping("/student/punishments/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getAllPunishmentByStudentEmail(@PathVariable String studentEmail) {
+        List<Punishment> message = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
 
     @GetMapping("/archived")
     public ResponseEntity<List<Punishment>> getAllArchived() {
