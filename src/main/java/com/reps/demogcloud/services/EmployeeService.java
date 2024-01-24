@@ -54,17 +54,18 @@ public class EmployeeService {
         return employeeRecord;
     }
 
-    public EmployeeResponse createNewEmployee (Employee request ) {
+    public EmployeeResponse createNewEmployee (Employee request) {
         //Check it email exist in system
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
+        AuthenticationRequest authenticationRequest = new AuthenticationRequest();
+        authenticationRequest.setUsername(request.getEmail());
+        authenticationRequest.setPassword("123abc");
+        authenticationRequest.setFirstName(request.getFirstName());
+        authenticationRequest.setLastName(request.getLastName());
+        authenticationRequest.setSchoolName(request.getSchool());
+        authenticationRequest.setRoles(request.getRoles());
         if(doesEmployeeExist == null){
             try {
-                AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-                authenticationRequest.setUsername(request.getEmail());
-                authenticationRequest.setPassword("abc123");
-                authenticationRequest.setFirstName(request.getFirstName());
-                authenticationRequest.setLastName(request.getLastName());
-                authenticationRequest.setSchoolName(request.getSchool());
                 authService.createEmployeeUser(authenticationRequest);
                 return new EmployeeResponse("", employeeRepository.save(request));
             } catch (IllegalArgumentException e) {
