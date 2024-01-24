@@ -214,7 +214,7 @@ public class PunishmentService {
             return sendEmailBasedOnType(punishment, punishRepository, emailService);
         }
         if(punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
-            punishment.setStatus("CFR");
+            punishment.setStatus("PENDING");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
 
@@ -391,6 +391,7 @@ public class PunishmentService {
         Punishment findMe = punishRepository.findByPunishmentId(punishmentId);
 
         findMe.setStatus("CLOSED");
+        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
         findMe.setTimeClosed(LocalDateTime.now());
         punishRepository.save(findMe);
         if (findMe != null) {

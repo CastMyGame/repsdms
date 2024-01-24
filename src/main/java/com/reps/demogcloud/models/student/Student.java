@@ -33,5 +33,6 @@ public class Student {
     private String archivedExplanation;
     private LocalDateTime archivedOn;
     private Integer points;
+    private String school;
 
 }

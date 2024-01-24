@@ -2,10 +2,9 @@ package com.reps.demogcloud.security.controllers;
 
 
 import com.fasterxml.jackson.databind.annotation.JsonAppend;
-import com.reps.demogcloud.security.models.AuthenticationRequest;
-import com.reps.demogcloud.security.models.AuthenticationResponse;
-import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.models.UserRepository;
+import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.models.*;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +14,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @CrossOrigin(
         origins = {
@@ -34,6 +38,8 @@ public class AuthControllers {
     UserService userService;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private StudentRepository studentRepository;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -90,9 +96,14 @@ public class AuthControllers {
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
 
-
+        System.out.println(generatedToken);
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/users/create/{school}")
+    private ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school){
+        List<UserModel> createdUsers = userService.createUsersForSchool(school);
+        return ResponseEntity.ok(createdUsers);
+    }
 
 }

@@ -1,5 +1,8 @@
 package com.reps.demogcloud.security.services;
 
+import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.models.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -21,6 +27,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -50,5 +59,28 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username); // Assuming UserRepository has a method like findByUsername
     }
 
+    public List<UserModel> createUsersForSchool(String school) {
+        List<Student> schoolUsers = studentRepository.findBySchool(school);
+        Set<RoleModel> studentRoles = new HashSet<>();
+        RoleModel studentRole = new RoleModel();
+        studentRole.setRole("STUDENT");
+        studentRoles.add(studentRole);
 
+        List<UserModel> createdUsers = new ArrayList<>();
+        for (Student student : schoolUsers) {
+            UserModel userExists = userRepository.findByUsername(student.getStudentEmail());
+            if (userExists.getUsername().isEmpty()) {
+                UserModel newUser = new UserModel();
+                newUser.setUsername(student.getStudentEmail());
+                newUser.setPassword("123abc");
+                newUser.setSchoolName(school);
+                newUser.setRoles(studentRoles);
+
+                userRepository.save(newUser);
+                createdUsers.add(newUser);
+            }
+        }
+        return createdUsers;
+
+    }
 }

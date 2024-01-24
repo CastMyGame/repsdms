@@ -5,6 +5,9 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.security.models.AuthenticationRequest;
+import com.reps.demogcloud.security.models.RoleModel;
+import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -27,9 +30,12 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final EmailService emailService;
 
-    public StudentService(StudentRepository studentRepository, EmailService emailService) {
+    private final AuthService authService;
+
+    public StudentService(StudentRepository studentRepository, EmailService emailService, AuthService authService) {
         this.studentRepository = studentRepository;
         this.emailService = emailService;
+        this.authService = authService;
     }
 
     public Student findByStudentIdNumber(String studentId) throws ResourceNotFoundException {
@@ -79,7 +85,19 @@ public class StudentService {
     }
 
     public StudentResponse createNewStudent (Student studentRequest ) {
+        Set<RoleModel> roles = new HashSet<>();
+        RoleModel student = new RoleModel();
+        student.setRole("STUDENT");
+        roles.add(student);
+        AuthenticationRequest authenticationRequest = new AuthenticationRequest();
+        authenticationRequest.setUsername(studentRequest.getStudentEmail());
+        authenticationRequest.setPassword("123abc");
+        authenticationRequest.setFirstName(studentRequest.getFirstName());
+        authenticationRequest.setLastName(studentRequest.getLastName());
+        authenticationRequest.setSchoolName(studentRequest.getSchool());
+        authenticationRequest.setRoles(roles);
         try {
+            authService.createEmployeeUser(authenticationRequest);
             return new StudentResponse("", studentRepository.save(studentRequest));
         } catch (IllegalArgumentException e) {
             logger.error(e.getMessage());
