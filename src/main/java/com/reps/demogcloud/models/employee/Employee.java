@@ -23,6 +23,7 @@ public class Employee {
     private String lastName;
     private String email;
     private Set<RoleModel> roles;
+    private String school;
     //Set initial value to true
     private boolean isArchived = false;
     private String archivedBy;
