@@ -96,7 +96,7 @@ public class AuthControllers {
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
 
-        System.out.println(generatedToken);
+//        System.out.println(generatedToken);
         return ResponseEntity.ok(response);
     }
 
