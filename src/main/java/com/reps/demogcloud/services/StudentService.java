@@ -193,4 +193,15 @@ public class StudentService {
         transferReceipt.add(receivingStudent);
         return transferReceipt;
     }
+
+    public List<Student> massAssignForSchool(String school) {
+        List<Student> students = studentRepository.findAll();
+        List<Student> assignedStudents = new ArrayList<>();
+        for(Student student : students) {
+            student.setSchool(school);
+            studentRepository.save(student);
+            assignedStudents.add(student);
+        }
+        return assignedStudents;
+    }
 }

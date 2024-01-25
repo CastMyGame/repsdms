@@ -153,4 +153,13 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
+    @PutMapping("/assignSchool")
+    public ResponseEntity<List<Student>> massAssignSchool(@RequestParam String school) {
+        List<Student> response = studentService.massAssignForSchool(school);
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 }

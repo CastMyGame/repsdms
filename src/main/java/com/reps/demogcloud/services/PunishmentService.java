@@ -194,6 +194,10 @@ public class PunishmentService {
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
+        var openFilter = findOpen.stream()
+                        .filter(x-> !x.getStatus().equals("OPEN"))
+                                .toList();
+
         System.out.println(findOpen);
         if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
             punishment.setStatus("SO");
@@ -205,7 +209,7 @@ public class PunishmentService {
             return sendEmailBasedOnType(punishment, punishRepository, emailService);
         }
         if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
-            punishment.setStatus("CFR");
+            punishment.setStatus("BC");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
 
@@ -223,7 +227,7 @@ public class PunishmentService {
             return sendEmailBasedOnType(punishment, punishRepository, emailService);
         }
 
-        if (findOpen.isEmpty()) {
+        if (openFilter.isEmpty()) {
             punishment.setStatus("OPEN");
             punishRepository.save(punishment);
 
