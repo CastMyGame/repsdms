@@ -2,11 +2,14 @@ package com.reps.demogcloud.security.controllers;
 
 
 import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import com.reps.demogcloud.data.PasswordResetTokenRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.ResetPasswordRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.*;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
+import com.reps.demogcloud.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,10 +18,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.awt.desktop.SystemEventListener;
+import java.util.*;
 
 @CrossOrigin(
         origins = {
@@ -28,6 +29,9 @@ import java.util.Set;
 
 @RestController
 public class AuthControllers {
+
+    @Autowired
+    EmailService emailService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -40,6 +44,9 @@ public class AuthControllers {
     private UserRepository userRepository;
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -79,7 +86,7 @@ public class AuthControllers {
 
     @PostMapping("/auth")
     private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest){
-        String username = authenticationRequest.getUsername();
+        String username = authenticationRequest.getUsername().toLowerCase();
 
         String password = authenticationRequest.getPassword();
         try{
@@ -104,6 +111,57 @@ public class AuthControllers {
     private ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school){
         List<UserModel> createdUsers = userService.createUsersForSchool(school);
         return ResponseEntity.ok(createdUsers);
+    }
+
+@PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest){
+        String email = forgotPasswordRequest.getEmail();
+    System.out.println(forgotPasswordRequest.getEmail());
+        //check if email is in userRepository
+        UserModel user = userRepository.findByUsername(email);
+        if (user==null){
+            return ResponseEntity.badRequest().body("User not found for email " + email);
+        }
+        // Generate unique token that will be sent to email
+    String resetToken = UUID.randomUUID().toString();
+
+        // save token into mongo to check against after user gets email
+    PasswordResetToken passwordResetToken = new PasswordResetToken();
+    passwordResetToken.setUser(user);
+    passwordResetToken.setToken(resetToken);
+    passwordResetToken.setExpiryDate(24*60); // set exipration time in minutes
+    passwordResetTokenRepository.save(passwordResetToken);
+String link = "https://repsdev.vercel.app/reset-password/"+resetToken;
+    emailService.sendEmail(user.getUsername(), "Reset Your Password", "Click the Link Below to Reset Your Password " + link );
+    return ResponseEntity.ok("Password reset link sent to " + email);
+
+
+}
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+        String token = resetPasswordRequest.getToken();
+        String newPassword = resetPasswordRequest.getNewPassword();
+
+        // Find the token in the database
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token);
+
+        if (passwordResetToken == null || passwordResetToken.isExpired()) {
+            return ResponseEntity.badRequest().body("Invalid or expired token");
+        }
+
+        // Update the user's password
+        UserModel user = passwordResetToken.getUser();
+
+        // This is where the issue might be if newPassword is null
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        userRepository.save(user);
+
+        // Delete the used token from the database
+        passwordResetTokenRepository.delete(passwordResetToken);
+
+        return ResponseEntity.ok("Password reset successfully");
     }
 
 }
