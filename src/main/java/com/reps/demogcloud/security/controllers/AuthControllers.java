@@ -131,7 +131,7 @@ public class AuthControllers {
     passwordResetToken.setToken(resetToken);
     passwordResetToken.setExpiryDate(24*60); // set exipration time in minutes
     passwordResetTokenRepository.save(passwordResetToken);
-String link = "https://repsdev.vercel.app//reset-password/"+resetToken;
+String link = "https://repsdev.vercel.app/reset-password/"+resetToken;
     emailService.sendEmail(user.getUsername(), "Reset You Password", "Click the Link Below to Reset You Password " + link );
     return ResponseEntity.ok("Password reset link sent to " + email);
 
