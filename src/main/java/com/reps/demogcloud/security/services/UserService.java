@@ -5,7 +5,11 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.models.UserRepository;
+import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
+import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
+import com.reps.demogcloud.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,6 +34,12 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Autowired
+    private EmailService emailService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -87,6 +97,16 @@ public class UserService implements UserDetailsService {
             }
         }
         return createdUsers;
+
+    }
+
+    public ContactUsResponse contactUs(ContactUsRequest contactUsRequest) {
+        emailService.sendContactUsMail(contactUsRequest);
+        ContactUsResponse response = new ContactUsResponse();
+        response.setRequest(contactUsRequest);
+        response.setError("");
+
+        return response;
 
     }
 }

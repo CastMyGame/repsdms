@@ -7,6 +7,8 @@ import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.ResetPasswordRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.*;
+import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
+import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.services.EmailService;
@@ -162,6 +164,13 @@ String link = "https://repsdev.vercel.app/reset-password/"+resetToken;
         passwordResetTokenRepository.delete(passwordResetToken);
 
         return ResponseEntity.ok("Password reset successfully");
+    }
+
+    @PostMapping("/contact-us")
+    public ResponseEntity<ContactUsResponse> contactUs (@RequestBody ContactUsRequest request) {
+       ContactUsResponse response = userService.contactUs(request);
+
+        return ResponseEntity.ok(response);
     }
 
 }
