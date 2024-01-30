@@ -69,12 +69,18 @@ public class UserService implements UserDetailsService {
         List<UserModel> createdUsers = new ArrayList<>();
         for (Student student : schoolUsers) {
             UserModel userExists = userRepository.findByUsername(student.getStudentEmail());
-            if (userExists.getUsername().isEmpty()) {
+            if (userExists == null) {
                 UserModel newUser = new UserModel();
+                String password = "123abc";
                 newUser.setUsername(student.getStudentEmail());
-                newUser.setPassword("123abc");
                 newUser.setSchoolName(school);
+                newUser.setFirstName(student.getFirstName());
+                newUser.setLastName(student.getLastName());
                 newUser.setRoles(studentRoles);
+
+                // Use BCryptPasswordEncoder to encode the provided password
+                String encodedPassword = passwordEncoder.encode(password);
+                newUser.setPassword(encodedPassword);
 
                 userRepository.save(newUser);
                 createdUsers.add(newUser);
