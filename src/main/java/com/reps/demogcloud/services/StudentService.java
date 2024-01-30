@@ -194,11 +194,11 @@ public class StudentService {
         return transferReceipt;
     }
 
-    public List<Student> massAssignForSchool(String school) {
+    public List<Student> massAssignForSchool(boolean isArchived) {
         List<Student> students = studentRepository.findAll();
         List<Student> assignedStudents = new ArrayList<>();
         for(Student student : students) {
-            student.setSchool(school);
+            student.setArchived(isArchived);
             studentRepository.save(student);
             assignedStudents.add(student);
         }

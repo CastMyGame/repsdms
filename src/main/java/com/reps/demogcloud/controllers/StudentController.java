@@ -155,8 +155,8 @@ public class StudentController {
     }
 
     @PutMapping("/assignSchool")
-    public ResponseEntity<List<Student>> massAssignSchool(@RequestParam String school) {
-        List<Student> response = studentService.massAssignForSchool(school);
+    public ResponseEntity<List<Student>> massAssignSchool(@RequestParam boolean isArchived) {
+        List<Student> response = studentService.massAssignForSchool(isArchived);
 
         return ResponseEntity
                 .accepted()
