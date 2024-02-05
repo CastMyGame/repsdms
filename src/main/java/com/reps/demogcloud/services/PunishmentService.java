@@ -429,6 +429,19 @@ public class PunishmentService {
     public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
         try {
             punishRepository.delete(punishment);
+
+            String deleteMessage = "Hello,\n" +
+                    "Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+                    " received a referral in error. The referral that was written was for offense number " + punishment.getInfraction().getInfractionLevel() + " for " + punishment.getInfraction().getInfractionName() +
+                    ". They were assigned a restorative assignment which has now been removed and the referral will be removed from their record. Thank you for your patience. \n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.";
+
+            emailService.sendPtsEmail(punishment.getStudent().getParentEmail(),
+                    punishment.getTeacherEmail(),
+                    punishment.getStudent().getStudentEmail(),
+                    "Burke High School Punishment Deleted for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName(),
+                    deleteMessage);
+
         } catch (Exception e) {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
@@ -690,7 +703,7 @@ public class PunishmentService {
                     "The username is their school email and their password is 123abc unless they have changed their password using the forgot my password button on the login screen.\n" +
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment. You can also call the school directly at (843) 579-4815.";
             messageIn.replace("[,", "");
-            messageIn.replace(",]","")
+            messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -744,11 +757,11 @@ public class PunishmentService {
             String concern = punishment.getInfraction().getInfractionDescription().get(1);
             concern.replace("[,", "");
             concern.replace(",]","");
-            punishmentResponse.setMessage(" Hello," +
+            punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern +
+                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at " + punishment.getTeacherEmail());
+                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. If you wish to respond to the teacher who wrote the behavioral concern you can do so by clicking reply all to this message and typing a response. You can also contact the school at (843) 579-4815");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
@@ -923,6 +936,20 @@ public class PunishmentService {
         existingRecord.setArchivedOn(null);
         existingRecord.setArchivedBy(null);
         existingRecord.setArchivedExplanation(null);
+
+        String restoreMessage = "Hello,\n" +
+                "Your child, " + existingRecord.getStudent().getFirstName() + " " + existingRecord.getStudent().getLastName() +
+                ", had their referral for offense " + existingRecord.getInfraction().getInfractionLevel() + " for " + existingRecord.getInfraction().getInfractionName() +
+                " unintentionally deleted. This referral has now been restored and as a result " + existingRecord.getStudent().getFirstName() + " " + existingRecord.getStudent().getLastName() + " will need to complete the restorative assignment that accompanies the referral at repsdiscipline.vercel.app . \n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.";
+        emailService.sendPtsEmail(existingRecord.getStudent().getParentEmail(),
+                existingRecord.getTeacherEmail(),
+                existingRecord.getStudent().getStudentEmail(),
+                "Burke High School Punishment Restored for " + existingRecord.getStudent().getFirstName() + " " + existingRecord.getStudent().getLastName(),
+                restoreMessage);
+
+
+
         return punishRepository.save(existingRecord);
 
 
