@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -215,6 +216,14 @@ public class PunishController {
     public ResponseEntity<Punishment> rejectLevelThree(@PathVariable String punishmentId,
                                                        @RequestBody String description) {
         Punishment response = punishmentService.rejectLevelThree(punishmentId, description);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @GetMapping("/writeUps")
+    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
+        List<Punishment> response = punishmentService.getPunishmentWriteUps();
         return ResponseEntity
                 .accepted()
                 .body(response);

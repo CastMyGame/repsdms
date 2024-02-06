@@ -522,6 +522,15 @@ public class PunishmentService {
         return studentPunishments;
     }
 
+    public List<Punishment> getPunishmentWriteUps() {
+        List<Punishment> writeUps = findAllPunishmentIsArchived(false);
+        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")).toList();
+        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+
+        return wu2;
+
+    }
+
 //    @Scheduled(cron = "0 00 11 * * MON-FRI")
 //    public void getAllOpenAssignmentsBeforeNow() {
 //        List<Punishment> open = punishRepository.findByStatus("OPEN");
