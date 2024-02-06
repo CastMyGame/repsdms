@@ -35,4 +35,5 @@ public class Punishment {
     private String archivedBy;
     private String archivedExplanation;
     private LocalDateTime archivedOn;
+    private int mapIndex = 0;
 }

@@ -1002,4 +1002,19 @@ public class PunishmentService {
     public List<Punishment> getAllPunishmentByStudentEmail(String studentEmail) {
         return punishRepository.getAllPunishmentByStudentStudentEmail(studentEmail);
     }
+
+    public Punishment updateMapIndex(String id, int index) {
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment !=null){
+                punishment.setMapIndex(index);
+                punishRepository.save(punishment);
+            return punishment;
+
+        }else{
+            throw new ResourceNotFoundException("No Punishment with Id " +id +" number exist");
+
+        }
+
+
+    }
 }

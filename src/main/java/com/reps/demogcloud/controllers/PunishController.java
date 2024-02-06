@@ -33,6 +33,15 @@ public class PunishController {
                 .body(message);
     }
 
+    @PutMapping("/{id}/index/{index}")
+    public ResponseEntity<Punishment> updateMapIndex(@PathVariable String id, @PathVariable int index) throws ResourceNotFoundException {
+        var message = punishmentService.updateMapIndex(id,index);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @GetMapping("/{infractionName}")
     public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
         var message = punishmentService.findByInfractionName(infractionName);
