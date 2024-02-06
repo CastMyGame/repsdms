@@ -210,4 +210,13 @@ public class PunishController {
                 .accepted()
                 .body(response);
     }
+
+    @PutMapping("/rejected/{punishmentId}")
+    public ResponseEntity<Punishment> rejectLevelThree(@PathVariable String punishmentId,
+                                                       @RequestBody String description) {
+        Punishment response = punishmentService.rejectLevelThree(punishmentId, description);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 }
