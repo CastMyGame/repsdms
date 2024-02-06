@@ -328,10 +328,12 @@ public class PunishmentService {
         String rep = description.replace("{", "");
         String rep2 = rep.replace("\"description\": ", "");
         String rep3 = rep2.replace("}","");
+        String rep4 = rep3.replace("[\"","");
+        String rep5 = rep4.replace("\"]","");
 
         ArrayList<String> studentAnswer = new ArrayList<>();
         studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
-        studentAnswer.add(rep3);
+        studentAnswer.add(rep5);
 
         Infraction infraction = new Infraction();
         infraction = punishment.getInfraction();
@@ -344,7 +346,7 @@ public class PunishmentService {
         String message =  "Hello, \n" +
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
-                rep3 + " \n" +
+                rep5 + " \n" +
                 "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment. You can also call the school directly at (843) 579-4815.";
 
         String subject = "Level Three Answers not accepted for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName();
