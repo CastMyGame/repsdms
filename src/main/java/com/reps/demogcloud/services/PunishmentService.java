@@ -322,28 +322,42 @@ public class PunishmentService {
         }
     }};
 
-//    public Punishment updateLevelThreeCloseRequest(LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
-////        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-//        Punishment punishment = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndInfractionInfractionLevelAndStatus(
-//                levelThreeCloseRequest.getStudentEmail(),
-//                levelThreeCloseRequest.getInfractionName(),
-//                "3",
-//                "OPEN"
-//        );
-//
-//        List<String> studentAnswer = new ArrayList<>();
-//        studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
-//        studentAnswer.add(levelThreeCloseRequest.getStudentAnswer().toString());
-//
-//        Infraction infraction = new Infraction();
-//        infraction = punishment.getInfraction();
-//        infraction.setInfractionDescription(studentAnswer);
-//
-//        punishment.setInfraction(infraction);
-//        punishRepository.save(punishment);
-//
-//        return punishment;
-//    }
+    public Punishment rejectLevelThree(String punishmentId, String description) {
+//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+        Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
+        String rep = description.replace("{", "");
+        String rep2 = rep.replace("\"description\": ", "");
+        String rep3 = rep2.replace("}","");
+
+        ArrayList<String> studentAnswer = new ArrayList<>();
+        studentAnswer.add(punishment.getInfraction().getInfractionDescription().toString());
+        studentAnswer.add(rep3);
+
+        Infraction infraction = new Infraction();
+        infraction = punishment.getInfraction();
+        infraction.setInfractionDescription(studentAnswer);
+
+        punishment.setStatus("OPEN");
+
+        punishment.setInfraction(infraction);
+
+        String message =  "Hello, \n" +
+                "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
+                " \n" +
+                rep3 + " \n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment. You can also call the school directly at (843) 579-4815.";
+
+        String subject = "Level Three Answers not accepted for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName();
+
+        emailService.sendPtsEmail(punishment.getStudent().getParentEmail(),
+                punishment.getTeacherEmail(),
+                punishment.getStudent().getStudentEmail(),
+                subject,
+                message);
+        punishRepository.save(punishment);
+
+        return punishment;
+    }
 
     public PunishmentResponse closeFailureToComplete(String infractionName, String studentEmail, String teacherEmail) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
