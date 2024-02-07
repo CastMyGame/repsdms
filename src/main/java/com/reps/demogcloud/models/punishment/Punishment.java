@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.*;
 
 
 @Data
@@ -36,4 +37,13 @@ public class Punishment {
     private String archivedExplanation;
     private LocalDateTime archivedOn;
     private int mapIndex = 0;
+    private Map<Date,List<String>> answerHistory ;
+
+    public void setAnswerHistory(Date date, List<String> context) {
+        if (answerHistory == null) {
+            answerHistory = new HashMap<>();
+        }
+
+        answerHistory.put(date, context);
+    }
 }
