@@ -776,6 +776,7 @@ public class PunishmentService {
             String shoutOut = punishment.getInfraction().getInfractionDescription().get(1);
             shoutOut.replace("[,", "");
             shoutOut.replace(",]","");
+            punishmentResponse.setSubject("Burke High School Positive Shout Out for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received a shout out from their teacher for the following: " + shoutOut + "\n" +
@@ -793,6 +794,7 @@ public class PunishmentService {
             String concern = punishment.getInfraction().getInfractionDescription().get(1);
             concern.replace("[,", "");
             concern.replace(",]","");
+            punishmentResponse.setSubject("Burke High School Behavioral Concern for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + "\n" +
@@ -893,25 +895,25 @@ public class PunishmentService {
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return punishmentResponse;
         }
-        if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-
-    }
-        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + punishment.getInfraction().getInfractionDescription() +
-                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
-                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-        }
+//        if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+//            punishmentResponse.setMessage(" Hello," +
+//                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+//                    " has received a shout out from their teacher for the following: " + punishment.getInfraction().getInfractionDescription());
+//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+//
+//
+//    }
+//        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+//            punishmentResponse.setMessage(" Hello," +
+//                    " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+//                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + punishment.getInfraction().getInfractionDescription() +
+//                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
+//                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
+//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+//
+//        }
         return punishmentResponse;
     }
 
