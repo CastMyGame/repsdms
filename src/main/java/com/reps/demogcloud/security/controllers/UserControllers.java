@@ -55,6 +55,12 @@ public class UserControllers {
         return ResponseEntity.ok(createdUsers);
     }
 
+    @PutMapping("/users/{school}")
+    private ResponseEntity<List<UserModel>> lowercaseThemAll(@PathVariable String school) {
+        List<UserModel> users = userService.lowerCaseThemAll(school);
+        return ResponseEntity.ok(users);
+    }
+
 
 
     @PutMapping("/users/{id}/roles")
@@ -113,7 +119,5 @@ public class UserControllers {
         return ResponseEntity.ok(users);
     }
 
-
-
-
 }
+

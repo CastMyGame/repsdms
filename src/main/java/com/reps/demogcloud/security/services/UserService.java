@@ -82,7 +82,7 @@ public class UserService implements UserDetailsService {
             if (userExists == null) {
                 UserModel newUser = new UserModel();
                 String password = "123abc";
-                newUser.setUsername(student.getStudentEmail());
+                newUser.setUsername(student.getStudentEmail().toLowerCase());
                 newUser.setSchoolName(school);
                 newUser.setFirstName(student.getFirstName());
                 newUser.setLastName(student.getLastName());
@@ -108,5 +108,14 @@ public class UserService implements UserDetailsService {
 
         return response;
 
+    }
+
+    public List<UserModel> lowerCaseThemAll(String school) {
+        List<UserModel> users = userRepository.findBySchoolName(school);
+        for (UserModel user : users) {
+            user.setUsername(user.getUsername().toLowerCase());
+            userRepository.save(user);
+        }
+        return users;
     }
 }
