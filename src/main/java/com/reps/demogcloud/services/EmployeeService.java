@@ -8,11 +8,12 @@ import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -55,15 +56,19 @@ public class EmployeeService {
     }
 
     public EmployeeResponse createNewEmployee (Employee request) {
+        Set<RoleModel> roles = new HashSet<>();
+        RoleModel teacher = new RoleModel();
+        teacher.setRole("TEACHER");
+        roles.add(teacher);
         //Check it email exist in system
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-        authenticationRequest.setUsername(request.getEmail());
+        authenticationRequest.setUsername(request.getEmail().toLowerCase());
         authenticationRequest.setPassword("123abc");
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchoolName(request.getSchool());
-        authenticationRequest.setRoles(request.getRoles());
+        authenticationRequest.setRoles(roles);
         if(doesEmployeeExist == null){
             try {
                 authService.createEmployeeUser(authenticationRequest);
@@ -134,7 +139,7 @@ public class EmployeeService {
         Employee existingRecord = findByEmployeeId(employeeId);
         //Updated Record
         existingRecord.setArchived(true);
-        LocalDateTime createdOn = LocalDateTime.now();
+        LocalDate createdOn = LocalDate.now();
         existingRecord.setArchivedOn(createdOn);
         existingRecord.setArchivedBy(employeeId);
         return employeeRepository.save(existingRecord);

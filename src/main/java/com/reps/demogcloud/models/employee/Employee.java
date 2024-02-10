@@ -5,10 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.joda.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
@@ -28,6 +28,6 @@ public class Employee {
     private boolean isArchived = false;
     private String archivedBy;
     private String archivedExplanation;
-    private LocalDateTime archivedOn;
+    private LocalDate archivedOn;
 
 }

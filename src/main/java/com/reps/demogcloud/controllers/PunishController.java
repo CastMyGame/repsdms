@@ -12,13 +12,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
 
 @RestController
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin(
+        origins = {
+                "http://localhost:3000/",
+                "https://repsdiscipline.vercel.app"
+        }
+)
 @RequestMapping("/punish/v1")
 public class PunishController {
     @Autowired
