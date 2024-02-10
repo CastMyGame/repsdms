@@ -164,14 +164,14 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/compare")
-    public ResponseEntity<List<Punishment>> getOpenForADay() {
-        List<Punishment> message = punishmentService.getAllOpenForADay();
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @GetMapping("/compare")
+//    public ResponseEntity<List<Punishment>> getOpenForADay() {
+//        List<Punishment> message = punishmentService.getAllOpenForADay();
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
 //    @PostMapping("/updateLevelThree")
 //    public ResponseEntity<Punishment> updateLevelThree(@RequestBody LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {

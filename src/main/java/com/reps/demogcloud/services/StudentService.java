@@ -11,11 +11,13 @@ import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.Days;
 import org.joda.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -213,13 +215,19 @@ public class StudentService {
 
     public List<Student> getDetentionList(){
         List<Punishment> punishments = punishRepository.findAll();
-
+        List<Student> students = new ArrayList<>();
         for(Punishment punishment : punishments) {
-            List<Student> students = new ArrayList<>();
-            String createdOn = punishment.getTimeCreated();
             LocalDate today = LocalDate.now();
-            LocalDate punishment = L
-                    today.getDayOfWeek()
+            LocalDate punishmentTime = punishment.getTimeCreated();
+
+            Days d = Days.daysBetween(today, punishmentTime);
+            int days = d.getDays();
+
+            if(days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
+                students.add(punishment.getStudent());
+            }
+            return students;
         }
+        return students;
     }
 }

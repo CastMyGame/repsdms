@@ -482,33 +482,31 @@ public class PunishmentService {
         return open;
     }
 
-    public List<Punishment> getAllOpenForADay() {
-        String subject = "Burke High School Open Referrals";
-        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
-        var open = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
-
-        List<Punishment> names = new ArrayList<>();
-        for(Punishment punishment: open) {
-            String timeCreated = String.valueOf(punishment.getTimeCreated());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            LocalDate timestamp = LocalDate.parse(timeCreated, formatter);
-            LocalDate now = LocalDate.now();
-
-
-            Duration duration = Duration.between(timestamp, now);
-            long hours = duration.toHours();
-            if (hours >= 24) {
-                names.add(punishment);
-            }
-        }
-        String email = "Here is the list of students who have open assignments" + names;
-
-        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
-
-        return open;
-    }
+//    public List<Punishment> getAllOpenForADay() {
+//        String subject = "Burke High School Open Referrals";
+//        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
+//        var open = fetchPunishmentData.stream()
+//                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+//                .toList();  // Collect the filtered punishments into a list
+//
+//        List<Punishment> names = new ArrayList<>();
+//        for(Punishment punishment: open) {
+//            LocalDate timestamp = punishment.getTimeCreated();
+//            LocalDate now = LocalDate.now();
+//
+//
+//            Duration duration = Duration.between(timestamp, now);
+//            long hours = duration.toHours();
+//            if (hours >= 24) {
+//                names.add(punishment);
+//            }
+//        }
+//        String email = "Here is the list of students who have open assignments" + names;
+//
+//        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
+//
+//        return open;
+//    }
 
     public List<Punishment> getAllPunishmentsForStudents(String studentEmail) {
             List<String> messages = new ArrayList<>();
@@ -572,7 +570,7 @@ public class PunishmentService {
             punishments.addAll(cfr);
             List<String> message = new ArrayList<>();
             for(Punishment closed : punishments) {
-                String messageIn ="Infraction took place on" + closed.getTimeCreated().toLocalDate() + " " + closed.getTimeCreated().toLocalTime() + " the description of the event is as follows: " + closed.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed().toLocalDate() + " " + closed.getTimeClosed().toLocalTime() + ". ";
+                String messageIn ="Infraction took place on" + closed.getTimeCreated() + " the description of the event is as follows: " + closed.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed() + ". ";
                 messageIn.replace("[,", "");
                 messageIn.replace(",]","");
                 message.add(messageIn);
@@ -901,7 +899,7 @@ public class PunishmentService {
                 .toList();  // Collect the filtered punishments into a list
         List<String> message = new ArrayList<>();
         for(Punishment punishments : likeWise) {
-            message.add("First infraction took place on" + punishments.getTimeCreated().toLocalDate() + " " + punishments.getTimeCreated().toLocalTime() + " the description of the event is as follows: " + punishments.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + punishments.getTimeClosed().toLocalDate() + " " + punishments.getTimeClosed().toLocalTime() + ". ");
+            message.add("First infraction took place on" + punishments.getTimeCreated() + " the description of the event is as follows: " + punishments.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + punishments.getTimeClosed() + ". ");
         }
         punishmentResponse.setSubject("Burke High School Office Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         punishmentResponse.setMessage(
