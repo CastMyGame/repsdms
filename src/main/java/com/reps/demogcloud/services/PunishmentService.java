@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -995,5 +996,17 @@ public class PunishmentService {
         }
 
 
+    }
+
+    public List<Punishment> updateTimeCreated() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            LocalDate time = punishment.getTimeCreated();
+            punishment.setTimeCreated(time);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
     }
 }

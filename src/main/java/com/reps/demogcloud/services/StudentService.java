@@ -217,16 +217,17 @@ public class StudentService {
         List<Punishment> punishments = punishRepository.findAll();
         List<Student> students = new ArrayList<>();
         for(Punishment punishment : punishments) {
-            LocalDate today = LocalDate.now();
-            LocalDate punishmentTime = punishment.getTimeCreated();
+            if(punishment.getStatus().equals("OPEN")) {
+                LocalDate today = LocalDate.now();
+                LocalDate punishmentTime = punishment.getTimeCreated();
 
-            Days d = Days.daysBetween(today, punishmentTime);
-            int days = d.getDays();
+                Days d = Days.daysBetween(punishmentTime, today);
+                int days = d.getDays();
 
-            if(days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
-                students.add(punishment.getStudent());
+                if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
+                    students.add(punishment.getStudent());
+                }
             }
-            return students;
         }
         return students;
     }
@@ -235,16 +236,17 @@ public class StudentService {
         List<Punishment> punishments = punishRepository.findAll();
         List<Student> students = new ArrayList<>();
         for(Punishment punishment : punishments) {
-            LocalDate today = LocalDate.now();
-            LocalDate punishmentTime = punishment.getTimeCreated();
+            if(punishment.getStatus().equals("OPEN")) {
+                LocalDate today = LocalDate.now();
+                LocalDate punishmentTime = punishment.getTimeCreated();
 
-            Days d = Days.daysBetween(today, punishmentTime);
-            int days = d.getDays();
+                Days d = Days.daysBetween(punishmentTime, today);
+                int days = d.getDays();
 
-            if(days >= 3 && !students.contains(punishment.getStudent())) {
-                students.add(punishment.getStudent());
+                if (days >= 3 && !students.contains(punishment.getStudent())) {
+                    students.add(punishment.getStudent());
+                }
             }
-            return students;
         }
         return students;
     }
