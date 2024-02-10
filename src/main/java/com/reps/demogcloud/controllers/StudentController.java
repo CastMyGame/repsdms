@@ -172,4 +172,13 @@ public class StudentController {
                 .body(response);
     }
 
+    @GetMapping("/issList")
+    public ResponseEntity<List<Student>> getIssList() {
+        List<Student> response = studentService.getIssList();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
 }

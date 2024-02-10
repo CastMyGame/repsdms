@@ -230,4 +230,22 @@ public class StudentService {
         }
         return students;
     }
+
+    public List<Student> getIssList(){
+        List<Punishment> punishments = punishRepository.findAll();
+        List<Student> students = new ArrayList<>();
+        for(Punishment punishment : punishments) {
+            LocalDate today = LocalDate.now();
+            LocalDate punishmentTime = punishment.getTimeCreated();
+
+            Days d = Days.daysBetween(today, punishmentTime);
+            int days = d.getDays();
+
+            if(days >= 3 && !students.contains(punishment.getStudent())) {
+                students.add(punishment.getStudent());
+            }
+            return students;
+        }
+        return students;
+    }
 }
