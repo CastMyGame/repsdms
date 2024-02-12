@@ -1002,7 +1002,10 @@ public class PunishmentService {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for(Punishment punishment : all) {
-            LocalDate time = punishment.getTimeCreated();
+            int year = punishment.getTimeCreated().getYear();
+            int month = punishment.getTimeCreated().getMonthOfYear();
+            int day = punishment.getTimeCreated().getDayOfMonth();
+            LocalDate time = new LocalDate(year, month, day);
             punishment.setTimeCreated(time);
             punishRepository.save(punishment);
             saved.add(punishment);

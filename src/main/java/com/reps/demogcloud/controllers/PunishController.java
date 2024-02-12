@@ -242,7 +242,7 @@ public class PunishController {
                 .body(response);
     }
 
-    @GetMapping("/updates")
+    @PutMapping("/updates")
     public ResponseEntity<List<Punishment>> updateAllFix() {
         List<Punishment> response = punishmentService.updateTimeCreated();
 
