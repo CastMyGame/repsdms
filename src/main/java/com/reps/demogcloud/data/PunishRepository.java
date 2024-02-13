@@ -2,7 +2,7 @@ package com.reps.demogcloud.data;
 
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
-import org.joda.time.LocalDate;
+import java.time.LocalDate;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

@@ -11,8 +11,11 @@ import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
-import org.joda.time.Days;
-import org.joda.time.LocalDate;
+
+import java.time.Duration;
+import java.time.LocalDate;
+
+
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,8 +224,8 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                Days d = Days.daysBetween(punishmentTime, today);
-                int days = d.getDays();
+                Duration between = Duration.between(punishmentTime, today);
+                long days = between.toDays();
 
                 if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
                     students.add(punishment.getStudent());
@@ -240,8 +243,8 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                Days d = Days.daysBetween(punishmentTime, today);
-                int days = d.getDays();
+                Duration between = Duration.between(punishmentTime, today);
+                long days = between.toDays();
 
                 if (days >= 3 && !students.contains(punishment.getStudent())) {
                     students.add(punishment.getStudent());

@@ -13,13 +13,14 @@ import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.joda.time.LocalDate;
+import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -1003,9 +1004,9 @@ public class PunishmentService {
         List<Punishment> saved = new ArrayList<>();
         for(Punishment punishment : all) {
             int year = punishment.getTimeCreated().getYear();
-            int month = punishment.getTimeCreated().getMonthOfYear();
+            Month month = punishment.getTimeCreated().getMonth();
             int day = punishment.getTimeCreated().getDayOfMonth();
-            LocalDate time = new LocalDate(year, month, day);
+            LocalDate time = LocalDate.of(year, month, day);
             punishment.setTimeCreated(time);
             punishRepository.save(punishment);
             saved.add(punishment);
