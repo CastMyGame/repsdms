@@ -13,12 +13,14 @@ import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -135,7 +137,7 @@ public class PunishmentService {
     public PunishmentResponse createNewPunish(PunishmentRequest punishmentRequest) {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
         System.out.println("REP CREATED");
 
         Punishment punishment = new Punishment();
@@ -155,7 +157,7 @@ public class PunishmentService {
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
@@ -238,7 +240,7 @@ public class PunishmentService {
 
         } else {
             punishment.setStatus("CFR");
-            punishment.setTimeClosed(LocalDateTime.now());
+            punishment.setTimeClosed(LocalDate.now());
             punishRepository.save(punishment);
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -291,7 +293,7 @@ public class PunishmentService {
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
         System.out.println(findMe.getClosedTimes());
         System.out.println(findMe.getTeacherEmail());
-        findMe.setTimeClosed(LocalDateTime.now());
+        findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
         System.out.println(findMe);
         if (findMe != null) {
@@ -381,7 +383,7 @@ public class PunishmentService {
         findMe.setStatus("COMPLETED");
         System.out.println(findMe.getClosedTimes());
         findMe.setClosedTimes(findMe.getClosedTimes());
-        findMe.setTimeClosed(LocalDateTime.now());
+        findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
         System.out.println(findMe);
         if (findMe != null) {
@@ -419,7 +421,7 @@ public class PunishmentService {
 
         findMe.setStatus("CLOSED");
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-        findMe.setTimeClosed(LocalDateTime.now());
+        findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
         if (findMe != null) {
             PunishmentResponse punishmentResponse = new PunishmentResponse();
@@ -463,7 +465,7 @@ public class PunishmentService {
 
     public List<Punishment> getAllOpenAssignments() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
         String subject = "Burke High School Open Referrals";
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
@@ -482,33 +484,31 @@ public class PunishmentService {
         return open;
     }
 
-    public List<Punishment> getAllOpenForADay() {
-        String subject = "Burke High School Open Referrals";
-        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
-        var open = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
-
-        List<Punishment> names = new ArrayList<>();
-        for(Punishment punishment: open) {
-            String timeCreated = String.valueOf(punishment.getTimeCreated());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
-            LocalDateTime now = LocalDateTime.now();
-
-
-            Duration duration = Duration.between(timestamp, now);
-            long hours = duration.toHours();
-            if (hours >= 24) {
-                names.add(punishment);
-            }
-        }
-        String email = "Here is the list of students who have open assignments" + names;
-
-        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
-
-        return open;
-    }
+//    public List<Punishment> getAllOpenForADay() {
+//        String subject = "Burke High School Open Referrals";
+//        List<Punishment> fetchPunishmentData = punishRepository.findByStatus("OPEN");
+//        var open = fetchPunishmentData.stream()
+//                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+//                .toList();  // Collect the filtered punishments into a list
+//
+//        List<Punishment> names = new ArrayList<>();
+//        for(Punishment punishment: open) {
+//            LocalDate timestamp = punishment.getTimeCreated();
+//            LocalDate now = LocalDate.now();
+//
+//
+//            Duration duration = Duration.between(timestamp, now);
+//            long hours = duration.toHours();
+//            if (hours >= 24) {
+//                names.add(punishment);
+//            }
+//        }
+//        String email = "Here is the list of students who have open assignments" + names;
+//
+//        emailService.sendEmail("castmygameinc@gmail.com", subject, email);
+//
+//        return open;
+//    }
 
     public List<Punishment> getAllPunishmentsForStudents(String studentEmail) {
             List<String> messages = new ArrayList<>();
@@ -537,34 +537,6 @@ public class PunishmentService {
         return wu2;
 
     }
-
-//    @Scheduled(cron = "0 00 11 * * MON-FRI")
-//    public void getAllOpenAssignmentsBeforeNow() {
-//        List<Punishment> open = punishRepository.findByStatus("OPEN");
-//
-//        List<String> names = new ArrayList<>();
-//
-//        for (Punishment punishment : open) {
-//            String timeCreated = String.valueOf(punishment.getTimeCreated());
-//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-//            LocalDateTime timestamp = LocalDateTime.parse(timeCreated, formatter);
-//            LocalDateTime now = LocalDateTime.now();
-//
-//            Duration duration = Duration.between(timestamp, now);
-//            long hours = duration.toHours();
-//
-//            if (hours >= 3) {
-//                names.add("Student: " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() + "  |  " + punishment.getTeacherEmail() + " |  Infraction: " + punishment.getInfraction().getInfractionName() + " " +  punishment.getInfraction().getInfractionLevel()
-//                        + " " + punishment.getInfraction().getInfractionDescription() + " " + punishment.getTimeCreated() + " " + punishment.getInfraction().getInfractionAssign() + " \n");
-//            }
-//        }
-//        Set<String> openNames = new HashSet<String>(names);
-//
-//        String subject = "Burke High School Open Referrals";
-//        String email = "Here is the list of students who have open assignments \n" + openNames.toString();
-//
-//        emailService.sendEmail("jiverson@saga.org", subject, email);
-//    }
 
     private static String levelCheck(List<Integer> levels) {
         int level = 1;
@@ -600,13 +572,13 @@ public class PunishmentService {
             punishments.addAll(cfr);
             List<String> message = new ArrayList<>();
             for(Punishment closed : punishments) {
-                String messageIn ="Infraction took place on" + closed.getTimeCreated().toLocalDate() + " " + closed.getTimeCreated().toLocalTime() + " the description of the event is as follows: " + closed.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed().toLocalDate() + " " + closed.getTimeClosed().toLocalTime() + ". ";
+                String messageIn ="Infraction took place on" + closed.getTimeCreated() + " the description of the event is as follows: " + closed.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed() + ". ";
                 messageIn.replace("[,", "");
                 messageIn.replace(",]","");
                 message.add(messageIn);
             }
 
-            punishment.setTimeClosed(LocalDateTime.now());
+            punishment.setTimeClosed(LocalDate.now());
             punishment.setStatus("REFERRAL");
             punishRepository.save(punishment);
             punishmentResponse.setSubject("Burke High School Office Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
@@ -818,7 +790,7 @@ public class PunishmentService {
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
-        punishment.setTimeClosed(LocalDateTime.now());
+        punishment.setTimeClosed(LocalDate.now());
         punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if (punishment.getInfraction().getInfractionName().equals("Tardy")) {
             punishmentResponse.setMessage(" Hello," +
@@ -929,7 +901,7 @@ public class PunishmentService {
                 .toList();  // Collect the filtered punishments into a list
         List<String> message = new ArrayList<>();
         for(Punishment punishments : likeWise) {
-            message.add("First infraction took place on" + punishments.getTimeCreated().toLocalDate() + " " + punishments.getTimeCreated().toLocalTime() + " the description of the event is as follows: " + punishments.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + punishments.getTimeClosed().toLocalDate() + " " + punishments.getTimeClosed().toLocalTime() + ". ");
+            message.add("First infraction took place on" + punishments.getTimeCreated() + " the description of the event is as follows: " + punishments.getInfraction().getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + punishments.getTimeClosed() + ". ");
         }
         punishmentResponse.setSubject("Burke High School Office Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         punishmentResponse.setMessage(
@@ -957,7 +929,7 @@ public class PunishmentService {
         Punishment existingRecord = findByPunishmentId(punishmentId);
         //Updated Record
         existingRecord.setArchived(true);
-        LocalDateTime createdOn = LocalDateTime.now();
+        LocalDate createdOn = LocalDate.now();
         existingRecord.setArchivedOn(createdOn);
         existingRecord.setArchivedBy(userId);
         existingRecord.setArchivedExplanation(explanation);
@@ -1025,5 +997,20 @@ public class PunishmentService {
         }
 
 
+    }
+
+    public List<Punishment> updateTimeCreated() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            int year = punishment.getTimeCreated().getYear();
+            Month month = punishment.getTimeCreated().getMonth();
+            int day = punishment.getTimeCreated().getDayOfMonth();
+            LocalDate time = LocalDate.of(year, month, day);
+            punishment.setTimeCreated(time);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
     }
 }

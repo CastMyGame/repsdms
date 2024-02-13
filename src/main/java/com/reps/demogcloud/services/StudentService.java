@@ -1,7 +1,9 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -9,11 +11,17 @@ import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.Duration;
+import java.time.LocalDate;
+
+
+import org.joda.time.Days;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -30,11 +38,14 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final EmailService emailService;
 
+    private final PunishRepository punishRepository;
+
     private final AuthService authService;
 
-    public StudentService(StudentRepository studentRepository, EmailService emailService, AuthService authService) {
+    public StudentService(StudentRepository studentRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService) {
         this.studentRepository = studentRepository;
         this.emailService = emailService;
+        this.punishRepository = punishRepository;
         this.authService = authService;
     }
 
@@ -90,12 +101,13 @@ public class StudentService {
         student.setRole("STUDENT");
         roles.add(student);
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-        authenticationRequest.setUsername(studentRequest.getStudentEmail());
+        authenticationRequest.setUsername(studentRequest.getStudentEmail().toLowerCase());
         authenticationRequest.setPassword("123abc");
         authenticationRequest.setFirstName(studentRequest.getFirstName());
         authenticationRequest.setLastName(studentRequest.getLastName());
         authenticationRequest.setSchoolName(studentRequest.getSchool());
         authenticationRequest.setRoles(roles);
+        studentRequest.setPoints(0);
         try {
             authService.createEmployeeUser(authenticationRequest);
             return new StudentResponse("", studentRepository.save(studentRequest));
@@ -150,7 +162,7 @@ public class StudentService {
         Student existingRecord = findByStudentId(studentId);
         //Updated Record
         existingRecord.setArchived(true);
-        LocalDateTime createdOn = LocalDateTime.now();
+        LocalDate createdOn = LocalDate.now();
         existingRecord.setArchivedOn(createdOn);
         existingRecord.setArchivedBy(studentId);
         return studentRepository.save(existingRecord);
@@ -204,4 +216,42 @@ public class StudentService {
         }
         return assignedStudents;
     }
+
+    public List<Student> getDetentionList(){
+        List<Punishment> punishments = punishRepository.findAll();
+        List<Student> students = new ArrayList<>();
+        for(Punishment punishment : punishments) {
+            if(punishment.getStatus().equals("OPEN")) {
+                LocalDate today = LocalDate.now();
+                LocalDate punishmentTime = punishment.getTimeCreated();
+
+                long days = ChronoUnit.DAYS.between(punishmentTime, today);
+
+                if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
+                    students.add(punishment.getStudent());
+                }
+            }
+        }
+        return students;
+    }
+
+    public List<Student> getIssList(){
+        List<Punishment> punishments = punishRepository.findAll();
+        List<Student> students = new ArrayList<>();
+        for(Punishment punishment : punishments) {
+            if(punishment.getStatus().equals("OPEN")) {
+                LocalDate today = LocalDate.now();
+                LocalDate punishmentTime = punishment.getTimeCreated();
+
+                long days = ChronoUnit.DAYS.between(punishmentTime, today);
+
+                if (days >= 3 && !students.contains(punishment.getStudent())) {
+                    students.add(punishment.getStudent());
+                }
+            }
+        }
+        return students;
+    }
+
+
 }

@@ -12,13 +12,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
 
 @RestController
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin(
+        origins = {
+                "http://localhost:3000/",
+                "https://repsdiscipline.vercel.app"
+        }
+)
 @RequestMapping("/punish/v1")
 public class PunishController {
     @Autowired
@@ -160,14 +164,14 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/compare")
-    public ResponseEntity<List<Punishment>> getOpenForADay() {
-        List<Punishment> message = punishmentService.getAllOpenForADay();
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @GetMapping("/compare")
+//    public ResponseEntity<List<Punishment>> getOpenForADay() {
+//        List<Punishment> message = punishmentService.getAllOpenForADay();
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
 //    @PostMapping("/updateLevelThree")
 //    public ResponseEntity<Punishment> updateLevelThree(@RequestBody LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
@@ -233,6 +237,15 @@ public class PunishController {
     @GetMapping("/writeUps")
     public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
         List<Punishment> response = punishmentService.getPunishmentWriteUps();
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/updates")
+    public ResponseEntity<List<Punishment>> updateAllFix() {
+        List<Punishment> response = punishmentService.updateTimeCreated();
+
         return ResponseEntity
                 .accepted()
                 .body(response);

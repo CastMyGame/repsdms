@@ -5,10 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -27,15 +27,15 @@ public class Punishment {
     private int closedTimes;
     private String closedExplanation;
     //    private int infractionTimes;
-    private LocalDateTime timeCreated;
-    private LocalDateTime timeClosed;
+    private LocalDate timeCreated;
+    private LocalDate timeClosed;
     private String classPeriod;
     private String teacherEmail;
     //Set initial value to true
     private boolean isArchived = false;
     private String archivedBy;
     private String archivedExplanation;
-    private LocalDateTime archivedOn;
+    private LocalDate archivedOn;
     private int mapIndex = 0;
     private Map<Date,List<String>> answerHistory ;
 

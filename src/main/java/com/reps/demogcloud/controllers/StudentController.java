@@ -162,4 +162,23 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
+    @GetMapping("/detentionList")
+    public ResponseEntity<List<Student>> getDetentionList() {
+        List<Student> response = studentService.getDetentionList();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @GetMapping("/issList")
+    public ResponseEntity<List<Student>> getIssList() {
+        List<Student> response = studentService.getIssList();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
 }
