@@ -1,5 +1,6 @@
 package com.reps.demogcloud.controllers;
 
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -173,8 +174,8 @@ public class StudentController {
     }
 
     @GetMapping("/issList")
-    public ResponseEntity<List<Student>> getIssList() {
-        List<Student> response = studentService.getIssList();
+    public ResponseEntity<List<Punishment>> getIssList() {
+        List<Punishment> response = studentService.getIssList();
 
         return ResponseEntity
                 .accepted()
