@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -232,12 +233,18 @@ public class StudentService {
                 }
             }
         }
+        Collections.sort(students, new Comparator<Student>() {
+            @Override
+            public int compare(Student o1, Student o2) {
+                return o1.getLastName().compareTo(o2.getLastName());
+            }
+        });
         return students;
     }
 
-    public List<Student> getIssList(){
+    public List<Punishment> getIssList(){
         List<Punishment> punishments = punishRepository.findAll();
-        List<Student> students = new ArrayList<>();
+        List<Punishment> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
             if(punishment.getStatus().equals("OPEN")) {
                 LocalDate today = LocalDate.now();
@@ -245,12 +252,18 @@ public class StudentService {
 
                 long days = ChronoUnit.DAYS.between(punishmentTime, today);
 
-                if (days >= 3 && !students.contains(punishment.getStudent())) {
-                    students.add(punishment.getStudent());
+                if (days >= 3) {
+                    punishedStudents.add(punishment);
                 }
             }
         }
-        return students;
+        Collections.sort(punishedStudents, new Comparator<Punishment>() {
+            @Override
+            public int compare(Punishment o1, Punishment o2) {
+                return o1.getStudent().getLastName().compareTo(o2.getStudent().getLastName());
+            }
+        });
+        return punishedStudents;
     }
 
 
