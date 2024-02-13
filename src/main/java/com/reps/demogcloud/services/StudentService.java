@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 
 
+import org.joda.time.Days;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -224,8 +225,7 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                Duration between = Duration.between(punishmentTime, today);
-                long days = between.toDays();
+                long days = ChronoUnit.DAYS.between(punishmentTime, today);
 
                 if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
                     students.add(punishment.getStudent());
@@ -243,8 +243,7 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                Duration between = Duration.between(punishmentTime, today);
-                long days = between.toDays();
+                long days = ChronoUnit.DAYS.between(punishmentTime, today);
 
                 if (days >= 3 && !students.contains(punishment.getStudent())) {
                     students.add(punishment.getStudent());
@@ -253,4 +252,6 @@ public class StudentService {
         }
         return students;
     }
+
+
 }
