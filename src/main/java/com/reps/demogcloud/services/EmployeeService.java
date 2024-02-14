@@ -4,6 +4,7 @@ import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -14,10 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -157,7 +155,12 @@ public class EmployeeService {
                                 .anyMatch(roleModel -> roleModel.getRole().equals(role));
                     })
                     .collect(Collectors.toList());
-
+            Collections.sort(employeesWithRole, new Comparator<Employee>() {
+                @Override
+                public int compare(Employee o1, Employee o2) {
+                    return o1.getLastName().compareTo(o2.getLastName());
+                }
+            });
             return Optional.of(employeesWithRole);
         } else {
             return Optional.empty();

@@ -12,6 +12,7 @@ import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 
@@ -132,7 +133,14 @@ public class StudentService {
     }
 
     public List<Student> getAllStudents() {
-        return studentRepository.findByIsArchived(false);
+        List<Student> students = studentRepository.findByIsArchived(false);
+        Collections.sort(students, new Comparator<Student>() {
+            @Override
+            public int compare(Student o1, Student o2) {
+                return o1.getLastName().compareTo(o2.getLastName());
+            }
+        });
+        return students;
     }
 
     private Student ensureStudentExists(Student student) {
@@ -226,7 +234,7 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                long days = ChronoUnit.DAYS.between(punishmentTime, today);
+                int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
                 if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
                     students.add(punishment.getStudent());
@@ -250,7 +258,7 @@ public class StudentService {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
-                long days = ChronoUnit.DAYS.between(punishmentTime, today);
+                int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
                 if (days >= 3) {
                     punishedStudents.add(punishment);
@@ -264,6 +272,18 @@ public class StudentService {
             }
         });
         return punishedStudents;
+    }
+
+    public static int getWorkDaysBetweenTwoDates(LocalDate startTime, LocalDate endTime) {
+        final DayOfWeek startW = startTime.getDayOfWeek();
+        final DayOfWeek endW = endTime.getDayOfWeek();
+        final long days = ChronoUnit.DAYS.between(startTime, endTime);
+        final long daysWithoutWeekends = days - 2 * ((days + startW.getValue()) / 7);
+
+        return (int)
+                (daysWithoutWeekends
+                + (startW == DayOfWeek.SUNDAY ? 1 : 0)
+                + (endW == DayOfWeek.SUNDAY ? 1 : 0));
     }
 
 

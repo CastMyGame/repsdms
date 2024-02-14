@@ -70,7 +70,15 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-       return punishRepository.findByIsArchived(false);
+       List<Punishment> punishments = punishRepository.findByIsArchived(false);
+
+        Collections.sort(punishments, new Comparator<Punishment>() {
+            @Override
+            public int compare(Punishment o1, Punishment o2) {
+                return o1.getStudent().getLastName().compareTo(o2.getStudent().getLastName());
+            }
+        });
+        return punishments;
     }
 
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
