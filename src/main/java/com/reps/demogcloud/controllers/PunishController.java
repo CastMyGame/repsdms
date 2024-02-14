@@ -242,6 +242,14 @@ public class PunishController {
                 .body(response);
     }
 
+    @GetMapping("/punishments/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){
+        List<Punishment> response = punishmentService.getAllPunishmentForStudent(studentEmail);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     @PutMapping("/updates")
     public ResponseEntity<List<Punishment>> updateAllFix() {
         List<Punishment> response = punishmentService.updateTimeCreated();

@@ -531,10 +531,10 @@ public class PunishmentService {
 
     public List<Punishment> getPunishmentWriteUps() {
         List<Punishment> writeUps = findAllPunishmentIsArchived(false);
-        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")).toList();
-        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") && !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+//        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
 
-        return wu2;
+        return wu1;
 
     }
 
@@ -1012,5 +1012,10 @@ public class PunishmentService {
             saved.add(punishment);
         }
         return saved;
+    }
+
+    public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
+        List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
+        return punishments;
     }
 }
