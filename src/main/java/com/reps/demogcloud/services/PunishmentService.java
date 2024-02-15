@@ -71,13 +71,6 @@ public class PunishmentService {
 
     public List<Punishment> findAll() {
        List<Punishment> punishments = punishRepository.findByIsArchived(false);
-
-        Collections.sort(punishments, new Comparator<Punishment>() {
-            @Override
-            public int compare(Punishment o1, Punishment o2) {
-                return o1.getStudent().getLastName().compareTo(o2.getStudent().getLastName());
-            }
-        });
         return punishments;
     }
 
@@ -537,7 +530,7 @@ public class PunishmentService {
         return studentPunishments;
     }
 
-    public List<Punishment> getPunishmentWriteUps() {
+    public List<Punishment> getAllReferrals() {
         List<Punishment> writeUps = findAllPunishmentIsArchived(false);
         List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") && !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
 //        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
@@ -1023,7 +1016,6 @@ public class PunishmentService {
     }
 
     public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
-        List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
-        return punishments;
+        return punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
     }
 }

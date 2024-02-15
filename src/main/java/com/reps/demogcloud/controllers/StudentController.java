@@ -39,6 +39,23 @@ public class StudentController {
                 .body(message);
     }
 
+    //---------------------------------GET Controllers--------------------------------
+    @GetMapping("/allStudents")
+    public ResponseEntity<List<Student>> findAllStudents () {
+        var findAll = studentService.getAllStudents();
+
+        return ResponseEntity
+                .accepted()
+                .body(findAll);
+    }
+
+    @GetMapping("/archived")
+    public ResponseEntity<List<Student>> getAllArchived() {
+        List<Student> message = studentService.findAllStudentIsArchived(true);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
     @GetMapping("/lastname/{lastName}")
     public ResponseEntity<List<Student>> getStudentByLastName (@PathVariable String lastName) throws Exception {
         var message = studentService.findByStudentLastName(lastName);
@@ -66,37 +83,31 @@ public class StudentController {
                 .body(message);
     }
 
-    @DeleteMapping("/delete")
-    public ResponseEntity<String> deleteStudent (@RequestBody StudentRequest studentRequest) throws Exception {
-        var delete = studentService.deleteStudent(studentRequest);
+    @GetMapping("/detentionList")
+    public ResponseEntity<List<Student>> getDetentionList() {
+        List<Student> response = studentService.getDetentionList();
+
         return ResponseEntity
                 .accepted()
-                .body(delete);
+                .body(response);
     }
 
-//    @PutMapping("/edit")
-//    public ResponseEntity<Student> editInfraction (@RequestBody Student student) {
-//        var edit = studentService.createNewStudent(student);
-//        return ResponseEntity
-//                .accepted()
-//                .body(edit);
-//    }
+    @GetMapping("/issList")
+    public ResponseEntity<List<Punishment>> getIssList() {
+        List<Punishment> response = studentService.getIssList();
 
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    //-----------------------------POST Controllers-----------------------------------
     @PostMapping("/newStudent")
     public ResponseEntity<StudentResponse> createStudent (@RequestBody Student studentRequest) {
         StudentResponse studentResponse = studentService.createNewStudent(studentRequest);
         return studentResponse.getStudent() == null
                 ? new ResponseEntity<>(studentResponse, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(studentResponse, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/allStudents")
-    public ResponseEntity<List<Student>> findAllStudents () {
-        var findAll = studentService.getAllStudents();
-
-        return ResponseEntity
-                .accepted()
-                .body(findAll);
     }
 
     @PostMapping("/addStudents")
@@ -108,25 +119,7 @@ public class StudentController {
                 .accepted()
                 .body(students);
     }
-
-    @GetMapping("/archived")
-    public ResponseEntity<List<Student>> getAllArchived() {
-        List<Student> message = studentService.findAllStudentIsArchived(true);
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PutMapping("/archived/{studentId}")
-    public ResponseEntity<Student> archivedDeleted(@PathVariable String studentId) {
-        Student response = studentService.archiveRecord(studentId);
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
-
     // Points Controllers
-
     @PostMapping("/points/add")
     public ResponseEntity<Student> addPoints (@RequestParam String studentEmail, @RequestParam Integer points) {
         Student response = studentService.addPoints(studentEmail, points);
@@ -145,8 +138,8 @@ public class StudentController {
 
     @PostMapping("/points/transfer")
     public ResponseEntity<List<Student>> transferPoints (@RequestParam String givingStudentEmail,
-    @RequestParam String receivingStudentEmail,
-    @RequestParam Integer pointsTransferred) {
+                                                         @RequestParam String receivingStudentEmail,
+                                                         @RequestParam Integer pointsTransferred) {
         List<Student> response = studentService.transferPoints(givingStudentEmail,
                 receivingStudentEmail,
                 pointsTransferred);
@@ -154,7 +147,7 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
-
+    //----------------------------PUT Controllers--------------------------------
     @PutMapping("/assignSchool")
     public ResponseEntity<List<Student>> massAssignSchool(@RequestParam boolean isArchived) {
         List<Student> response = studentService.massAssignForSchool(isArchived);
@@ -163,23 +156,21 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
-
-    @GetMapping("/detentionList")
-    public ResponseEntity<List<Student>> getDetentionList() {
-        List<Student> response = studentService.getDetentionList();
-
+    @PutMapping("/archived/{studentId}")
+    public ResponseEntity<Student> archivedDeleted(@PathVariable String studentId) {
+        Student response = studentService.archiveRecord(studentId);
         return ResponseEntity
                 .accepted()
                 .body(response);
     }
 
-    @GetMapping("/issList")
-    public ResponseEntity<List<Punishment>> getIssList() {
-        List<Punishment> response = studentService.getIssList();
-
+    //---------------------------DELETE Controllers--------------------------
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteStudent (@RequestBody StudentRequest studentRequest) throws Exception {
+        var delete = studentService.deleteStudent(studentRequest);
         return ResponseEntity
                 .accepted()
-                .body(response);
+                .body(delete);
     }
 
 }
