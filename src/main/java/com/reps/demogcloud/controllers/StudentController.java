@@ -25,6 +25,7 @@ public class StudentController {
     @Autowired
     private StudentService studentService;
 
+    //---------------------------------GET Controllers--------------------------------
     @GetMapping("/")
     public ResponseEntity<?> getHome() {
         return new ResponseEntity<>(HttpStatus.OK);
@@ -39,7 +40,6 @@ public class StudentController {
                 .body(message);
     }
 
-    //---------------------------------GET Controllers--------------------------------
     @GetMapping("/allStudents")
     public ResponseEntity<List<Student>> findAllStudents () {
         var findAll = studentService.getAllStudents();
@@ -56,6 +56,7 @@ public class StudentController {
                 .accepted()
                 .body(message);
     }
+
     @GetMapping("/lastname/{lastName}")
     public ResponseEntity<List<Student>> getStudentByLastName (@PathVariable String lastName) throws Exception {
         var message = studentService.findByStudentLastName(lastName);
