@@ -23,7 +23,7 @@ public class assignmentController {
     @Autowired
   private AssignmentService assignmentService;
 
-
+    //-----------------------GET Controllers----------------------------
     @GetMapping("/")
     public ResponseEntity<List<Assignment>> getAllQuestions() throws Exception {
         var message = assignmentService.getAllAssignments();
@@ -32,7 +32,7 @@ public class assignmentController {
                 .body(message);
     }
 
-
+    //------------------------POST Controllers-----------------------------
     @PostMapping("/")
     public ResponseEntity<Assignment> createNewAssignment(@RequestBody Assignment assignment) throws Exception {
         System.out.println(assignment);
@@ -42,7 +42,7 @@ public class assignmentController {
                 .body(message);
     }
 
-
+    //----------------------------PUT Controllers----------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<Assignment> updateAssignment(@RequestBody Assignment assignment,@PathVariable String id) throws Exception {
         System.out.println(assignment);
@@ -53,7 +53,7 @@ public class assignmentController {
     }
 
 
-
+    //-------------------------DELETE Controllers--------------------------------
     @DeleteMapping("/delete/{assignmentName}")
     public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
         var message = assignmentService.deleteAssignment(assignmentName);

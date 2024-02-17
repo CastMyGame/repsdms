@@ -28,18 +28,17 @@ public class PunishController {
     @Autowired
     PunishmentService punishmentService;
 
-    @GetMapping("/punishId")
-    public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
-        var message = punishmentService.findByPunishmentId(punishment);
-
+    //-------------------------------------GET Controllers-------------------------------
+    @GetMapping("/punishments")
+    public ResponseEntity<List<Punishment>> getAll() {
+        var message = punishmentService.findAll();
         return ResponseEntity
                 .accepted()
                 .body(message);
     }
-
-    @PutMapping("/{id}/index/{index}")
-    public ResponseEntity<Punishment> updateMapIndex(@PathVariable String id, @PathVariable int index) throws ResourceNotFoundException {
-        var message = punishmentService.updateMapIndex(id,index);
+    @GetMapping("/punishId")
+    public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
+        var message = punishmentService.findByPunishmentId(punishment);
 
         return ResponseEntity
                 .accepted()
@@ -50,42 +49,6 @@ public class PunishController {
     public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
         var message = punishmentService.findByInfractionName(infractionName);
 
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PreAuthorize("hasRole('STUDENT')")
-    @PostMapping("/punishId/close")
-    public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
-        System.out.println(closePunishmentRequest);
-        var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail(), closePunishmentRequest.getStudentAnswer());
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PostMapping("/close/{id}")
-    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
-        var message = punishmentService.closeByPunishmentId(id);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PostMapping("/ftc-close")
-    public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
-        var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @GetMapping("/punishments")
-    public ResponseEntity<List<Punishment>> getAll() {
-        var message = punishmentService.findAll();
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -109,52 +72,6 @@ public class PunishController {
                 .body(message);
     }
 
-    @PostMapping("/startPunish")
-    public ResponseEntity<PunishmentResponse> createNewPunish(@RequestBody PunishmentRequest punishmentRequest) {
-        var message = punishmentService.createNewPunish(punishmentRequest);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @DeleteMapping("/delete")
-    public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {
-        var delete = punishmentService.deletePunishment(punishment);
-        return ResponseEntity
-                .accepted()
-                .body(delete);
-    }
-
-//    @PutMapping("/edit")
-//    public ResponseEntity<PunishRequestCommand> editInfraction (@RequestBody PunishRequestCommand requestCommand) {
-//        var edit = punishmentService.createNewPunish(requestCommand);
-//        return ResponseEntity
-//                .accepted()
-//                .body(edit);
-//    }
-
-    @CrossOrigin
-    @PreAuthorize("hasRole('TEACHER')")
-    @PostMapping("/startPunish/form")
-    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
-        var message = punishmentService.createNewPunishForm(punishmentFormRequest);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @CrossOrigin
-    @PostMapping("/startPunish/formList")
-    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
-        var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
     @GetMapping("/openPunishments")
     public ResponseEntity<List<Punishment>> getOpenPunishments() {
         var message = punishmentService.getAllOpenAssignments();
@@ -164,31 +81,28 @@ public class PunishController {
                 .body(message);
     }
 
-//    @GetMapping("/compare")
-//    public ResponseEntity<List<Punishment>> getOpenForADay() {
-//        List<Punishment> message = punishmentService.getAllOpenForADay();
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
-
-//    @PostMapping("/updateLevelThree")
-//    public ResponseEntity<Punishment> updateLevelThree(@RequestBody LevelThreeCloseRequest levelThreeCloseRequest) throws ResourceNotFoundException {
-//        Punishment updated = punishmentService.updateLevelThreeCloseRequest(levelThreeCloseRequest);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(updated);
-//    }
-
-    @PostMapping("/studentsReport/{studentEmail}")
-    public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
-        List<Punishment> message = punishmentService.getAllPunishmentsForStudents(studentEmail);
-
+    @GetMapping("/archived")
+    public ResponseEntity<List<Punishment>> getAllArchived() {
+        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
         return ResponseEntity
                 .accepted()
                 .body(message);
+    }
+
+    @GetMapping("/writeUps")
+    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
+        List<Punishment> response = punishmentService.getAllReferrals();
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @GetMapping("/punishments/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){
+        List<Punishment> response = punishmentService.getAllPunishmentForStudent(studentEmail);
+        return ResponseEntity
+                .accepted()
+                .body(response);
     }
 
     @GetMapping("/student/punishments/{studentEmail}")
@@ -200,10 +114,59 @@ public class PunishController {
                 .body(message);
     }
 
+    //-----------------------------POST Controllers---------------------------
+    @PostMapping("/punishId/close")
+    public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
+        System.out.println(closePunishmentRequest);
+        var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail(), closePunishmentRequest.getStudentAnswer());
 
-    @GetMapping("/archived")
-    public ResponseEntity<List<Punishment>> getAllArchived() {
-        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/close/{id}")
+    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
+        var message = punishmentService.closeByPunishmentId(id);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/startPunish/form")
+    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
+        var message = punishmentService.createNewPunishForm(punishmentFormRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/startPunish/formList")
+    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
+        var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/studentsReport/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
+        List<Punishment> message = punishmentService.getAllPunishmentsForStudents(studentEmail);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    //--------------------------PUT Controllers--------------------------
+
+    @PutMapping("/{id}/index/{index}")
+    public ResponseEntity<Punishment> updateMapIndex(@PathVariable String id, @PathVariable int index) throws ResourceNotFoundException {
+        var message = punishmentService.updateMapIndex(id,index);
+
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -234,22 +197,6 @@ public class PunishController {
                 .body(response);
     }
 
-    @GetMapping("/writeUps")
-    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
-        List<Punishment> response = punishmentService.getPunishmentWriteUps();
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
-
-    @GetMapping("/punishments/{studentEmail}")
-    public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){
-        List<Punishment> response = punishmentService.getAllPunishmentForStudent(studentEmail);
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
-
     @PutMapping("/updates")
     public ResponseEntity<List<Punishment>> updateAllFix() {
         List<Punishment> response = punishmentService.updateTimeCreated();
@@ -257,5 +204,14 @@ public class PunishController {
         return ResponseEntity
                 .accepted()
                 .body(response);
+    }
+
+    //----------------------------DELETE Controllers------------------------------
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {
+        var delete = punishmentService.deletePunishment(punishment);
+        return ResponseEntity
+                .accepted()
+                .body(delete);
     }
 }

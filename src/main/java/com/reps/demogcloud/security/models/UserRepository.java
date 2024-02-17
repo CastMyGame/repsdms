@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends MongoRepository<UserModel,String> {
-UserModel findByUsername(String username);
 List<UserModel> findBySchoolName (String schoolName);
+UserModel findByUsername(String username);
 Boolean existsByUsername(String username);
 }

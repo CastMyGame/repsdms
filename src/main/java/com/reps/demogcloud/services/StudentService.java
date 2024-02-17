@@ -29,13 +29,6 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class StudentService {
-    //    String keyVaultName = "repskv";
-//    String keyVaultUri = "https://" + keyVaultName + ".vault.azure.net";
-//
-//    SecretClient secretClient = new SecretClientBuilder()
-//            .vaultUrl(keyVaultUri)
-//            .credential(new DefaultAzureCredentialBuilder().build())
-//            .buildClient();
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
     private final EmailService emailService;
@@ -49,16 +42,6 @@ public class StudentService {
         this.emailService = emailService;
         this.punishRepository = punishRepository;
         this.authService = authService;
-    }
-
-    public Student findByStudentIdNumber(String studentId) throws ResourceNotFoundException {
-        var findMe = studentRepository.findByStudentIdNumber(studentId);
-
-        if (findMe == null) {
-            throw new ResourceNotFoundException("No student with that Id exists");
-        }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
     }
 
     public List<Student> findStudentByParentEmail(String parentEmail) throws Exception {
@@ -141,10 +124,6 @@ public class StudentService {
             }
         });
         return students;
-    }
-
-    private Student ensureStudentExists(Student student) {
-        return null;
     }
 
     public Student findByStudentId(String studentId) throws ResourceNotFoundException {

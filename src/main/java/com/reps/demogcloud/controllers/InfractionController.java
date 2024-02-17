@@ -22,19 +22,11 @@ public class InfractionController {
         this.infractionService = infractionService;
     }
 
-
+    //---------------------------GET Controllers------------------------------
     @GetMapping("/all")
     public ResponseEntity<List<Infraction>> findAllInfractions() {
         var message = infractionService.findAllInfractions();
         InfractionResponse responseMessage = new InfractionResponse();
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-    @PostMapping("/createInfraction")
-    public ResponseEntity<Infraction> createNewInfraction(@RequestBody Infraction infraction) {
-        var message = infractionService.createNewInfraction(infraction);
-
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -62,7 +54,16 @@ public class InfractionController {
                 .accepted()
                 .body(findMe);
     }
+    //----------------------------POST Controllers------------------------
+    @PostMapping("/createInfraction")
+    public ResponseEntity<Infraction> createNewInfraction(@RequestBody Infraction infraction) {
+        var message = infractionService.createNewInfraction(infraction);
 
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+    //------------------------------DELETE Controllers-----------------------
     @DeleteMapping("/delete/infraction")
     public ResponseEntity<String> deleteInfraction (@RequestBody Infraction infraction) throws ResourceNotFoundException {
         var delete = infractionService.deleteInfraction(infraction);
@@ -70,12 +71,4 @@ public class InfractionController {
                 .accepted()
                 .body(delete);
     }
-
-//    @PutMapping("/infraction/edit")
-//    public ResponseEntity<Infraction> editInfraction (@RequestBody Infraction infraction) {
-//        var edit = infractionService.createNewInfraction(infraction);
-//        return ResponseEntity
-//                .accepted()
-//                .body(edit);
-//    }
 }

@@ -35,11 +35,33 @@ public class EmployeeControllers {
     }
 
 
+    // -----------------------------------GET Controllers---------------------------------
     @GetMapping("/employees")
     private ResponseEntity<List<Employee>> getAllUsers(){
         List<Employee> employees =  employeeRepository.findAll();
         return ResponseEntity.ok(employees);
     }
+
+    @GetMapping("/employees/{role}")
+    private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
+        Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
+
+        if (employeesOptional.isPresent()) {
+            List<Employee> employees = employeesOptional.get();
+            if(employees.isEmpty()){
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
+
+            }else{
+                return ResponseEntity.ok(employees);
+
+            }
+        } else {
+            // If no employees with the specified role are found, return a 404 Not Found response
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
+        }
+    }
+
+    //------------------------------POST Controllers------------------------------------
 
     @PostMapping("/employees")
     private ResponseEntity<EmployeeResponse> createEmployee(@RequestBody Employee employee){
@@ -50,7 +72,7 @@ public class EmployeeControllers {
     }
 
 
-
+    //---------------------------PUT Controllers------------------------------
 
     @PutMapping("/employees/{id}/roles")
     private ResponseEntity<Employee> updateEmployeesRole(@PathVariable String id, @RequestBody Set<RoleModel> roles) {
@@ -73,7 +95,7 @@ public class EmployeeControllers {
         }
     }
 
-
+    //----------------------------DELETE Controllers----------------------------------
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
         try {
@@ -86,32 +108,4 @@ public class EmployeeControllers {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Employee with ID " + id + " not found.");
         }
     }
-
-
-
-    @GetMapping("/employees/{role}")
-    private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
-        Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
-
-        if (employeesOptional.isPresent()) {
-            List<Employee> employees = employeesOptional.get();
-            if(employees.isEmpty()){
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
-
-            }else{
-                return ResponseEntity.ok(employees);
-
-            }
-        } else {
-            // If no employees with the specified role are found, return a 404 Not Found response
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
-        }
-    }
-
-
-
-
-
-
-
 }

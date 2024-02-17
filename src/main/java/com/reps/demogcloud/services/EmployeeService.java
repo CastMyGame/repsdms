@@ -31,29 +31,6 @@ public class EmployeeService {
         this.authService = authService;
     }
 
-    public Employee findByEmail(String email) throws Exception {
-        Employee employeeRecord = employeeRepository.findByEmailIgnoreCase(email);
-
-        if (employeeRecord == null) {
-            throw new ResourceNotFoundException("That Employee does not exist");
-        }
-        logger.debug(String.valueOf(employeeRecord));
-        System.out.println(employeeRecord);
-        return employeeRecord;
-    }
-    public List<Employee> findByLastName(String lastName) throws Exception {
-        List<Employee> fetchData = employeeRepository.findByLastName(lastName);
-        List<Employee> employeeRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList(); // Collect the filtered punishments into a list
-        if (employeeRecord.isEmpty()) {
-            throw new ResourceNotFoundException("That student does not exist");
-        }
-        logger.debug(String.valueOf(employeeRecord));
-        System.out.println(employeeRecord);
-        return employeeRecord;
-    }
-
     public EmployeeResponse createNewEmployee (Employee request) {
         Set<RoleModel> roles = new HashSet<>();
         RoleModel teacher = new RoleModel();
