@@ -42,26 +42,41 @@ public class UserControllers {
     @Autowired
     private UserRepository userRepository;
 
-
+    //---------------------------GET Controllers-------------------------------------
     @GetMapping("/users")
     private  ResponseEntity<List<UserModel>> getAllUsers(){
         List<UserModel> users =  userRepository.findAll();
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping("/users/{role}")
+    private ResponseEntity<List<UserModel>> getAllUsersByRole(@PathVariable String role) {
+        List<UserModel> users = userRepository.findAll().stream()
+                .filter(user -> {
+                    Set<RoleModel> userRoles = user.getRoles();
+                    if (userRoles != null) {
+                        return userRoles.stream().anyMatch(roleModel -> roleModel.getRole().equals(role));
+                    }
+                    return false; // Return false if userRoles is null
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(users);
+    }
+
+    //------------------------------POST Controllers---------------------------------
     @PostMapping("/users/create/{school}")
     private ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school){
         List<UserModel> createdUsers = userService.createUsersForSchool(school);
         return ResponseEntity.ok(createdUsers);
     }
 
+    //----------------------------------PUT Controllers-----------------------------------
     @PutMapping("/users/{school}")
     private ResponseEntity<List<UserModel>> lowercaseThemAll(@PathVariable String school) {
         List<UserModel> users = userService.lowerCaseThemAll(school);
         return ResponseEntity.ok(users);
     }
-
-
 
     @PutMapping("/users/{id}/roles")
     private ResponseEntity<UserModel> updateUsersRole(@PathVariable String id, @RequestBody Set<RoleModel> roles) {
@@ -84,7 +99,7 @@ public class UserControllers {
         }
     }
 
-
+    //-------------------------DELETE Controllers-----------------------------------
     @DeleteMapping("/users/{id}")
     public ResponseEntity<String> deleteUserById(@PathVariable String id) {
 
@@ -101,22 +116,6 @@ public class UserControllers {
             // If user not found, return a 404 Not Found response
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User with ID " + id + " not found.");
         }
-    }
-
-
-    @GetMapping("/users/{role}")
-    private ResponseEntity<List<UserModel>> getAllUsersByRole(@PathVariable String role) {
-        List<UserModel> users = userRepository.findAll().stream()
-                .filter(user -> {
-                    Set<RoleModel> userRoles = user.getRoles();
-                    if (userRoles != null) {
-                        return userRoles.stream().anyMatch(roleModel -> roleModel.getRole().equals(role));
-                    }
-                    return false; // Return false if userRoles is null
-                })
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(users);
     }
 
 }

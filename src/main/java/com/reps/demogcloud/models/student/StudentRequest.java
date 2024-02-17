@@ -2,8 +2,10 @@ package com.reps.demogcloud.models.student;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+@Getter
 public class StudentRequest {
     private Student student;
     private String error;
@@ -17,16 +19,8 @@ public class StudentRequest {
         this.error = error;
     }
 
-    public Student getStudent() {
-        return student;
-    }
-
     public void setStudent(Student student) {
         this.student = student;
-    }
-
-    public String getError() {
-        return error;
     }
 
     public void setError(String error) {

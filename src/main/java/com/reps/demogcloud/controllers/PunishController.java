@@ -134,23 +134,6 @@ public class PunishController {
                 .body(message);
     }
 
-    @PostMapping("/ftc-close")
-    public ResponseEntity<PunishmentResponse> closeFailureToComplete(@RequestBody CloseFailureToComplete closeFailureToComplete) throws ResourceNotFoundException {
-        var message = punishmentService.closeFailureToComplete(closeFailureToComplete.getInfractionName(), closeFailureToComplete.getStudentEmail(), closeFailureToComplete.getTeacherEmail());
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    @PostMapping("/startPunish")
-    public ResponseEntity<PunishmentResponse> createNewPunish(@RequestBody PunishmentRequest punishmentRequest) {
-        var message = punishmentService.createNewPunish(punishmentRequest);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
@@ -223,7 +206,7 @@ public class PunishController {
                 .body(response);
     }
 
-    //----------------------------DELETE Controllers
+    //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")
     public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {
         var delete = punishmentService.deletePunishment(punishment);

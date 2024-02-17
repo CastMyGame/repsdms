@@ -24,22 +24,15 @@ public class AssignmentService {
     public AssignmentService(AssignmentRepository assignmentRepository) {
         this.assignmentRepository = assignmentRepository;
     }
-
-
     public List<Assignment> getAllAssignments(){
        return  assignmentRepository.findAll();
-
     }
-
     public  Assignment createNewAssignment(Assignment assignments){
         return assignmentRepository.save(assignments);
     }
-
-
     public  Assignment deleteAssignment(String assignmentName){
         return assignmentRepository.deleteByInfractionName(assignmentName);
     }
-
     public Assignment updateNewAssignment(Assignment assignment, String id) throws Exception {
         try {
             Assignment existingAssignment = assignmentRepository.findById(id).orElseThrow();

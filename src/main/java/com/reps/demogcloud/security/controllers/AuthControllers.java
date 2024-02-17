@@ -54,11 +54,13 @@ public class AuthControllers {
     private AuthenticationManager authenticationManager;
 
 
-
+    //------------------------GET Controllers----------------------
     @GetMapping("/test")
     private  String testingToken(){
         return "I WORKS";
     }
+
+    //---------------------POST Controllers-----------------------------
     @PostMapping("/register")
     private ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
         String username = authenticationRequest.getUsername();
@@ -84,7 +86,6 @@ public class AuthControllers {
             return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username,null));
         }
     }
-
 
     @PostMapping("/auth")
     private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest){
@@ -115,7 +116,7 @@ public class AuthControllers {
         return ResponseEntity.ok(createdUsers);
     }
 
-@PostMapping("/forgot-password")
+    @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest){
         String email = forgotPasswordRequest.getEmail();
     System.out.println(forgotPasswordRequest.getEmail());
@@ -133,12 +134,12 @@ public class AuthControllers {
     passwordResetToken.setToken(resetToken);
     passwordResetToken.setExpiryDate(24*60); // set exipration time in minutes
     passwordResetTokenRepository.save(passwordResetToken);
-String link = "https://repsdiscipline.vercel.app/reset-password/"+resetToken;
+    String link = "https://repsdiscipline.vercel.app/reset-password/"+resetToken;
     emailService.sendEmail(user.getUsername(), "Reset Your Password", "Click the Link Below to Reset Your Password " + link );
     return ResponseEntity.ok("Password reset link sent to " + email);
 
 
-}
+    }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
