@@ -35,4 +35,12 @@ public class DTOController {
                 .body(message);
     }
 
+    @GetMapping("/TeacherOverviewData")
+    public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
+        var message = dtoService.getTeacherOverData();
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
 }
