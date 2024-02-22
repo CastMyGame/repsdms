@@ -43,4 +43,13 @@ public class DTOController {
                 .body(message);
     }
 
+    @GetMapping("/StudentOverviewData/{studentEmail}")
+    public ResponseEntity<StudentOverviewDTO> getAllTeacherOverview(@PathVariable String studentEmail) throws Exception {
+        var message = dtoService.getStudentOverData(studentEmail);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
 }
