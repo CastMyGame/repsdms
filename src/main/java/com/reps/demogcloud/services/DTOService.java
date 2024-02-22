@@ -3,7 +3,9 @@ package com.reps.demogcloud.services;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.AdminOverviewDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.punishment.StudentOverviewDTO;
 import com.reps.demogcloud.models.punishment.TeacherOverviewDTO;
+import com.reps.demogcloud.models.student.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,10 @@ public class DTOService {
     @Autowired
     private EmployeeService employeeService;
 
+    @Autowired
+    private StudentService studentService;
+
+
     public AdminOverviewDTO getAdminOverData(){
         List<Punishment> punishmentList = punishmentService.findAll();
         List<Punishment> writeUpList = punishmentService.getAllReferrals();
@@ -35,6 +41,13 @@ public class DTOService {
     public TeacherOverviewDTO getTeacherOverData(){
         List<Punishment> punishmentList = punishmentService.findAll();
         return new TeacherOverviewDTO(punishmentList);
+    }
+
+    public StudentOverviewDTO getStudentOverData(String studentEmail) throws Exception {
+        List<Punishment> punishmentList = punishmentService.findAll();
+        Student student = studentService.findByStudentEmail(studentEmail);
+
+        return new StudentOverviewDTO(punishmentList,student);
     }
 
 }
