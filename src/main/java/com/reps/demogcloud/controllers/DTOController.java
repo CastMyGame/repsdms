@@ -35,16 +35,16 @@ public class DTOController {
                 .body(message);
     }
 
-    @GetMapping("/TeacherOverviewData")
-    public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
-        var message = dtoService.getTeacherOverData();
+    @GetMapping("/TeacherOverviewData/{email}")
+    public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview(@PathVariable String email) {
+        var message = dtoService.getTeacherOverData(email);
         return ResponseEntity
                 .accepted()
                 .body(message);
     }
 
     @GetMapping("/StudentOverviewData/{studentEmail}")
-    public ResponseEntity<StudentOverviewDTO> getAllTeacherOverview(@PathVariable String studentEmail) throws Exception {
+    public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(@PathVariable String studentEmail) throws Exception {
         var message = dtoService.getStudentOverData(studentEmail);
         return ResponseEntity
                 .accepted()

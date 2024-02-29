@@ -60,6 +60,12 @@ public class PunishmentService {
         return punishments;
     }
 
+    public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
+        List<Punishment> preProcessedPunishments = punishRepository.findByIsArchived(false);
+
+        return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
+    }
+
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
         List<Punishment> fetchData = punishRepository.findByInfractionInfractionName(infractionName);
         var punishmentRecord = fetchData.stream()
@@ -454,6 +460,15 @@ public class PunishmentService {
     public List<Punishment> getAllReferrals() {
         List<Punishment> writeUps = findAllPunishmentIsArchived(false);
         List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") && !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+//        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+
+        return wu1;
+
+    }
+
+    public List<Punishment> getAllReferralsFilteredByTeacher(String email) {
+        List<Punishment> writeUps = findAllPunishmentIsArchived(false);
+        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") && !pun.getInfraction().getInfractionName().equals("Behavioral Concern") && pun.getTeacherEmail().equalsIgnoreCase(email)).toList();
 //        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
 
         return wu1;
