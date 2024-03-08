@@ -1,10 +1,7 @@
 package com.reps.demogcloud.controllers;
 
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.models.school.SchoolRequest;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.school.SchoolResponse;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentResponse;
 import com.reps.demogcloud.services.SchoolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +21,7 @@ public class schoolController {
     SchoolService schoolService;
 
     @PostMapping("/newSchool")
-    public ResponseEntity<SchoolResponse> createSchool (@RequestBody SchoolRequest schoolRequest) {
+    public ResponseEntity<SchoolResponse> createSchool (@RequestBody School schoolRequest) {
         SchoolResponse schoolResponse = schoolService.createNewSchool(schoolRequest);
         return schoolResponse.getSchool() == null
                 ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
