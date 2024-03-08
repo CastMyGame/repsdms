@@ -1,6 +1,8 @@
 package com.reps.demogcloud.security.services;
 
+import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
@@ -28,6 +30,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -67,6 +72,12 @@ public class UserService implements UserDetailsService {
         // Implement the logic to load UserModel based on the username
         // For example, fetch it from a UserRepository
         return userRepository.findByUsername(username); // Assuming UserRepository has a method like findByUsername
+    }
+
+    public Object loadModelEmployeeModelByUsername(String username) {
+        // Implement the logic to load UserModel based on the username
+        // For example, fetch it from a UserRepository
+        return employeeRepository.findByEmailIgnoreCase(username); // Assuming UserRepository has a method like findByUsername
     }
 
     public List<UserModel> createUsersForSchool(String school) {

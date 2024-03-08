@@ -41,7 +41,7 @@ public class DTOService {
 
     public TeacherOverviewDTO getTeacherOverData(String email){
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail(email);
-        List<Punishment> writeUpList = punishmentService.getAllReferralsFilteredByTeacher(email);
+        List<Punishment> writeUpList = punishmentService.getAllReferrals();
 
         return new TeacherOverviewDTO(punishmentList,writeUpList);
     }

@@ -1,10 +1,10 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -26,10 +26,20 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final AuthService authService;
 
-    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService) {
+    private final CustomFilters customFilters;
+
+
+
+
+
+    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters) {
         this.employeeRepository = employeeRepository;
         this.authService = authService;
+        this.customFilters = customFilters;
     }
+
+
+
 
     public EmployeeResponse createNewEmployee (Employee request) {
         Set<RoleModel> roles = new HashSet<>();
@@ -122,7 +132,10 @@ public class EmployeeService {
     }
 
     public Optional<List<Employee>> findAllByRole(String role) {
-        List<Employee> allEmployees = employeeRepository.findAll();
+
+        //Fetch Data
+        List<Employee> allEmployees = customFilters.FetchEmployeeDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
+
 
         if (!allEmployees.isEmpty()) {
             List<Employee> employeesWithRole = allEmployees.stream()

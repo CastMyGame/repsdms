@@ -1,28 +1,37 @@
 package com.reps.demogcloud.services;
 
 
-import com.reps.demogcloud.data.InfractionRepository;
-import com.reps.demogcloud.data.PunishRepository;
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.models.UserModel;
+import com.reps.demogcloud.security.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
+
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -36,6 +45,10 @@ public class PunishmentService {
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
     private final EmailService emailService;
+    private final UserService userService;
+    private final CustomFilters customFilters;
+    private final EmployeeRepository employeeRepository;
+
 
 
 
@@ -57,12 +70,11 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-        return punishRepository.findByIsArchived(false);
+        return customFilters.FetchDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
     }
 
     public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
         List<Punishment> preProcessedPunishments = punishRepository.findByIsArchived(false);
-
         return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
     }
 
@@ -459,13 +471,38 @@ public class PunishmentService {
         return studentPunishments;
     }
 
+
+
     public List<Punishment> getAllReferrals() {
-        List<Punishment> writeUps = findAllPunishmentIsArchived(false);
-        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") && !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
-//        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        return wu1;
+            //Make Sure We have Logged In User Details
+        if (authentication != null && authentication.getPrincipal() != null) {
+            UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
 
+            //Fetch Data
+            List<Punishment> data = customFilters.FetchDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
+
+            // Switch Filter Depending On Role
+            if (userModel.getRoles().stream().anyMatch(role -> "TEACHER".equals(role.getRole()))) {
+                 data = customFilters.filterPunishmentsByTeacherEmail(data,userModel.getUsername());
+            }
+
+            if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
+                data = customFilters.filterPunishmentObjByStudent(data,userModel.getUsername());
+            }
+
+            //If Admin, defaults to no additional filter
+
+               //Method Specific Filters
+            return data.stream()
+                    .filter(punishment -> !punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") &&
+                            !punishment.getInfraction().getInfractionName().equals("Behavioral Concern"))
+                    .collect(Collectors.toList());
+        }
+
+        // Return an empty list instead of null
+        return Collections.emptyList();
     }
 
     public List<Punishment> getAllReferralsFilteredByTeacher(String email) {
