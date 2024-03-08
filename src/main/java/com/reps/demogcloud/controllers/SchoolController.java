@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/school/v1")
-public class schoolController {
+public class SchoolController {
     @Autowired
     SchoolService schoolService;
 
