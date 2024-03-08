@@ -3,6 +3,7 @@ package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.InfractionRepository;
 import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
@@ -10,6 +11,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -34,6 +34,7 @@ public class PunishmentService {
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
+    private final SchoolRepository schoolRepository;
     private final EmailService emailService;
 
 
@@ -56,8 +57,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-       List<Punishment> punishments = punishRepository.findByIsArchived(false);
-        return punishments;
+        return punishRepository.findByIsArchived(false);
     }
 
     public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
@@ -133,6 +133,8 @@ public class PunishmentService {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+        int maxLevel = ourSchool.getMaxPunishLevel();
         List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
@@ -145,7 +147,7 @@ public class PunishmentService {
             closedTimes.add(punishment.getClosedTimes());
         }
 
-        String level = levelCheck(closedTimes);
+        String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
 
         Punishment punishment = new Punishment();
@@ -181,7 +183,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return sendEmailBasedOnType(punishment, punishRepository, emailService);
+            return sendEmailBasedOnType(punishment,schoolRepository, punishRepository, emailService);
         }
         if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
@@ -190,7 +192,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return sendEmailBasedOnType(punishment, punishRepository, emailService);
+            return sendEmailBasedOnType(punishment,schoolRepository, punishRepository, emailService);
         }
         if(punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
@@ -199,7 +201,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return sendEmailBasedOnType(punishment, punishRepository, emailService);
+            return sendEmailBasedOnType(punishment,schoolRepository, punishRepository, emailService);
         }
 
         if (findOpen.isEmpty()) {
@@ -208,7 +210,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return sendEmailBasedOnType(punishment, punishRepository, emailService);
+            return sendEmailBasedOnType(punishment,schoolRepository, punishRepository, emailService);
 
 
         } else {
@@ -218,7 +220,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return sendCFREmailBasedOnType(punishment);
+            return sendCFREmailBasedOnType(punishment, schoolRepository);
         }
     }
 
@@ -475,27 +477,36 @@ public class PunishmentService {
 
     }
 
-    private static String levelCheck(List<Integer> levels) {
+    private static String levelCheck(List<Integer> levels, int maxLevel) {
         int level = 1;
+        int discLevel;
+        if (maxLevel == 0) {
+            discLevel = 4;
+        } else {
+            discLevel = maxLevel;
+        }
         for (Integer lev : levels) {
-            if (lev>level) {
+            if (lev > level) {
                 level = lev;
             }
-            if(level >= 4) {
+            if (level >= discLevel) {
                 level = 4;
             }
         }
         return String.valueOf(level);
     }
 
-    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment, PunishRepository punishRepository, EmailService emailService) {
+    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment,SchoolRepository schoolRepository, PunishRepository punishRepository, EmailService emailService) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setParentToEmail(punishment.getStudent().getParentEmail());
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
-        punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
-        if(punishment.getClosedTimes() == 4) {
+
+        // Grab school info and populate into punishment
+        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
+        punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+        if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
             List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
                     punishment.getStudent().getStudentEmail(), punishment.getInfraction().getInfractionName(), "CLOSED",false
             );
@@ -518,7 +529,7 @@ public class PunishmentService {
             punishment.setTimeClosed(LocalDate.now());
             punishment.setStatus("REFERRAL");
             punishRepository.save(punishment);
-            punishmentResponse.setSubject("Burke High School Office Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Office Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
             punishmentResponse.setMessage(
                     " Thank you for using the teacher managed referral. Because " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                             " has received their fourth or greater offense for " + punishment.getInfraction().getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. " +
@@ -685,7 +696,7 @@ public class PunishmentService {
             String shoutOut = punishment.getInfraction().getInfractionDescription().get(1);
             shoutOut.replace("[,", "");
             shoutOut.replace(",]","");
-            punishmentResponse.setSubject("Burke High School Positive Shout Out for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     " has received a shout out from their teacher for the following: " + shoutOut + "\n" +
@@ -703,7 +714,7 @@ public class PunishmentService {
             String concern = punishment.getInfraction().getInfractionDescription().get(1);
             concern.replace("[,", "");
             concern.replace(",]","");
-            punishmentResponse.setSubject("Burke High School Behavioral Concern for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Behavioral Concern for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
                     ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + "\n" +
@@ -721,14 +732,18 @@ public class PunishmentService {
         return punishmentResponse;
     }
 
-    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
+    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, SchoolRepository schoolRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setParentToEmail(punishment.getStudent().getParentEmail());
         punishmentResponse.setStudentToEmail(punishment.getStudent().getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishment.setTimeClosed(LocalDate.now());
-        punishmentResponse.setSubject("Burke High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+
+        // Grab school info and populate into punishment
+        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
+
+        punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
         if (punishment.getInfraction().getInfractionName().equals("Tardy")) {
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName() +
