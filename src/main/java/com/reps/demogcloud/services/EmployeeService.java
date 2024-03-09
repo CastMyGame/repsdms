@@ -94,7 +94,7 @@ public class EmployeeService {
     }
 
     public List<Employee> getAllEmployees() {
-        return employeeRepository.findByIsArchived(false);
+        return customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
     }
 
     private Employee ensureEmployeeExists(Employee employee) {
@@ -134,8 +134,7 @@ public class EmployeeService {
     public Optional<List<Employee>> findAllByRole(String role) {
 
         //Fetch Data
-        List<Employee> allEmployees = customFilters.FetchEmployeeDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
-
+        List<Employee> allEmployees = customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
 
         if (!allEmployees.isEmpty()) {
             List<Employee> employeesWithRole = allEmployees.stream()

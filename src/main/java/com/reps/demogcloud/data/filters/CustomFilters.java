@@ -23,16 +23,16 @@ public class CustomFilters {
 
     @Autowired
     private PunishRepository punishRepository;
-
     @Autowired
     private UserService userService;
-
     @Autowired
     private StudentRepository studentRepository;
-
     @Autowired
     private EmployeeRepository employeeRepository;
 
+
+
+    //Filters for Punishments
     public List<Punishment> filterPunishmentObjBySchool(List<Punishment> punishments, String schoolName) {
         return punishments
                 .stream()
@@ -45,8 +45,62 @@ public class CustomFilters {
     }
 
 
+    public List<Punishment> FetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+    }
 
-    public String getSchoolName() {
+    public List<Punishment> FetchPunishmentDataByIsArchivedAndSchoolAndStatus(boolean bool,String status) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = FetchPunishmentDataByIsArchivedAndSchool(bool);
+        return archivedRecords.stream().filter(x-> x.getStatus().equalsIgnoreCase(status)).toList();
+
+    }
+
+    public List<Punishment> FetchPunishmentDataByInfractionNameAndIsArchived(String infractionName,boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByInfractionInfractionNameAndIsArchivedAndStudent_School(infractionName,bool,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+    }
+
+
+    public List<Punishment> filterPunishmentsByTeacherEmail(List<Punishment> punishments, String teacherEmail) {
+        return punishments
+                .stream()
+                .filter(punishment -> {
+                    return  punishment.getTeacherEmail() !=null && punishment.getTeacherEmail().equalsIgnoreCase(teacherEmail);
+
+                })
+                .collect(Collectors.toList());
+    }
+    public List<Punishment> filterPunishmentObjByStudent(List<Punishment> punishments, String studentEmail) {
+        return punishments
+                .stream()
+                .filter(punishment -> {
+                    return  punishment.getStudent().getStudentEmail() !=null && punishment.getStudent().getStudentEmail().equalsIgnoreCase(studentEmail);
+
+                })
+                .collect(Collectors.toList());
+    }
+
+
+    //Filter for Employee Endpoints
+    public List<Employee> FetchEmployeeDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<Employee> archivedRecords = employeeRepository.findByIsArchivedAndSchool(bool,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+    }
+
+
+
+    // private methods for user details
+    private String getSchoolName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
         return fetchSchoolName(authentication, userModel);
@@ -68,42 +122,6 @@ public class CustomFilters {
         return null;
     }
 
-
-
-    public List<Punishment> FetchDataByIsArchivedAndSchool(boolean bool,String school) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,school);
-        if (archivedRecords.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return archivedRecords;
-    }
-
-    public List<Employee> FetchEmployeeDataByIsArchivedAndSchool(boolean bool,String school) throws ResourceNotFoundException {
-        List<Employee> archivedRecords = employeeRepository.findByIsArchivedAndSchool(bool,school);
-        if (archivedRecords.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return archivedRecords;
-    }
-
-    public List<Punishment> filterPunishmentsByTeacherEmail(List<Punishment> punishments, String teacherEmail) {
-        return punishments
-                .stream()
-                .filter(punishment -> {
-                    return  punishment.getTeacherEmail() !=null && punishment.getTeacherEmail().equalsIgnoreCase(teacherEmail);
-
-                })
-                .collect(Collectors.toList());
-    }
-    public List<Punishment> filterPunishmentObjByStudent(List<Punishment> punishments, String studentEmail) {
-        return punishments
-                .stream()
-                .filter(punishment -> {
-                    return  punishment.getStudent().getStudentEmail() !=null && punishment.getStudent().getStudentEmail().equalsIgnoreCase(studentEmail);
-
-                })
-                .collect(Collectors.toList());
-    }
 
 
 }

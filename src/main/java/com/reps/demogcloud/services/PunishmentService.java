@@ -53,6 +53,8 @@ public class PunishmentService {
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
+
+
     public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionName) throws ResourceNotFoundException {
         var fetchData = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
         var punishmentRecord = fetchData.stream()
@@ -69,40 +71,15 @@ public class PunishmentService {
 
     }
 
-    public List<Punishment> findAll() {
-        return customFilters.FetchDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
-    }
-
-    public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
-        List<Punishment> preProcessedPunishments = punishRepository.findByIsArchived(false);
-        return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
-    }
-
-    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
-        List<Punishment> fetchData = punishRepository.findByInfractionInfractionName(infractionName);
-        var punishmentRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
-
-
-        if (punishmentRecord.isEmpty()) {
-            throw new ResourceNotFoundException("No students with that Infraction exist");
-        }
-        logger.debug(String.valueOf(punishmentRecord));
-        return punishmentRecord;
-    }
-
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByStatus(status);
-        var punishmentRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
+        var fetchData = customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false,status);
 
-        if (punishmentRecord.isEmpty()) {
+
+        if (fetchData.isEmpty()) {
             throw new ResourceNotFoundException("No punishments with that status exist");
         }
-        logger.debug(String.valueOf(punishmentRecord));
-        return punishmentRecord;
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
     }
 
     public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
@@ -135,6 +112,30 @@ public class PunishmentService {
         logger.debug(String.valueOf(fetchData));
         return fetchData;
     }
+
+
+
+    // Methods that Need Global Filters Due for schools
+    public List<Punishment> findAll() {
+        return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
+
+
+    public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
+        List<Punishment> preProcessedPunishments = customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
+        return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
+    }
+
+    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
+        List<Punishment> fetchData = customFilters.FetchPunishmentDataByInfractionNameAndIsArchived(infractionName,false);
+
+
+        if (fetchData.isEmpty()) {
+            throw new ResourceNotFoundException("No students with that Infraction exist");
+        }
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
+    }
+
 
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
@@ -481,7 +482,7 @@ public class PunishmentService {
             UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
 
             //Fetch Data
-            List<Punishment> data = customFilters.FetchDataByIsArchivedAndSchool(false, customFilters.getSchoolName());
+            List<Punishment> data = customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
 
             // Switch Filter Depending On Role
             if (userModel.getRoles().stream().anyMatch(role -> "TEACHER".equals(role.getRole()))) {
