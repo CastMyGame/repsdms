@@ -40,6 +40,14 @@ public class EmployeeService {
 
 
 
+    public List<Employee> findAll() throws ResourceNotFoundException {
+      return customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
+
+
+    }
+
+
+
 
     public EmployeeResponse createNewEmployee (Employee request) {
         Set<RoleModel> roles = new HashSet<>();

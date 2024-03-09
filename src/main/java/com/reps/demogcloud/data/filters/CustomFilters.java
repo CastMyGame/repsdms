@@ -53,6 +53,15 @@ public class CustomFilters {
         return archivedRecords;
     }
 
+    public List<Student> findByIsArchivedAndSchool(boolean b) {
+        List<Student> archivedRecords = studentRepository.findByIsArchivedAndSchool(b,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+
+    }
+
     public List<Punishment> FetchPunishmentDataByIsArchivedAndSchoolAndStatus(boolean bool,String status) throws ResourceNotFoundException {
         List<Punishment> archivedRecords = FetchPunishmentDataByIsArchivedAndSchool(bool);
         return archivedRecords.stream().filter(x-> x.getStatus().equalsIgnoreCase(status)).toList();
@@ -123,5 +132,7 @@ public class CustomFilters {
     }
 
 
-
+    public List<Student> findByLastNameAndSchool(String lastName) {
+        return studentRepository.findByIsArchivedAndLastNameAndSchool(false,lastName,getSchoolName());
+    }
 }

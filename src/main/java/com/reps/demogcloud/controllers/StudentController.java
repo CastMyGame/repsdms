@@ -42,7 +42,7 @@ public class StudentController {
 
     @GetMapping("/allStudents")
     public ResponseEntity<List<Student>> findAllStudents () {
-        var findAll = studentService.getAllStudents();
+        var findAll = studentService.getAllStudents(false);
 
         return ResponseEntity
                 .accepted()
@@ -51,7 +51,7 @@ public class StudentController {
 
     @GetMapping("/archived")
     public ResponseEntity<List<Student>> getAllArchived() {
-        List<Student> message = studentService.findAllStudentIsArchived(true);
+        List<Student> message = studentService.getAllStudents(true);
         return ResponseEntity
                 .accepted()
                 .body(message);

@@ -2,6 +2,7 @@ package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
@@ -13,18 +14,15 @@ import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
 
 
-import org.joda.time.Days;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -32,16 +30,17 @@ public class StudentService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
     private final EmailService emailService;
-
     private final PunishRepository punishRepository;
-
     private final AuthService authService;
 
-    public StudentService(StudentRepository studentRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService) {
+    private final CustomFilters customFilters;
+
+    public StudentService(StudentRepository studentRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService, CustomFilters customFilters) {
         this.studentRepository = studentRepository;
         this.emailService = emailService;
         this.punishRepository = punishRepository;
         this.authService = authService;
+        this.customFilters = customFilters;
     }
 
     public List<Student> findStudentByParentEmail(String parentEmail) throws Exception {
@@ -58,7 +57,7 @@ public class StudentService {
         return studentRecord;
     }
     public List<Student> findByStudentLastName(String lastName) throws Exception {
-        List<Student> fetchData = studentRepository.findByLastName(lastName);
+        List<Student> fetchData = customFilters.findByLastNameAndSchool(lastName);
         List<Student> studentRecord = fetchData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList(); // Collect the filtered punishments into a list
@@ -115,8 +114,8 @@ public class StudentService {
                 .toString();
     }
 
-    public List<Student> getAllStudents() {
-        List<Student> students = studentRepository.findByIsArchived(false);
+    public List<Student> getAllStudents(boolean bool) {
+        List<Student> students = customFilters.findByIsArchivedAndSchool(bool);
         Collections.sort(students, new Comparator<Student>() {
             @Override
             public int compare(Student o1, Student o2) {

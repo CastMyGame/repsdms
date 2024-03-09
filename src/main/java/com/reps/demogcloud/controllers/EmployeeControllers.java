@@ -38,7 +38,7 @@ public class EmployeeControllers {
     // -----------------------------------GET Controllers---------------------------------
     @GetMapping("/employees")
     private ResponseEntity<List<Employee>> getAllUsers(){
-        List<Employee> employees =  employeeRepository.findAll();
+        List<Employee> employees =  employeeService.findAll();
         return ResponseEntity.ok(employees);
     }
 
