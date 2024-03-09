@@ -120,9 +120,13 @@ public class PunishmentService {
         return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
 
 
-    public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
-        List<Punishment> preProcessedPunishments = customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
-        return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
+    // Uses Logged In User as Teacher Email
+    public List<Punishment> findAllPunishmentsByTeacherEmail(){
+       return customFilters.LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(false);
+    }
+
+    public List<Punishment> findAllPunishmentsByStudentEmail(){
+        return customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
     }
 
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {

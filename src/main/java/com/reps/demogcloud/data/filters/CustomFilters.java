@@ -53,6 +53,24 @@ public class CustomFilters {
         return archivedRecords;
     }
 
+    public List<Punishment> LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
+       return  archivedRecords.stream().filter(x-> x.getTeacherEmail().equalsIgnoreCase(authentication.getName())).toList();
+
+
+    }
+
+    public List<Punishment> LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
+        return  archivedRecords.stream().filter(x-> x.getStudent().getStudentEmail().equalsIgnoreCase(authentication.getName())).toList();
+
+
+    }
+
     public List<Student> findByIsArchivedAndSchool(boolean b) {
         List<Student> archivedRecords = studentRepository.findByIsArchivedAndSchool(b,getSchoolName());
         if (archivedRecords.isEmpty()) {

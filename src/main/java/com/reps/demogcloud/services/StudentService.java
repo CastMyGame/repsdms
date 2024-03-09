@@ -17,6 +17,8 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +73,17 @@ public class StudentService {
 
     public Student findByStudentEmail(String email) throws Exception {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
+
+        if (findMe == null) {
+            throw new Exception("No student with that email exists");
+        }
+
+        return findMe;
+    }
+
+    public Student findByLoggedInStudent() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");
