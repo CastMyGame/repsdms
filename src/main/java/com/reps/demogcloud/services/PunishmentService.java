@@ -133,7 +133,7 @@ public class PunishmentService {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
+        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
@@ -144,16 +144,14 @@ public class PunishmentService {
 
         Punishment punishment = new Punishment();
         punishment.setStudent(findMe);
+        punishment.setInfractionId(formRequest.getInfractionId());
         punishment.setClassPeriod(formRequest.getInfractionPeriod());
         punishment.setPunishmentId(UUID.randomUUID().toString());
         punishment.setTimeCreated(now);
         punishment.setClosedTimes(Integer.parseInt(level));
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
+        punishment.setInfractionDescription(formRequest.getInfractionDescription());
 
-            Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
-            List<String> description = findInf.getInfractionDescription();
-            description.add(formRequest.getInfractionDescription());
-            punishment.setInfraction(findInf);
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
                 punishment.getInfraction().getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
@@ -951,6 +949,18 @@ public class PunishmentService {
         for(Punishment punishment : all) {
             ArrayList<String> description = punishment.getInfraction().getInfractionDescription();
             punishment.setInfractionDescription(description);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateInfractions() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            String id = punishment.getInfraction().getInfractionId();
+            punishment.setInfractionId(id);
             punishRepository.save(punishment);
             saved.add(punishment);
         }

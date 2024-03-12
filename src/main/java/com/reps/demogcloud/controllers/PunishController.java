@@ -215,6 +215,15 @@ public class PunishController {
                 .body(response);
     }
 
+    @PutMapping("/infractions")
+    public ResponseEntity<List<Punishment>> updateAllInfractionId() {
+        List<Punishment> response = punishmentService.updateInfractions();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")
     public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {

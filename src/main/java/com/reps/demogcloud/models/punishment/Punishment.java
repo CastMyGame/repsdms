@@ -23,6 +23,7 @@ public class Punishment {
     private String punishmentId;
     private Student student;
     private Infraction infraction;
+    private String infractionId;
     private String status;
     private int closedTimes;
     private String closedExplanation;

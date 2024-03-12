@@ -15,6 +15,8 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     List<Punishment> findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(String studentEmail, String infractionName, String cfr,boolean bool);
     List<Punishment> findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(String studentEmail, String infractionName, String cfr);
     List<Punishment> findByStudentStudentEmailAndInfractionInfractionName (String email, String infractionName);
+
+    List<Punishment> findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus (String email, String infractionId, String status);
     List<Punishment> findByStatusAndTimeCreatedBefore (String status, LocalDate time);
     List<Punishment> findByStudent (Student student);
     List<Punishment> findByInfractionInfractionName (String infractionName);
