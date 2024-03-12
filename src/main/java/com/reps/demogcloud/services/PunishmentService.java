@@ -136,12 +136,6 @@ public class PunishmentService {
         List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
-//            if (punishments.getInfraction().getInfractionName().equals("Failure to Complete Work") | punishments.getInfraction().getInfractionName().equals("Behavioral Concern")
-//                    | punishments.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
-//                Infraction findInf = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), "1");
-//                findInf.setInfractionDescription(formRequest.getInfractionDescription());
-//                punishments.setInfraction(findInf);
-//            } else {
             closedTimes.add(punishment.getClosedTimes());
         }
 
@@ -945,6 +939,18 @@ public class PunishmentService {
             int day = punishment.getTimeCreated().getDayOfMonth();
             LocalDate time = LocalDate.of(year, month, day);
             punishment.setTimeCreated(time);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateDescriptions() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            ArrayList<String> description = punishment.getInfraction().getInfractionDescription();
+            punishment.setInfractionDescription(description);
             punishRepository.save(punishment);
             saved.add(punishment);
         }

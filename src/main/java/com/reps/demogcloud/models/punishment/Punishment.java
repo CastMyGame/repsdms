@@ -37,7 +37,8 @@ public class Punishment {
     private String archivedExplanation;
     private LocalDate archivedOn;
     private int mapIndex = 0;
-    private Map<Date,List<String>> answerHistory ;
+    private Map<Date,List<String>> answerHistory;
+    private ArrayList<String> infractionDescription;
 
     public void setAnswerHistory(Date date, List<String> context) {
         if (answerHistory == null) {
