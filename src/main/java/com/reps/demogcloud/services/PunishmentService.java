@@ -38,8 +38,8 @@ public class PunishmentService {
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
-    public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionName) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByStudentStudentEmailAndInfractionInfractionName(email,infractionName);
+    public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionId) throws ResourceNotFoundException {
+        var fetchData = punishRepository.findByStudentEmailAndInfractionId(email,infractionId);
         var punishmentRecord = fetchData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
@@ -436,7 +436,7 @@ public class PunishmentService {
             Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
             String subject = "Burke High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
             String intro = "Punishment report for: " + student.getFirstName() + " " + student.getLastName();
-            List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
+            List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCase(studentEmail);
         var studentPunishments = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
@@ -1003,6 +1003,6 @@ public class PunishmentService {
 //    }
 
     public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
-        return punishRepository.findByStudentStudentEmailIgnoreCase(studentEmail);
+        return punishRepository.findByStudentEmailIgnoreCase(studentEmail);
     }
 }
