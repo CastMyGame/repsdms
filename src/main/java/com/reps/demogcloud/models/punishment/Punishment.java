@@ -21,8 +21,9 @@ public class Punishment {
 
     @Id
     private String punishmentId;
-    private Student student;
-    private Infraction infraction;
+//    private Student student;
+    private String studentEmail;
+//    private Infraction infraction;
     private String infractionId;
     private String status;
     private int closedTimes;

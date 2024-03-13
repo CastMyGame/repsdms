@@ -143,7 +143,8 @@ public class PunishmentService {
         System.out.println(level);
 
         Punishment punishment = new Punishment();
-        punishment.setStudent(findMe);
+//        punishment.setStudent(findMe);
+        punishment.setStudentEmail(formRequest.getStudentEmail());
         punishment.setInfractionId(formRequest.getInfractionId());
         punishment.setClassPeriod(formRequest.getInfractionPeriod());
         punishment.setPunishmentId(UUID.randomUUID().toString());
@@ -152,10 +153,8 @@ public class PunishmentService {
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
         punishment.setInfractionDescription(formRequest.getInfractionDescription());
 
-        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
-                punishment.getInfraction().getInfractionName(), "OPEN");
-        List<Punishment> pendingPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(punishment.getStudent().getStudentEmail(),
-                punishment.getInfraction().getInfractionName(), "PENDING");
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "OPEN");
+        List<Punishment> pendingPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
         var findOpen = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
@@ -166,7 +165,8 @@ public class PunishmentService {
                                 .toList();
 
         System.out.println(findOpen);
-        if(punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!")) {
+        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
+        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
@@ -175,7 +175,7 @@ public class PunishmentService {
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return sendEmailBasedOnType(punishment, punishRepository, emailService);
         }
-        if(punishment.getInfraction().getInfractionName().equals("Behavioral Concern")) {
+        if(infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
@@ -184,7 +184,7 @@ public class PunishmentService {
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
             return sendEmailBasedOnType(punishment, punishRepository, emailService);
         }
-        if(punishment.getInfraction().getInfractionName().equals("Failure to Complete Work")) {
+        if(infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
@@ -237,14 +237,13 @@ public class PunishmentService {
 
         if(!studentAnswers.isEmpty()) {
             System.out.println(studentAnswers + " Not Null");
-            ArrayList<String> answers = findMe.getInfraction().getInfractionDescription();
+            ArrayList<String> answers = findMe.getInfractionDescription();
             for (StudentAnswer answer:studentAnswers
                  ) {
                 answers.add(answer.toString());
             }
-            Infraction answer = findMe.getInfraction();
-            answer.setInfractionDescription(answers);
-            findMe.setInfraction(answer);
+
+            findMe.setInfractionDescription(answers);
             findMe.setStatus("PENDING");
 
             punishRepository.save(findMe);
@@ -961,6 +960,18 @@ public class PunishmentService {
         for(Punishment punishment : all) {
             String id = punishment.getInfraction().getInfractionId();
             punishment.setInfractionId(id);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateStudentEmails() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            String studentEmail = punishment.getStudent().getStudentEmail();
+            punishment.setStudentEmail(studentEmail);
             punishRepository.save(punishment);
             saved.add(punishment);
         }
