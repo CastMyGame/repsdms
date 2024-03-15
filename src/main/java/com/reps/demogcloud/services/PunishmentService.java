@@ -65,8 +65,8 @@ public class PunishmentService {
         return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
     }
 
-    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
-        List<Punishment> fetchData = punishRepository.findByInfractionInfractionName(infractionName);
+    public List<Punishment> findByInfractionId(String infractionName) throws ResourceNotFoundException {
+        List<Punishment> fetchData = punishRepository.findByInfractionId(infractionName);
         var punishmentRecord = fetchData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
@@ -92,21 +92,21 @@ public class PunishmentService {
         return punishmentRecord;
     }
 
-    public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByPunishmentId(punishment.getPunishmentId());
+//    public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
+//        var fetchData = punishRepository.findByPunishmentId(punishment.getPunishmentId());
+//
+//        if (fetchData == null) {
+//            throw new ResourceNotFoundException("No punishments with that ID exist");
+//        }
+//        if(fetchData.isArchived()){
+//            throw new ResourceNotFoundException("Punishment with that Id is archived");
+//        }
 
-        if (fetchData == null) {
-            throw new ResourceNotFoundException("No punishments with that ID exist");
-        }
-        if(fetchData.isArchived()){
-            throw new ResourceNotFoundException("Punishment with that Id is archived");
-        }
 
 
-
-        logger.debug(String.valueOf(fetchData));
-        return fetchData;
-    }
+//        logger.debug(String.valueOf(fetchData));
+//        return fetchData;
+//    }
 
     public Punishment findByPunishmentId(String punishmentId) throws ResourceNotFoundException {
         var fetchData = punishRepository.findByPunishmentId(punishmentId);
@@ -132,7 +132,7 @@ public class PunishmentService {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-        List<Punishment> closedPunishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "CLOSED");
+        List<Punishment> closedPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "CLOSED");
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
@@ -152,8 +152,8 @@ public class PunishmentService {
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
         punishment.setInfractionDescription(formRequest.getInfractionDescription());
 
-        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "OPEN");
-        List<Punishment> pendingPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "PENDING");
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "OPEN");
+        List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
         var findOpen = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
@@ -223,7 +223,7 @@ public class PunishmentService {
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> fetchPunishmentData = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatus(studentEmail,
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(studentEmail,
                 infractionName, "OPEN");
 
         var findOpen = fetchPunishmentData.stream()
@@ -500,13 +500,13 @@ public class PunishmentService {
         punishmentResponse.setPunishment(punishment);
         punishmentResponse.setSubject("Burke High School referral for " + student.getFirstName() + " " + student.getLastName());
         if(punishment.getClosedTimes() == 4) {
-            List<Punishment> punishments = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+            List<Punishment> punishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
                     student.getStudentEmail(), infraction.getInfractionName(), "CLOSED",false
             );
-            List<Punishment> referrals = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+            List<Punishment> referrals = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
                     student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL",false
             );
-            List<Punishment> cfr = punishRepository.findByStudentStudentEmailIgnoreCaseAndInfractionInfractionNameAndStatusAndIsArchived(
+            List<Punishment> cfr = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
                     student.getStudentEmail(), infraction.getInfractionName(), "CFR",false
             );
             punishments.addAll(referrals);
@@ -933,7 +933,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> getAllPunishmentByStudentEmail(String studentEmail) {
-        return punishRepository.getAllPunishmentByStudentStudentEmail(studentEmail);
+        return punishRepository.getAllPunishmentByStudentEmail(studentEmail);
     }
 
     public Punishment updateMapIndex(String id, int index) {

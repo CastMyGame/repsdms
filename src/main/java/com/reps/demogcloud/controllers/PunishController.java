@@ -36,23 +36,23 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
-    @GetMapping("/punishId")
-    public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
-        var message = punishmentService.findByPunishmentId(punishment);
+    @GetMapping("/{id}")
+    public ResponseEntity<Punishment> getByPunishId(@PathVariable String id) throws ResourceNotFoundException {
+        var message = punishmentService.findByPunishmentId(id);
 
         return ResponseEntity
                 .accepted()
                 .body(message);
     }
 
-    @GetMapping("/{infractionName}")
-    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
-        var message = punishmentService.findByInfractionName(infractionName);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @GetMapping("/{infractionName}")
+//    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
+//        var message = punishmentService.findByInfractionName(infractionName);
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
     @GetMapping("/punishStatus/{status}")
     public ResponseEntity<List<Punishment>> getByStatus(@PathVariable String status) throws ResourceNotFoundException {
