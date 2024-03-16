@@ -28,7 +28,7 @@ public class DTOService {
 
 
     public AdminOverviewDTO getAdminOverData(){
-        List<Punishment> punishmentList = punishmentService.findAll();
+        List<Punishment> punishmentList = punishmentService.findAllSchool();
         List<Punishment> writeUpList = punishmentService.getAllReferrals();
         Optional<List<Employee>> teachersListOpt = employeeService.findAllByRole("TEACHER");
         List<Employee> teachersList = new ArrayList<>();

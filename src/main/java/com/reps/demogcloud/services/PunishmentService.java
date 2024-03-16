@@ -139,7 +139,7 @@ public class PunishmentService {
 
 
     // Methods that Need Global Filters Due for schools
-    public List<Punishment> findAll() {
+    public List<Punishment> findAllSchool() {
         return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
 
 
@@ -195,6 +195,7 @@ public class PunishmentService {
         punishment.setClosedTimes(Integer.parseInt(level));
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
         punishment.setInfractionDescription(formRequest.getInfractionDescription());
+        punishment.setSchoolName(ourSchool.getSchoolName());
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "PENDING");
@@ -217,7 +218,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
+            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
@@ -227,7 +228,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
+            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
@@ -237,7 +238,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
+            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
 
         if (findOpen.isEmpty()) {
@@ -247,7 +248,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
+            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
 
 
 
@@ -259,7 +260,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendCFREmailBasedOnType(punishment, studentRepository, infractionRepository);
+            return sendCFREmailBasedOnType(punishment, studentRepository, infractionRepository, schoolRepository);
 
         }
     }
@@ -534,8 +535,8 @@ public class PunishmentService {
 
                //Method Specific Filters
             return data.stream()
-                    .filter(punishment -> !punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") &&
-                            !punishment.getInfraction().getInfractionName().equals("Behavioral Concern"))
+                    .filter(punishment -> !punishment.getPunishmentId().equals(infraction.getInfractionId()) &&
+                            !punishment.getPunishmentId().equals(infraction2.getInfractionId()))
                     .collect(Collectors.toList());
         }
 
@@ -578,7 +579,8 @@ public class PunishmentService {
                                                            PunishRepository punishRepository,
                                                            StudentRepository studentRepository,
                                                            InfractionRepository infractionRepository,
-                                                           EmailService emailService) {
+                                                           EmailService emailService,
+                                                           SchoolRepository schoolRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -589,8 +591,8 @@ public class PunishmentService {
 
 
         // Grab school info and populate into punishment
-        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
-        punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
+        punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + student.getFirstName() + " " + student.getLastName());
         if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
 
             List<Punishment> punishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
@@ -823,7 +825,7 @@ public class PunishmentService {
     }
 
 
-    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository) {
+    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository, SchoolRepository schoolRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -835,7 +837,7 @@ public class PunishmentService {
 
 
         // Grab school info and populate into punishment
-        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
 
 
         punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + student.getFirstName() + " " + student.getLastName());
