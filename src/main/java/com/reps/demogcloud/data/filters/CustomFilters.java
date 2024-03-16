@@ -37,7 +37,7 @@ public class CustomFilters {
         return punishments
                 .stream()
                 .filter(punishment -> {
-                    Student student = punishment.getStudent();
+                    Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     return student != null && student.getSchool() !=null && student.getSchool().equalsIgnoreCase(schoolName);
 
                 })
@@ -46,7 +46,7 @@ public class CustomFilters {
 
 
     public List<Punishment> FetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -56,7 +56,7 @@ public class CustomFilters {
     public List<Punishment> LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
        return  archivedRecords.stream().filter(x-> x.getTeacherEmail().equalsIgnoreCase(authentication.getName())).toList();
 
 
@@ -65,8 +65,8 @@ public class CustomFilters {
     public List<Punishment> LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndStudent_School(bool,getSchoolName());
-        return  archivedRecords.stream().filter(x-> x.getStudent().getStudentEmail().equalsIgnoreCase(authentication.getName())).toList();
+        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
+        return  archivedRecords.stream().filter(x-> x.getStudentEmail().equalsIgnoreCase(authentication.getName())).toList();
 
 
     }
@@ -86,8 +86,8 @@ public class CustomFilters {
 
     }
 
-    public List<Punishment> FetchPunishmentDataByInfractionNameAndIsArchived(String infractionName,boolean bool) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByInfractionInfractionNameAndIsArchivedAndStudent_School(infractionName,bool,getSchoolName());
+    public List<Punishment> FetchPunishmentDataByInfractionNameAndIsArchived(String infractionId,boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByInfractionIdAndIsArchivedAndSchoolName(infractionId,bool,getSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -108,7 +108,7 @@ public class CustomFilters {
         return punishments
                 .stream()
                 .filter(punishment -> {
-                    return  punishment.getStudent().getStudentEmail() !=null && punishment.getStudent().getStudentEmail().equalsIgnoreCase(studentEmail);
+                    return  punishment.getStudentEmail() !=null && punishment.getStudentEmail().equalsIgnoreCase(studentEmail);
 
                 })
                 .collect(Collectors.toList());
