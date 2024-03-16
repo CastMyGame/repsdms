@@ -1,9 +1,11 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.InfractionRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
@@ -17,8 +19,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,14 +35,19 @@ import java.util.*;
 public class StudentService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
+    private final InfractionRepository infractionRepository;
     private final EmailService emailService;
     private final PunishRepository punishRepository;
     private final AuthService authService;
 
+
     private final CustomFilters customFilters;
 
-    public StudentService(StudentRepository studentRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService, CustomFilters customFilters) {
+
+    public StudentService(StudentRepository studentRepository, InfractionRepository infractionRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService, CustomFilters customFilters) {
+
         this.studentRepository = studentRepository;
+        this.infractionRepository = infractionRepository;
         this.emailService = emailService;
         this.punishRepository = punishRepository;
         this.authService = authService;
@@ -221,14 +230,16 @@ public class StudentService {
         List<Punishment> punishments = punishRepository.findAll();
         List<Student> students = new ArrayList<>();
         for(Punishment punishment : punishments) {
+            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
             if(punishment.getStatus().equals("OPEN")) {
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 1 && days < 3 && !students.contains(punishment.getStudent())) {
-                    students.add(punishment.getStudent());
+                if (days >= 1 && days < 3 && !students.contains(student)) {
+                    students.add(student);
                 }
             }
         }
@@ -259,7 +270,9 @@ public class StudentService {
         Collections.sort(punishedStudents, new Comparator<Punishment>() {
             @Override
             public int compare(Punishment o1, Punishment o2) {
-                return o1.getStudent().getLastName().compareTo(o2.getStudent().getLastName());
+                Student student1 = studentRepository.findByStudentEmailIgnoreCase(o1.getStudentEmail());
+                Student student2 = studentRepository.findByStudentEmailIgnoreCase(o2.getStudentEmail());
+                return student1.getLastName().compareTo(student2.getLastName());
             }
         });
         return punishedStudents;

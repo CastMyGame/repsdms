@@ -36,23 +36,23 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
-    @GetMapping("/punishId")
-    public ResponseEntity<Punishment> getByPunishId(@RequestBody Punishment punishment) throws ResourceNotFoundException {
-        var message = punishmentService.findByPunishmentId(punishment);
+    @GetMapping("/{id}")
+    public ResponseEntity<Punishment> getByPunishId(@PathVariable String id) throws ResourceNotFoundException {
+        var message = punishmentService.findByPunishmentId(id);
 
         return ResponseEntity
                 .accepted()
                 .body(message);
     }
 
-    @GetMapping("/{infractionName}")
-    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
-        var message = punishmentService.findByInfractionName(infractionName);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @GetMapping("/{infractionName}")
+//    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
+//        var message = punishmentService.findByInfractionName(infractionName);
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
     @GetMapping("/punishStatus/{status}")
     public ResponseEntity<List<Punishment>> getByStatus(@PathVariable String status) throws ResourceNotFoundException {
@@ -205,6 +205,33 @@ public class PunishController {
                 .accepted()
                 .body(response);
     }
+
+//    @PutMapping("/descriptions")
+//    public ResponseEntity<List<Punishment>> updateAllDescriptions() {
+//        List<Punishment> response = punishmentService.updateDescriptions();
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(response);
+//    }
+//
+//    @PutMapping("/infractions")
+//    public ResponseEntity<List<Punishment>> updateAllInfractionId() {
+//        List<Punishment> response = punishmentService.updateInfractions();
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(response);
+//    }
+//
+//    @PutMapping("/emails")
+//    public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
+//        List<Punishment> response = punishmentService.updateStudentEmails();
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(response);
+//    }
 
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")

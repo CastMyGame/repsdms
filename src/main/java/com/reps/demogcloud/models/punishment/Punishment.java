@@ -21,8 +21,10 @@ public class Punishment {
 
     @Id
     private String punishmentId;
-    private Student student;
-    private Infraction infraction;
+//    private Student student;
+    private String studentEmail;
+//    private Infraction infraction;
+    private String infractionId;
     private String status;
     private int closedTimes;
     private String closedExplanation;
@@ -37,7 +39,8 @@ public class Punishment {
     private String archivedExplanation;
     private LocalDate archivedOn;
     private int mapIndex = 0;
-    private Map<Date,List<String>> answerHistory ;
+    private Map<Date,List<String>> answerHistory;
+    private ArrayList<String> infractionDescription;
 
     public void setAnswerHistory(Date date, List<String> context) {
         if (answerHistory == null) {
