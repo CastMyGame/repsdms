@@ -1,10 +1,7 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.models.employee.Employee;
-import com.reps.demogcloud.models.punishment.AdminOverviewDTO;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.StudentOverviewDTO;
-import com.reps.demogcloud.models.punishment.TeacherOverviewDTO;
+import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.student.Student;
 import com.sun.security.auth.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +39,10 @@ public class DTOService {
     public TeacherOverviewDTO getTeacherOverData(){
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail();
         List<Punishment> writeUpList = punishmentService.getAllReferrals();
+        List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentList);
+        List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(writeUpList);
 
-        return new TeacherOverviewDTO(punishmentList,writeUpList);
+        return new TeacherOverviewDTO(punishmentList,writeUpList, punishmentInfo, writeUpInfo);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {

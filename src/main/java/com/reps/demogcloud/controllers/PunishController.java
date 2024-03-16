@@ -224,14 +224,23 @@ public class PunishController {
 //                .body(response);
 //    }
 //
-//    @PutMapping("/emails")
-//    public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
-//        List<Punishment> response = punishmentService.updateStudentEmails();
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
+    @PutMapping("/emails")
+    public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
+        List<Punishment> response = punishmentService.updateStudentEmails();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/schoolName")
+    public ResponseEntity<List<Punishment>> updateAllSchools() {
+        List<Punishment> response = punishmentService.updateSchools();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")

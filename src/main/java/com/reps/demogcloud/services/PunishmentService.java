@@ -7,7 +7,6 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
-import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -18,16 +17,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 
-import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -1089,6 +1084,7 @@ public class PunishmentService {
 //        List<Punishment> all = punishRepository.findAll();
 //        List<Punishment> saved = new ArrayList<>();
 //        for(Punishment punishment : all) {
+//            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfraction().getInfractionId());
 //            String id = infraction.getInfractionId();
 //            punishment.setInfractionId(id);
 //            punishRepository.save(punishment);
@@ -1097,19 +1093,52 @@ public class PunishmentService {
 //        return saved;
 //    }
 
-//    public List<Punishment> updateStudentEmails() {
-//        List<Punishment> all = punishRepository.findAll();
-//        List<Punishment> saved = new ArrayList<>();
-//        for(Punishment punishment : all) {
-//            String studentEmail = student.getStudentEmail();
-//            punishment.setStudentEmail(studentEmail);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-//        }
-//        return saved;
-//    }
+    public List<Punishment> updateStudentEmails() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            String studentEmail = punishment.getStudentEmail();
+            punishment.setStudentEmail(studentEmail);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateSchools() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            String studentEmail = punishment.getStudentEmail();
+            punishment.setSchoolName(student.getSchool());
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
 
     public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
         return punishRepository.findByStudentEmailIgnoreCase(studentEmail);
+    }
+
+    public List<TeacherResponse> getTeacherResponse(List<Punishment> punishmentList) {
+    List<TeacherResponse> response = new ArrayList<>();
+        for(Punishment punishment : punishmentList) {
+            TeacherResponse info = new TeacherResponse();
+            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            info.setInfractionDescription(punishment.getInfractionDescription());
+            info.setTeacherEmail(punishment.getTeacherEmail());
+            info.setInfractionName(infraction.getInfractionName());
+            info.setStudentFirstName(student.getFirstName());
+            info.setStudentLastName(student.getLastName());
+            info.setStudentEmail(punishment.getStudentEmail());
+            info.setTimeCreated(punishment.getTimeCreated());
+            info.setStatus(punishment.getStatus());
+            info.setLevel(infraction.getInfractionLevel());
+            response.add(info);
+    }
+        return response;
     }
 }
