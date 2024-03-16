@@ -3,6 +3,7 @@ package com.reps.demogcloud.services;
 import com.reps.demogcloud.data.InfractionRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
@@ -18,6 +19,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,17 +37,21 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
     private final EmailService emailService;
-
     private final PunishRepository punishRepository;
-
     private final AuthService authService;
 
-    public StudentService(StudentRepository studentRepository, InfractionRepository infractionRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService) {
+
+    private final CustomFilters customFilters;
+
+
+    public StudentService(StudentRepository studentRepository, InfractionRepository infractionRepository, EmailService emailService, PunishRepository punishRepository, AuthService authService, CustomFilters customFilters) {
+
         this.studentRepository = studentRepository;
         this.infractionRepository = infractionRepository;
         this.emailService = emailService;
         this.punishRepository = punishRepository;
         this.authService = authService;
+        this.customFilters = customFilters;
     }
 
     public List<Student> findStudentByParentEmail(String parentEmail) throws Exception {
@@ -59,7 +68,7 @@ public class StudentService {
         return studentRecord;
     }
     public List<Student> findByStudentLastName(String lastName) throws Exception {
-        List<Student> fetchData = studentRepository.findByLastName(lastName);
+        List<Student> fetchData = customFilters.findByLastNameAndSchool(lastName);
         List<Student> studentRecord = fetchData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList(); // Collect the filtered punishments into a list
@@ -73,6 +82,17 @@ public class StudentService {
 
     public Student findByStudentEmail(String email) throws Exception {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
+
+        if (findMe == null) {
+            throw new Exception("No student with that email exists");
+        }
+
+        return findMe;
+    }
+
+    public Student findByLoggedInStudent() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");
@@ -116,8 +136,8 @@ public class StudentService {
                 .toString();
     }
 
-    public List<Student> getAllStudents() {
-        List<Student> students = studentRepository.findByIsArchived(false);
+    public List<Student> getAllStudents(boolean bool) {
+        List<Student> students = customFilters.findByIsArchivedAndSchool(bool);
         Collections.sort(students, new Comparator<Student>() {
             @Override
             public int compare(Student o1, Student o2) {

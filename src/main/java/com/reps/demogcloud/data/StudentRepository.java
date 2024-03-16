@@ -15,4 +15,7 @@ public interface StudentRepository extends MongoRepository<Student,String> {
     Student findByStudentEmailIgnoreCase(String email);
     Student findByStudentIdNumber (String id);
 
+    List<Student> findByIsArchivedAndSchool(boolean b, String school);
+
+    List<Student> findByIsArchivedAndLastNameAndSchool(Boolean bool,String lastName, String schoolName);
 }

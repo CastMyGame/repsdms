@@ -39,16 +39,16 @@ public class DTOService {
         return new AdminOverviewDTO(punishmentList,writeUpList,teachersList);
     }
 
-    public TeacherOverviewDTO getTeacherOverData(String email){
-        List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail(email);
-        List<Punishment> writeUpList = punishmentService.getAllReferralsFilteredByTeacher(email);
+    public TeacherOverviewDTO getTeacherOverData(){
+        List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail();
+        List<Punishment> writeUpList = punishmentService.getAllReferrals();
 
         return new TeacherOverviewDTO(punishmentList,writeUpList);
     }
 
-    public StudentOverviewDTO getStudentOverData(String studentEmail) throws Exception {
-        List<Punishment> punishmentList = punishmentService.findAll();
-        Student student = studentService.findByStudentEmail(studentEmail);
+    public StudentOverviewDTO getStudentOverData() throws Exception {
+        List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
+        Student student = studentService.findByLoggedInStudent();
 
         return new StudentOverviewDTO(punishmentList,student);
     }

@@ -1,6 +1,7 @@
 package com.reps.demogcloud.data;
 
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -14,4 +15,6 @@ public interface EmployeeRepository extends MongoRepository<Employee, String> {
     Employee findByEmailIgnoreCase(String email);
     List<Employee> findByIsArchived (boolean bool);
     Employee findByEmployeeId (String employeeId);
+
+    List<Employee> findByIsArchivedAndSchool(boolean bool, String school);
 }

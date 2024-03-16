@@ -1,28 +1,37 @@
 package com.reps.demogcloud.services;
 
 
-import com.reps.demogcloud.data.InfractionRepository;
-import com.reps.demogcloud.data.PunishRepository;
-import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.models.UserModel;
+import com.reps.demogcloud.security.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
+
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import javax.annotation.PostConstruct;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -34,10 +43,16 @@ public class PunishmentService {
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
+    private final SchoolRepository schoolRepository;
     private final EmailService emailService;
+    private final UserService userService;
+    private final CustomFilters customFilters;
+    private final EmployeeRepository employeeRepository;
+
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
+
     public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionId) throws ResourceNotFoundException {
         var fetchData = punishRepository.findByStudentEmailAndInfractionId(email,infractionId);
         var punishmentRecord = fetchData.stream()
@@ -80,16 +95,14 @@ public class PunishmentService {
     }
 
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByStatus(status);
-        var punishmentRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
+        var fetchData = customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false,status);
 
-        if (punishmentRecord.isEmpty()) {
+
+        if (fetchData.isEmpty()) {
             throw new ResourceNotFoundException("No punishments with that status exist");
         }
-        logger.debug(String.valueOf(punishmentRecord));
-        return punishmentRecord;
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
     }
 
 //    public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
@@ -124,6 +137,34 @@ public class PunishmentService {
     }
 
 
+
+    // Methods that Need Global Filters Due for schools
+    public List<Punishment> findAll() {
+        return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
+
+
+    // Uses Logged In User as Teacher Email
+    public List<Punishment> findAllPunishmentsByTeacherEmail(){
+       return customFilters.LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(false);
+    }
+
+    public List<Punishment> findAllPunishmentsByStudentEmail(){
+        return customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
+    }
+
+    public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
+        List<Punishment> fetchData = customFilters.FetchPunishmentDataByInfractionNameAndIsArchived(infractionName,false);
+
+
+        if (fetchData.isEmpty()) {
+            throw new ResourceNotFoundException("No students with that Infraction exist");
+        }
+        logger.debug(String.valueOf(fetchData));
+        return fetchData;
+    }
+
+
+
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
@@ -132,13 +173,16 @@ public class PunishmentService {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+        int maxLevel = ourSchool.getMaxPunishLevel();
         List<Punishment> closedPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "CLOSED");
+
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
         }
 
-        String level = levelCheck(closedTimes);
+        String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
 
         Punishment punishment = new Punishment();
@@ -172,6 +216,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
             return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
@@ -181,6 +226,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
             return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
         }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
@@ -190,6 +236,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
             return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
         }
 
@@ -199,7 +246,9 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
             return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService);
+
 
 
         } else {
@@ -209,7 +258,9 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
             return sendCFREmailBasedOnType(punishment, studentRepository, infractionRepository);
+
         }
     }
 
@@ -451,15 +502,45 @@ public class PunishmentService {
         return studentPunishments;
     }
 
+
+
     public List<Punishment> getAllReferrals() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         List<Punishment> writeUps = findAllPunishmentIsArchived(false);
         Infraction infraction = infractionRepository.findByInfractionName("Positive Behavior Shout Out!");
         Infraction infraction2 = infractionRepository.findByInfractionName("Behavioral Concern");
         List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfractionId().equals(infraction.getInfractionId()) && !pun.getInfractionId().equals(infraction2.getInfractionId())).toList();
 //        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
 
-        return wu1;
 
+            //Make Sure We have Logged In User Details
+        if (authentication != null && authentication.getPrincipal() != null) {
+            UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
+
+            //Fetch Data
+            List<Punishment> data = customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
+
+            // Switch Filter Depending On Role
+            if (userModel.getRoles().stream().anyMatch(role -> "TEACHER".equals(role.getRole()))) {
+                 data = customFilters.filterPunishmentsByTeacherEmail(data,userModel.getUsername());
+            }
+
+            if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
+                data = customFilters.filterPunishmentObjByStudent(data,userModel.getUsername());
+            }
+
+            //If Admin, defaults to no additional filter
+
+               //Method Specific Filters
+            return data.stream()
+                    .filter(punishment -> !punishment.getInfraction().getInfractionName().equals("Positive Behavior Shout Out!") &&
+                            !punishment.getInfraction().getInfractionName().equals("Behavioral Concern"))
+                    .collect(Collectors.toList());
+        }
+
+        // Return an empty list instead of null
+        return Collections.emptyList();
     }
 
     public List<Punishment> getAllReferralsFilteredByTeacher(String email) {
@@ -473,18 +554,25 @@ public class PunishmentService {
 
     }
 
-    private static String levelCheck(List<Integer> levels) {
+    private static String levelCheck(List<Integer> levels, int maxLevel) {
         int level = 1;
+        int discLevel;
+        if (maxLevel == 0) {
+            discLevel = 4;
+        } else {
+            discLevel = maxLevel;
+        }
         for (Integer lev : levels) {
-            if (lev>level) {
+            if (lev > level) {
                 level = lev;
             }
-            if(level >= 4) {
+            if (level >= discLevel) {
                 level = 4;
             }
         }
         return String.valueOf(level);
     }
+
 
     private static PunishmentResponse sendEmailBasedOnType(Punishment punishment,
                                                            PunishRepository punishRepository,
@@ -498,8 +586,13 @@ public class PunishmentService {
         punishmentResponse.setStudentToEmail(student.getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
-        punishmentResponse.setSubject("Burke High School referral for " + student.getFirstName() + " " + student.getLastName());
-        if(punishment.getClosedTimes() == 4) {
+
+
+        // Grab school info and populate into punishment
+        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
+        punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + punishment.getStudent().getFirstName() + " " + punishment.getStudent().getLastName());
+        if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
+
             List<Punishment> punishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
                     student.getStudentEmail(), infraction.getInfractionName(), "CLOSED",false
             );
@@ -522,7 +615,8 @@ public class PunishmentService {
             punishment.setTimeClosed(LocalDate.now());
             punishment.setStatus("REFERRAL");
             punishRepository.save(punishment);
-            punishmentResponse.setSubject("Burke High School Office Referral for " + student.getFirstName() + " " + student.getLastName());
+
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Office Referral for " + student.getFirstName() + " " + student.getLastName());
             punishmentResponse.setMessage(
                     " Thank you for using the teacher managed referral. Because " + student.getFirstName() + " " + student.getLastName() +
                             " has received their fourth or greater offense for " + infraction.getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. " +
@@ -689,7 +783,8 @@ public class PunishmentService {
             String shoutOut = punishment.getInfractionDescription().get(1);
             shoutOut.replace("[,", "");
             shoutOut.replace(",]","");
-            punishmentResponse.setSubject("Burke High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
+
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
                     " has received a shout out from their teacher for the following: " + shoutOut + "\n" +
@@ -707,7 +802,9 @@ public class PunishmentService {
             String concern = punishment.getInfractionDescription().get(1);
             concern.replace("[,", "");
             concern.replace(",]","");
-            punishmentResponse.setSubject("Burke High School Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
+
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
+
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
                     ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + "\n" +
@@ -725,6 +822,7 @@ public class PunishmentService {
         return punishmentResponse;
     }
 
+
     private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
@@ -734,8 +832,15 @@ public class PunishmentService {
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
         punishment.setTimeClosed(LocalDate.now());
-        punishmentResponse.setSubject("Burke High School referral for " + student.getFirstName() + " " + student.getLastName());
+
+
+        // Grab school info and populate into punishment
+        School ourSchool = schoolRepository.findSchoolBySchoolName(punishment.getStudent().getSchool());
+
+
+        punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + student.getFirstName() + " " + student.getLastName());
         if (infraction.getInfractionName().equals("Tardy")) {
+
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
                     " has been written up for being " + infraction.getInfractionName() + ". \n" +

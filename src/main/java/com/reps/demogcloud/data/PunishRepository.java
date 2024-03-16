@@ -25,5 +25,9 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     Punishment findByPunishmentIdAndIsArchived(String punishmentId, boolean b);
     Punishment findByPunishmentId (String punishId);
 
+    List<Punishment> findByIsArchivedAndStudent_School(boolean archived, String school);
+
+    List<Punishment> findByInfractionInfractionNameAndIsArchivedAndStudent_School(String infractionName, boolean bool, String schoolName);
+
     List<Punishment> findByStudentEmailIgnoreCaseAndInfractionIdAndIsArchived(String studentEmail, String infractionName, boolean b);
 }
