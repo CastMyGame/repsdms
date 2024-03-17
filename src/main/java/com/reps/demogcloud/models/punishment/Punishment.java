@@ -26,6 +26,7 @@ public class Punishment {
     private String schoolName;
 //    private Infraction infraction;
     private String infractionId;
+    private String infractionName;
     private String status;
     private int closedTimes;
     private String closedExplanation;
