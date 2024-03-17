@@ -193,6 +193,8 @@ public class PunishmentService {
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
         punishment.setInfractionDescription(description);
         punishment.setSchoolName(ourSchool.getSchoolName());
+        punishment.setInfractionLevel(infraction.getInfractionLevel());
+        punishment.setInfractionName(infraction.getInfractionName());
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
