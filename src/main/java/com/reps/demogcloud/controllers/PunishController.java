@@ -206,14 +206,14 @@ public class PunishController {
                 .body(response);
     }
 
-//    @PutMapping("/descriptions")
-//    public ResponseEntity<List<Punishment>> updateAllDescriptions() {
-//        List<Punishment> response = punishmentService.updateDescriptions();
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
+    @PutMapping("/descriptions")
+    public ResponseEntity<List<Punishment>> updateAllDescriptions() {
+        List<Punishment> response = punishmentService.updateDescriptions();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 //
 //    @PutMapping("/infractions")
 //    public ResponseEntity<List<Punishment>> updateAllInfractionId() {
@@ -224,14 +224,41 @@ public class PunishController {
 //                .body(response);
 //    }
 //
-//    @PutMapping("/emails")
-//    public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
-//        List<Punishment> response = punishmentService.updateStudentEmails();
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
+    @PutMapping("/emails")
+    public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
+        List<Punishment> response = punishmentService.updateStudentEmails();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/schoolName")
+    public ResponseEntity<List<Punishment>> updateAllSchools() {
+        List<Punishment> response = punishmentService.updateSchools();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/infractionName")
+    public ResponseEntity<List<Punishment>> updateAllInfractionName() {
+        List<Punishment> response = punishmentService.updateInfractionName();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/infractionLevel")
+    public ResponseEntity<List<Punishment>> updateAllInfractionLevel() {
+        List<Punishment> response = punishmentService.updateInfractionLevel();
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
 
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")

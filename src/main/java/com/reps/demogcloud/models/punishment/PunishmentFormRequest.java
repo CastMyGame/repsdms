@@ -16,9 +16,9 @@ public class PunishmentFormRequest {
     private String firstName;
     private String lastName;
     private String studentEmail;
-    private String infractionId;
+    private String infractionName;
     private String infractionPeriod;
-    private ArrayList<String> infractionDescription;
+    private String infractionDescription;
     private String teacherEmail;
 
 }

@@ -7,7 +7,6 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
-import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -18,16 +17,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 
-import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -175,7 +170,7 @@ public class PunishmentService {
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
         int maxLevel = ourSchool.getMaxPunishLevel();
-        List<Punishment> closedPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "CLOSED");
+        List<Punishment> closedPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
 
         List<Integer> closedTimes = new ArrayList<>();
         for(Punishment punishment : closedPunishments) {
@@ -184,21 +179,25 @@ public class PunishmentService {
 
         String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
-
+        Infraction infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         Punishment punishment = new Punishment();
 //        punishment.setStudent(findMe);
+        ArrayList<String> description = new ArrayList<>();
+        description.add(formRequest.getInfractionDescription());
         punishment.setStudentEmail(formRequest.getStudentEmail());
-        punishment.setInfractionId(formRequest.getInfractionId());
+        punishment.setInfractionId(infraction.getInfractionId());
         punishment.setClassPeriod(formRequest.getInfractionPeriod());
         punishment.setPunishmentId(UUID.randomUUID().toString());
         punishment.setTimeCreated(now);
         punishment.setClosedTimes(Integer.parseInt(level));
         punishment.setTeacherEmail(formRequest.getTeacherEmail());
-        punishment.setInfractionDescription(formRequest.getInfractionDescription());
+        punishment.setInfractionDescription(description);
         punishment.setSchoolName(ourSchool.getSchoolName());
+        punishment.setInfractionLevel(infraction.getInfractionLevel());
+        punishment.setInfractionName(infraction.getInfractionName());
 
-        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "OPEN");
-        List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionId(), "PENDING");
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
+        List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
         var findOpen = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
@@ -209,7 +208,7 @@ public class PunishmentService {
                                 .toList();
 
         System.out.println(findOpen);
-        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
+//        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
@@ -630,7 +629,7 @@ public class PunishmentService {
 
         }
         if(infraction.getInfractionName().equals("Tardy") && !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -656,7 +655,7 @@ public class PunishmentService {
 
         }
         if(infraction.getInfractionName().equals("Unauthorized Device/Cell Phone") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -682,7 +681,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Disruptive Behavior") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -707,7 +706,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Horseplay") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -732,7 +731,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Dress Code") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -757,7 +756,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
-            String description = punishment.getInfractionDescription().get(1);
+            String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
             description.replace("]", "");
             String messageIn = " Hello, \n" +
@@ -782,7 +781,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
-            String shoutOut = punishment.getInfractionDescription().get(1);
+            String shoutOut = punishment.getInfractionDescription().get(0);
             shoutOut.replace("[,", "");
             shoutOut.replace(",]","");
 
@@ -801,7 +800,7 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
-            String concern = punishment.getInfractionDescription().get(1);
+            String concern = punishment.getInfractionDescription().get(0);
             concern.replace("[,", "");
             concern.replace(",]","");
 
@@ -1073,22 +1072,24 @@ public class PunishmentService {
         return saved;
     }
 
-//    public List<Punishment> updateDescriptions() {
-//        List<Punishment> all = punishRepository.findAll();
-//        List<Punishment> saved = new ArrayList<>();
-//        for(Punishment punishment : all) {
-//            ArrayList<String> description = infraction.getInfractionDescription();
-//            punishment.setInfractionDescription(description);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-//        }
-//        return saved;
-//    }
+    public List<Punishment> updateDescriptions() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            if(punishment.getInfractionDescription().size() > 1) {
+                punishment.getInfractionDescription().remove(0);
+                punishRepository.save(punishment);
+                saved.add(punishment);
+            }
+        }
+        return saved;
+    }
 
 //    public List<Punishment> updateInfractions() {
 //        List<Punishment> all = punishRepository.findAll();
 //        List<Punishment> saved = new ArrayList<>();
 //        for(Punishment punishment : all) {
+//            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfraction().getInfractionId());
 //            String id = infraction.getInfractionId();
 //            punishment.setInfractionId(id);
 //            punishRepository.save(punishment);
@@ -1097,19 +1098,76 @@ public class PunishmentService {
 //        return saved;
 //    }
 
-//    public List<Punishment> updateStudentEmails() {
-//        List<Punishment> all = punishRepository.findAll();
-//        List<Punishment> saved = new ArrayList<>();
-//        for(Punishment punishment : all) {
-//            String studentEmail = student.getStudentEmail();
-//            punishment.setStudentEmail(studentEmail);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-//        }
-//        return saved;
-//    }
+    public List<Punishment> updateStudentEmails() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            String studentEmail = punishment.getStudentEmail();
+            punishment.setStudentEmail(studentEmail);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateInfractionName() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            punishment.setInfractionName(infractionName.getInfractionName());
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateInfractionLevel() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            punishment.setInfractionLevel(infractionName.getInfractionLevel());
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateSchools() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            String studentEmail = punishment.getStudentEmail();
+            punishment.setSchoolName(student.getSchool());
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
 
     public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
         return punishRepository.findByStudentEmailIgnoreCase(studentEmail);
+    }
+
+    public List<TeacherResponse> getTeacherResponse(List<Punishment> punishmentList) {
+    List<TeacherResponse> response = new ArrayList<>();
+        for(Punishment punishment : punishmentList) {
+            TeacherResponse info = new TeacherResponse();
+            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            info.setInfractionDescription(punishment.getInfractionDescription());
+            info.setTeacherEmail(punishment.getTeacherEmail());
+            info.setInfractionName(infraction.getInfractionName());
+            info.setStudentFirstName(student.getFirstName());
+            info.setStudentLastName(student.getLastName());
+            info.setStudentEmail(punishment.getStudentEmail());
+            info.setTimeCreated(punishment.getTimeCreated());
+            info.setStatus(punishment.getStatus());
+            info.setLevel(infraction.getInfractionLevel());
+            response.add(info);
+    }
+        return response;
     }
 }
