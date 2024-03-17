@@ -1072,17 +1072,18 @@ public class PunishmentService {
         return saved;
     }
 
-//    public List<Punishment> updateDescriptions() {
-//        List<Punishment> all = punishRepository.findAll();
-//        List<Punishment> saved = new ArrayList<>();
-//        for(Punishment punishment : all) {
-//            ArrayList<String> description = infraction.getInfractionDescription();
-//            punishment.setInfractionDescription(description);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-//        }
-//        return saved;
-//    }
+    public List<Punishment> updateDescriptions() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            if(punishment.getInfractionDescription().size() > 1) {
+                punishment.getInfractionDescription().remove(0);
+                punishRepository.save(punishment);
+                saved.add(punishment);
+            }
+        }
+        return saved;
+    }
 
 //    public List<Punishment> updateInfractions() {
 //        List<Punishment> all = punishRepository.findAll();
@@ -1103,6 +1104,30 @@ public class PunishmentService {
         for(Punishment punishment : all) {
             String studentEmail = punishment.getStudentEmail();
             punishment.setStudentEmail(studentEmail);
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateInfractionName() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            punishment.setInfractionName(infractionName.getInfractionName());
+            punishRepository.save(punishment);
+            saved.add(punishment);
+        }
+        return saved;
+    }
+
+    public List<Punishment> updateInfractionLevel() {
+        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> saved = new ArrayList<>();
+        for(Punishment punishment : all) {
+            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            punishment.setInfractionLevel(infractionName.getInfractionLevel());
             punishRepository.save(punishment);
             saved.add(punishment);
         }
