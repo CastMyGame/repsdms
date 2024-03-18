@@ -55,7 +55,7 @@ public class DTOService {
 
 public List<PunishmentDTO> getDTOPunishments() throws Exception {
         List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
-        List<Punishment> punishments = punishmentService.findAll();
+        List<Punishment> punishments = punishmentService.findAllPunishmentsByTeacherEmail();
         for (Punishment punishment: punishments){
             PunishmentDTO punishmentDTO = new PunishmentDTO();
             punishmentDTO.setPunishment(punishment);
