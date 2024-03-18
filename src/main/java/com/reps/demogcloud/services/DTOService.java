@@ -52,4 +52,26 @@ public class DTOService {
         return new StudentOverviewDTO(punishmentList,student);
     }
 
+
+public List<PunishmentDTO> getDTOPunishments() throws Exception {
+        List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
+        List<Punishment> punishments = punishmentService.findAll();
+        for (Punishment punishment: punishments){
+            PunishmentDTO punishmentDTO = new PunishmentDTO();
+            punishmentDTO.setPunishment(punishment);
+            punishmentDTO.setStudentEmail(punishment.getStudentEmail());
+
+            //get stduent info
+            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+            punishmentDTO.setFirstName(student.getFirstName());
+            punishmentDTO.setLastName(student.getLastName());
+            punishmentDTOList.add(punishmentDTO);
+
+        }
+
+        return punishmentDTOList;
+
+}
+
+
 }

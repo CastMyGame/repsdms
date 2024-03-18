@@ -45,6 +45,14 @@ public class DTOController {
                 .body(message);
     }
 
+    @GetMapping("/punishmentsDTO")
+    public ResponseEntity<List<PunishmentDTO>> getAllPunishmentDTO() throws Exception {
+        var message = dtoService.getDTOPunishments();
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
     @GetMapping("/StudentOverviewData")
     public ResponseEntity<StudentOverviewDTO> getAllStudentOverview() throws Exception {
         var message = dtoService.getStudentOverData();
