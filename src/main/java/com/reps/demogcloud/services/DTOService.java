@@ -24,8 +24,37 @@ public class DTOService {
     private StudentService studentService;
 
 
-    public AdminOverviewDTO getAdminOverData(){
+    public AdminOverviewDTO getAdminOverData() throws Exception {
         List<Punishment> punishmentList = punishmentService.findAllSchool();
+//Get Write up with student info
+        List<Punishment> writeUps = punishmentService.getAllReferrals();
+        List<PunishmentDTO> writeUpDTOList = new ArrayList<>();
+        for (Punishment punishment: writeUps){
+            PunishmentDTO punishmentDTO = new PunishmentDTO();
+            punishmentDTO.setPunishment(punishment);
+            punishmentDTO.setStudentEmail(punishment.getStudentEmail());
+
+            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+            punishmentDTO.setFirstName(student.getFirstName());
+            punishmentDTO.setLastName(student.getLastName());
+            writeUpDTOList.add(punishmentDTO);
+
+        }
+
+        List<Punishment> punishments = punishmentService.findAllSchool();
+        List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
+        for (Punishment punishment: punishments){
+            PunishmentDTO punishmentDTO = new PunishmentDTO();
+            punishmentDTO.setPunishment(punishment);
+            punishmentDTO.setStudentEmail(punishment.getStudentEmail());
+
+            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+            punishmentDTO.setFirstName(student.getFirstName());
+            punishmentDTO.setLastName(student.getLastName());
+            punishmentDTOList.add(punishmentDTO);
+
+        }
+
         List<Punishment> writeUpList = punishmentService.getAllReferrals();
         Optional<List<Employee>> teachersListOpt = employeeService.findAllByRole("TEACHER");
         List<Employee> teachersList = new ArrayList<>();
@@ -33,7 +62,7 @@ public class DTOService {
             teachersList = teachersListOpt.get();
         }
 
-        return new AdminOverviewDTO(punishmentList,writeUpList,teachersList);
+        return new AdminOverviewDTO(punishmentDTOList,writeUpDTOList,teachersList);
     }
 
     public TeacherOverviewDTO getTeacherOverData(){

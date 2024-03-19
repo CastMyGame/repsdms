@@ -28,7 +28,7 @@ public class DTOController {
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
-    public ResponseEntity<AdminOverviewDTO> getAll() {
+    public ResponseEntity<AdminOverviewDTO> getAll() throws Exception {
         var message = dtoService.getAdminOverData();
         return ResponseEntity
                 .accepted()
