@@ -10,8 +10,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class AdminOverviewDTO {
-   private List<Punishment> punishments;
-   private  List<Punishment> writeUps;
+   private List<PunishmentDTO> punishments;
+   private  List<PunishmentDTO> writeUps;
    private List<Employee> teachers;
 
 

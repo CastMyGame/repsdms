@@ -28,7 +28,7 @@ public class DTOController {
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
-    public ResponseEntity<AdminOverviewDTO> getAll() {
+    public ResponseEntity<AdminOverviewDTO> getAll() throws Exception {
         var message = dtoService.getAdminOverData();
         return ResponseEntity
                 .accepted()
@@ -40,6 +40,14 @@ public class DTOController {
     @GetMapping("/TeacherOverviewData")
     public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
         var message = dtoService.getTeacherOverData();
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @GetMapping("/punishmentsDTO")
+    public ResponseEntity<List<PunishmentDTO>> getAllPunishmentDTO() throws Exception {
+        var message = dtoService.getDTOPunishments();
         return ResponseEntity
                 .accepted()
                 .body(message);

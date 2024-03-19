@@ -21,10 +21,8 @@ public class Punishment {
 
     @Id
     private String punishmentId;
-//    private Student student;
     private String studentEmail;
     private String schoolName;
-//    private Infraction infraction;
     private String infractionId;
     private String infractionName;
     private String infractionLevel;
