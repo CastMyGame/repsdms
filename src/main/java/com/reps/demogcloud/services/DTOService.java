@@ -65,13 +65,26 @@ public class DTOService {
         return new AdminOverviewDTO(punishmentDTOList,writeUpDTOList,teachersList);
     }
 
-    public TeacherOverviewDTO getTeacherOverData(){
+    public TeacherOverviewDTO getTeacherOverData() throws Exception {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail();
         List<Punishment> writeUpList = punishmentService.getAllReferrals();
         List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentList);
         List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(writeUpList);
 
-        return new TeacherOverviewDTO(punishmentList,writeUpList, punishmentInfo, writeUpInfo);
+        List<PunishmentDTO> writeDTO = new ArrayList<>();
+        for (Punishment writeups: writeUpList) {
+            PunishmentDTO wu = new PunishmentDTO();
+            wu.setPunishment(writeups);
+            wu.setStudentEmail(writeups.getStudentEmail());
+            //get stduent info
+            Student student = studentService.findByStudentEmail(writeups.getStudentEmail());
+            wu.setFirstName(student.getFirstName());
+            wu.setLastName(student.getLastName());
+            writeDTO.add(wu);
+
+        }
+        
+        return new TeacherOverviewDTO(punishmentList,writeDTO, punishmentInfo, writeUpInfo);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {

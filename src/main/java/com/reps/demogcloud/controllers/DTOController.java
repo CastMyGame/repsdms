@@ -38,7 +38,7 @@ public class DTOController {
 
     //Uses Logged In User
     @GetMapping("/TeacherOverviewData")
-    public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
+    public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() throws Exception {
         var message = dtoService.getTeacherOverData();
         return ResponseEntity
                 .accepted()

@@ -10,7 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 public class TeacherOverviewDTO {
    private List<Punishment> punishments;
-   private List<Punishment> writeUps;
+   private List<PunishmentDTO> writeUps;
    private List<TeacherResponse> punishmentResponse;
    private List<TeacherResponse> writeUpResponse;
 
