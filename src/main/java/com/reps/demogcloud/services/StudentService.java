@@ -7,6 +7,7 @@ import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.punishment.PunishmentDTO;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -226,55 +227,91 @@ public class StudentService {
         return assignedStudents;
     }
 
-    public List<Student> getDetentionList(){
+//    public List<Student> getDetentionList(){
+//        List<Punishment> punishments = punishRepository.findAll();
+//        List<Student> students = new ArrayList<>();
+//        for(Punishment punishment : punishments) {
+//            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+//            if(punishment.getStatus().equals("OPEN")) {
+//                LocalDate today = LocalDate.now();
+//                LocalDate punishmentTime = punishment.getTimeCreated();
+//
+//                int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
+//
+//                if (days >= 1 && days < 3 && !students.contains(student)) {
+//                    students.add(student);
+//                }
+//            }
+//        }
+//        Collections.sort(students, new Comparator<Student>() {
+//            @Override
+//            public int compare(Student o1, Student o2) {
+//                return o1.getLastName().compareTo(o2.getLastName());
+//            }
+//        });
+//        return students;
+//    }
+
+    public List<PunishmentDTO> getDetentionList(){
         List<Punishment> punishments = punishRepository.findAll();
-        List<Student> students = new ArrayList<>();
+        Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
+        List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
-            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
             if(punishment.getStatus().equals("OPEN")) {
+                PunishmentDTO dto = new PunishmentDTO();
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 1 && days < 3 && !students.contains(student)) {
-                    students.add(student);
+                if (days >= 1 && days < 3) {
+                    Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+                    String studentEmail = punishment.getStudentEmail();
+                    dto.setFirstName(student.getFirstName());
+                    dto.setLastName(student.getLastName());
+                    dto.setPunishment(punishment);
+                    if(!uniqueStudentEmails.contains(studentEmail)){
+                        punishedStudents.add(dto);
+
+                    }
+                    uniqueStudentEmails.add(studentEmail);
                 }
             }
         }
-        Collections.sort(students, new Comparator<Student>() {
-            @Override
-            public int compare(Student o1, Student o2) {
-                return o1.getLastName().compareTo(o2.getLastName());
-            }
-        });
-        return students;
+
+        return punishedStudents;
     }
 
-    public List<Punishment> getIssList(){
+
+    public List<PunishmentDTO> getIssList(){
         List<Punishment> punishments = punishRepository.findAll();
-        List<Punishment> punishedStudents = new ArrayList<>();
+        Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
+        List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
             if(punishment.getStatus().equals("OPEN")) {
+                PunishmentDTO dto = new PunishmentDTO();
                 LocalDate today = LocalDate.now();
                 LocalDate punishmentTime = punishment.getTimeCreated();
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
                 if (days >= 3) {
-                    punishedStudents.add(punishment);
+                    Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+                    String studentEmail = punishment.getStudentEmail();
+                    dto.setFirstName(student.getFirstName());
+                    dto.setLastName(student.getLastName());
+                    dto.setPunishment(punishment);
+                    if(!uniqueStudentEmails.contains(studentEmail)){
+                        punishedStudents.add(dto);
+
+                    }
+                    uniqueStudentEmails.add(studentEmail);
                 }
             }
         }
-        Collections.sort(punishedStudents, new Comparator<Punishment>() {
-            @Override
-            public int compare(Punishment o1, Punishment o2) {
-                Student student1 = studentRepository.findByStudentEmailIgnoreCase(o1.getStudentEmail());
-                Student student2 = studentRepository.findByStudentEmailIgnoreCase(o2.getStudentEmail());
-                return student1.getLastName().compareTo(student2.getLastName());
-            }
-        });
+
+
+
         return punishedStudents;
     }
 
