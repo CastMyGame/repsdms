@@ -179,7 +179,14 @@ public class PunishmentService {
 
         String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
-        Infraction infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
+        Infraction infraction = new Infraction();
+        if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
+        && !formRequest.getInfractionName().equals("Behavioral Concern")
+        && !formRequest.getInfractionName().equals("Failure to Complete Work")) {
+            infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
+        } else {
+            infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
+        }
         Punishment punishment = new Punishment();
 //        punishment.setStudent(findMe);
         ArrayList<String> description = new ArrayList<>();

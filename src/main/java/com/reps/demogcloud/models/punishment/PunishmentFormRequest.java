@@ -13,8 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 @ToString
 public class PunishmentFormRequest {
-    private String firstName;
-    private String lastName;
     private String studentEmail;
     private String infractionName;
     private String infractionPeriod;
