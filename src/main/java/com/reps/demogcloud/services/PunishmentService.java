@@ -281,7 +281,6 @@ public class PunishmentService {
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
-        System.out.println("Student Answers " + studentAnswers);
 
 
         Punishment findMe = null;
