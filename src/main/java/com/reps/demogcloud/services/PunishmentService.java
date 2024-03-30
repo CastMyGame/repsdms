@@ -274,16 +274,24 @@ public class PunishmentService {
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatus(studentEmail,
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
 
         var findOpen = fetchPunishmentData.stream()
                 .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
-        System.out.println("Student Answers " + studentAnswers);
 
-        Punishment findMe = findOpen.get(0);
+
+        Punishment findMe = null;
+        if (!findOpen.isEmpty()) {
+            findMe = findOpen.get(0);
+
+        } else {
+            // Handle the case where findOpen is empty
+            throw new ResourceNotFoundException("No open punishments found for the given criteria.");
+        }
+
         Student studentClose = studentRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
         Infraction infractionClose = infractionRepository.findByInfractionId(findMe.getInfractionId());
 
@@ -312,7 +320,6 @@ public class PunishmentService {
         findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
 //        System.out.println(findMe);
-        if (findMe != null) {
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
             punishmentResponse.setMessage(" Hello, \n" +
@@ -335,10 +342,7 @@ public class PunishmentService {
 //                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return punishmentResponse;
-        } else {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
-    }};
+        }};
 
     public Punishment rejectLevelThree(String punishmentId, String description) {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
