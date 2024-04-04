@@ -71,6 +71,25 @@ public class DTOService {
         List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentList);
         List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(writeUpList);
 
+
+        //This will Pull School Wide Shoutouts
+        List<Punishment> punishments = punishmentService.findAllSchool();
+        List<PunishmentDTO> schoolWideShouts = new ArrayList<>();
+        for (Punishment punishment: punishments){
+            if(punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")){
+                PunishmentDTO punishmentDTO = new PunishmentDTO();
+                punishmentDTO.setPunishment(punishment);
+                punishmentDTO.setStudentEmail(punishment.getStudentEmail());
+
+                Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+                punishmentDTO.setFirstName(student.getFirstName());
+                punishmentDTO.setLastName(student.getLastName());
+                schoolWideShouts.add(punishmentDTO);
+            }
+
+
+        }
+      ;
         List<PunishmentDTO> writeDTO = new ArrayList<>();
         for (Punishment writeups: writeUpList) {
             PunishmentDTO wu = new PunishmentDTO();
@@ -84,7 +103,7 @@ public class DTOService {
 
         }
         
-        return new TeacherOverviewDTO(punishmentList,writeDTO, punishmentInfo, writeUpInfo);
+        return new TeacherOverviewDTO(punishmentList,writeDTO, punishmentInfo, writeUpInfo, schoolWideShouts);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {
