@@ -85,18 +85,18 @@ public class StudentController {
                 .body(message);
     }
 
-    @GetMapping("/detentionList")
-    public ResponseEntity<List<PunishmentDTO>> getDetentionList() {
-        List<PunishmentDTO> response = studentService.getDetentionList();
+    @GetMapping("/detentionList/{school}")
+    public ResponseEntity<List<PunishmentDTO>> getDetentionList(@PathVariable String school) {
+        List<PunishmentDTO> response = studentService.getDetentionList(school);
 
         return ResponseEntity
                 .accepted()
                 .body(response);
     }
 
-    @GetMapping("/issList")
-    public ResponseEntity<List<PunishmentDTO>> getIssList() {
-        List<PunishmentDTO> response = studentService.getIssList();
+    @GetMapping("/issList/{school}")
+    public ResponseEntity<List<PunishmentDTO>> getIssList(@PathVariable String school) {
+        List<PunishmentDTO> response = studentService.getIssList(school);
 
 
         return ResponseEntity

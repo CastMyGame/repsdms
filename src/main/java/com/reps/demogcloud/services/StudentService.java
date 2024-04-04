@@ -252,8 +252,8 @@ public class StudentService {
 //        return students;
 //    }
 
-    public List<PunishmentDTO> getDetentionList(){
-        List<Punishment> punishments = punishRepository.findAll();
+    public List<PunishmentDTO> getDetentionList(String school){
+        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -283,8 +283,8 @@ public class StudentService {
     }
 
 
-    public List<PunishmentDTO> getIssList(){
-        List<Punishment> punishments = punishRepository.findAll();
+    public List<PunishmentDTO> getIssList(String school){
+        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
