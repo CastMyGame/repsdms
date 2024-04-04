@@ -13,6 +13,8 @@ public class TeacherOverviewDTO {
    private List<PunishmentDTO> writeUps;
    private List<TeacherResponse> punishmentResponse;
    private List<TeacherResponse> writeUpResponse;
+   private List<PunishmentDTO> shoutOutsResponse;
+
 
 
 
