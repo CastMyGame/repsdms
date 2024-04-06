@@ -9,16 +9,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class TeacherOverviewDTO {
-   private List<Punishment> punishments;
-   private List<PunishmentDTO> writeUps;
    private List<TeacherResponse> punishmentResponse;
    private List<TeacherResponse> writeUpResponse;
-   private List<PunishmentDTO> shoutOutsResponse;
-
-
-
-
-
-
-
+   private List<TeacherResponse> shoutOutsResponse;
 }
