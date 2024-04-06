@@ -89,13 +89,13 @@ public class PunishController {
                 .body(message);
     }
 
-    @GetMapping("/writeUps")
-    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
-        List<Punishment> response = punishmentService.getAllReferrals();
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
+//    @GetMapping("/writeUps")
+//    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
+//        List<Punishment> response = punishmentService.getAllReferrals();
+//        return ResponseEntity
+//                .accepted()
+//                .body(response);
+//    }
 
     @GetMapping("/punishments/{studentEmail}")
     public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){

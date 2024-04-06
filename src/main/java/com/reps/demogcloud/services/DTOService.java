@@ -27,24 +27,44 @@ public class DTOService {
 
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
-        //Get All School Punishments
-        List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
+        List<Punishment> punishmentList = punishmentService.findAllSchool();
+//Get Write up with student info
+        List<Punishment> writeUps = punishmentService.getAllReferrals();
+        List<PunishmentDTO> writeUpDTOList = new ArrayList<>();
+        for (Punishment punishment: writeUps){
+            PunishmentDTO punishmentDTO = new PunishmentDTO();
+            punishmentDTO.setPunishment(punishment);
+            punishmentDTO.setStudentEmail(punishment.getStudentEmail());
 
-        // Create Punishment DTO with Display Student Info
-        List<PunishmentDTO> allSchoolPunishmentDisplay = punishmentService.getDTOResponse(allSchoolPunishments);
+            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+            punishmentDTO.setFirstName(student.getFirstName());
+            punishmentDTO.setLastName(student.getLastName());
+            writeUpDTOList.add(punishmentDTO);
 
+        }
 
-        //Filter Data for write ups only and create the DTO with the student info
-        List<PunishmentDTO> writeupDisplay = allSchoolPunishmentDisplay.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
+        List<Punishment> punishments = punishmentService.findAllSchool();
+        List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
+        for (Punishment punishment: punishments){
+            PunishmentDTO punishmentDTO = new PunishmentDTO();
+            punishmentDTO.setPunishment(punishment);
+            punishmentDTO.setStudentEmail(punishment.getStudentEmail());
 
-        //Teachers List
+            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
+            punishmentDTO.setFirstName(student.getFirstName());
+            punishmentDTO.setLastName(student.getLastName());
+            punishmentDTOList.add(punishmentDTO);
+
+        }
+
+        List<Punishment> writeUpList = punishmentService.getAllReferrals();
         Optional<List<Employee>> teachersListOpt = employeeService.findAllByRole("TEACHER");
         List<Employee> teachersList = new ArrayList<>();
         if(teachersListOpt.isPresent()){
             teachersList = teachersListOpt.get();
         }
 
-        return new AdminOverviewDTO(allSchoolPunishmentDisplay,writeupDisplay,teachersList);
+        return new AdminOverviewDTO(punishmentDTOList,writeUpDTOList,teachersList);
     }
 
     public TeacherOverviewDTO getTeacherOverData() throws Exception {
