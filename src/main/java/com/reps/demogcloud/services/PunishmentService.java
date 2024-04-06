@@ -531,44 +531,14 @@ public class PunishmentService {
 
 
 
-    public List<Punishment> getAllReferrals() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        List<Punishment> writeUps = findAllPunishmentIsArchived(false);
-        Infraction infraction = infractionRepository.findByInfractionName("Positive Behavior Shout Out!");
-        Infraction infraction2 = infractionRepository.findByInfractionName("Behavioral Concern");
-        List<Punishment> wu1 = writeUps.stream().filter(pun -> !pun.getInfractionId().equals(infraction.getInfractionId()) && !pun.getInfractionId().equals(infraction2.getInfractionId())).toList();
-//        List<Punishment> wu2 = wu1.stream().filter(pun -> !pun.getInfraction().getInfractionName().equals("Behavioral Concern")).toList();
-
-
-            //Make Sure We have Logged In User Details
-        if (authentication != null && authentication.getPrincipal() != null) {
-            UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
-
-            //Fetch Data
-            List<Punishment> data = customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
-
-            // Switch Filter Depending On Role
-            if (userModel.getRoles().stream().anyMatch(role -> "TEACHER".equals(role.getRole()))) {
-                 data = customFilters.filterPunishmentsByTeacherEmail(data,userModel.getUsername());
-            }
-
-            if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
-                data = customFilters.filterPunishmentObjByStudent(data,userModel.getUsername());
-            }
-
-            //If Admin, defaults to no additional filter
-
-               //Method Specific Filters
-            return data.stream()
-                    .filter(punishment -> !punishment.getPunishmentId().equals(infraction.getInfractionId()) &&
-                            !punishment.getPunishmentId().equals(infraction2.getInfractionId()))
-                    .collect(Collectors.toList());
-        }
-
-        // Return an empty list instead of null
-        return Collections.emptyList();
+    public List<PunishmentDTO> getAllReferrals(List<PunishmentDTO> listToBeFiltered) {
+        return listToBeFiltered.stream()
+                .filter(punishment -> punishment.getPunishment() != null &&
+                        !punishment.getPunishment().getInfractionName().equals("Positive Behavior Shout Out!") &&
+                        !punishment.getPunishment().getInfractionName().equals("Behavioral Concern"))
+                .collect(Collectors.toList());
     }
+
 
     public List<Punishment> getAllReferralsFilteredByTeacher(String email) {
         List<Punishment> writeUps = findAllPunishmentIsArchived(false);
@@ -1203,6 +1173,32 @@ public class PunishmentService {
 
         AggregationResults<TeacherResponse> results =
                 mongoTemplate.aggregate(aggregation, "Punishments", TeacherResponse.class);
+
+        return results.getMappedResults();
+    }
+
+    public List<PunishmentDTO> getDTOResponse(List<Punishment> punishmentList) {
+        // Extract student emails from the given punishmentList
+        List<String> studentEmails = punishmentList.stream()
+                .map(Punishment::getStudentEmail)
+                .collect(Collectors.toList());
+
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where("studentEmail").in(studentEmails)), // Match only the specified student emails
+                lookup("students", "studentEmail", "studentEmail", "studentInfo"), // Join with the students collection
+                unwind("studentInfo"),
+                project()
+                        .and("studentInfo.studentEmail").as("studentEmail")
+                        .and("studentInfo.firstName").as("firstName")
+                        .and("studentInfo.lastName").as("lastName")
+                        .and("infractionName").as("infractionName")
+                        .andExclude("_id")
+                        .and("punishment").as("punishment")
+
+        );
+
+        AggregationResults<PunishmentDTO> results =
+                mongoTemplate.aggregate(aggregation, "Punishments", PunishmentDTO.class);
 
         return results.getMappedResults();
     }
