@@ -13,12 +13,17 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,6 +32,12 @@ import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
+
 
 
 @Service
@@ -44,6 +55,11 @@ public class PunishmentService {
     private final CustomFilters customFilters;
     private final EmployeeRepository employeeRepository;
 
+
+
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
@@ -1163,21 +1179,32 @@ public class PunishmentService {
     }
 
     public List<TeacherResponse> getTeacherResponse(List<Punishment> punishmentList) {
-    List<TeacherResponse> response = new ArrayList<>();
-        for(Punishment punishment : punishmentList) {
-            TeacherResponse info = new TeacherResponse();
-            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-            info.setInfractionDescription(punishment.getInfractionDescription());
-            info.setTeacherEmail(punishment.getTeacherEmail());
-            info.setInfractionName(punishment.getInfractionName());
-            info.setStudentFirstName(student.getFirstName());
-            info.setStudentLastName(student.getLastName());
-            info.setStudentEmail(punishment.getStudentEmail());
-            info.setTimeCreated(punishment.getTimeCreated());
-            info.setStatus(punishment.getStatus());
-            info.setLevel(punishment.getInfractionLevel());
-            response.add(info);
+        // Extract student emails from the given punishmentList
+        List<String> studentEmails = punishmentList.stream()
+                .map(Punishment::getStudentEmail)
+                .collect(Collectors.toList());
+
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where("studentEmail").in(studentEmails)), // Match only the specified student emails
+                lookup("students", "studentEmail", "studentEmail", "studentInfo"), // Join with the students collection
+                unwind("studentInfo"),
+                project()
+                        .and("studentInfo.studentEmail").as("studentEmail")
+                        .and("studentInfo.firstName").as("studentFirstName")
+                        .and("studentInfo.lastName").as("studentLastName")
+                        .and("infractionName").as("infractionName")
+                        .and("timeCreated").as("timeCreated")
+                        .and("infractionDescription").as("infractionDescription")
+                        .and("teacherEmail").as("teacherEmail")
+                        .and("status").as("status")
+                        .and("level").as("level")
+                        .andExclude("_id")
+        );
+
+        AggregationResults<TeacherResponse> results =
+                mongoTemplate.aggregate(aggregation, "Punishments", TeacherResponse.class);
+
+        return results.getMappedResults();
     }
-        return response;
     }
-}
+

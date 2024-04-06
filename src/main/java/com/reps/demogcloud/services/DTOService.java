@@ -80,31 +80,11 @@ public class DTOService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<TeacherResponse> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getTeacherEmail().equalsIgnoreCase(authentication.getName()) ).toList();
 
-        //Get Write Up List only - excludes Shout Outs, BxConcerns,
+        //Get Write Up List only - excludes Shout-Outs, BxConcerns,
         List<TeacherResponse> punishmentsFilteredByTeacherAndReferralsOnly = punishmentsFilteredByTeacher.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
 
-        //Get Shout Outs Only, School Wide
+        //Get Shout-Outs Only, School Wide
         List<TeacherResponse> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
-
-
-
-        // List<Punishment> punishmentsFilteredByTeacher = punishmentService.findAllPunishmentsByTeacherEmail();
-        // List<Punishment> punishmentsFilteredByTeacherAndReferralsOnly = punishmentService.getAllReferrals();
-//        List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentsFilteredByTeacher);
-//        List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(punishmentsFilteredByTeacherAndReferralsOnly);
-
-//        List<PunishmentDTO> writeDTO = new ArrayList<>();
-//        for (Punishment writeups: punishmentsFilteredByTeacherAndReferralsOnly) {
-//            PunishmentDTO wu = new PunishmentDTO();
-//            wu.setPunishment(writeups);
-//            wu.setStudentEmail(writeups.getStudentEmail());
-//            //get stduent info
-//            Student student = studentService.findByStudentEmail(writeups.getStudentEmail());
-//            wu.setFirstName(student.getFirstName());
-//            wu.setLastName(student.getLastName());
-//            writeDTO.add(wu);
-//
-//        }
 
         return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts);
     }
