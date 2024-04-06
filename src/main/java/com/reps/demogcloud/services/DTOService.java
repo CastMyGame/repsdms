@@ -6,6 +6,8 @@ import com.reps.demogcloud.models.student.Student;
 import com.sun.security.auth.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -66,44 +68,45 @@ public class DTOService {
     }
 
     public TeacherOverviewDTO getTeacherOverData() throws Exception {
-        List<Punishment> punishmentList = punishmentService.findAllPunishmentsByTeacherEmail();
-        List<Punishment> writeUpList = punishmentService.getAllReferrals();
-        List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentList);
-        List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(writeUpList);
+
+        //Reduce Time by Making Fewer Calls Add Filter Methods
+        // -> this is global call to get all school related punishments
+        List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
+
+        //From this list created teacher response with student names included
+        List<TeacherResponse> allSchoolPunishmentsWithDisplayInformation = punishmentService.getTeacherResponse(allSchoolPunishments);
+
+        //Method filter punishments by teachers
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        List<TeacherResponse> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getTeacherEmail().equalsIgnoreCase(authentication.getName()) ).toList();
+
+        //Get Write Up List only - excludes Shout Outs, BxConcerns,
+        List<TeacherResponse> punishmentsFilteredByTeacherAndReferralsOnly = punishmentsFilteredByTeacher.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
+
+        //Get Shout Outs Only, School Wide
+        List<TeacherResponse> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
 
 
-        //This will Pull School Wide Shoutouts
-        List<Punishment> punishments = punishmentService.findAllSchool();
-        List<PunishmentDTO> schoolWideShouts = new ArrayList<>();
-        for (Punishment punishment: punishments){
-            if(punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")){
-                PunishmentDTO punishmentDTO = new PunishmentDTO();
-                punishmentDTO.setPunishment(punishment);
-                punishmentDTO.setStudentEmail(punishment.getStudentEmail());
 
-                Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
-                punishmentDTO.setFirstName(student.getFirstName());
-                punishmentDTO.setLastName(student.getLastName());
-                schoolWideShouts.add(punishmentDTO);
-            }
+        // List<Punishment> punishmentsFilteredByTeacher = punishmentService.findAllPunishmentsByTeacherEmail();
+        // List<Punishment> punishmentsFilteredByTeacherAndReferralsOnly = punishmentService.getAllReferrals();
+//        List<TeacherResponse> punishmentInfo = punishmentService.getTeacherResponse(punishmentsFilteredByTeacher);
+//        List<TeacherResponse> writeUpInfo = punishmentService.getTeacherResponse(punishmentsFilteredByTeacherAndReferralsOnly);
 
+//        List<PunishmentDTO> writeDTO = new ArrayList<>();
+//        for (Punishment writeups: punishmentsFilteredByTeacherAndReferralsOnly) {
+//            PunishmentDTO wu = new PunishmentDTO();
+//            wu.setPunishment(writeups);
+//            wu.setStudentEmail(writeups.getStudentEmail());
+//            //get stduent info
+//            Student student = studentService.findByStudentEmail(writeups.getStudentEmail());
+//            wu.setFirstName(student.getFirstName());
+//            wu.setLastName(student.getLastName());
+//            writeDTO.add(wu);
+//
+//        }
 
-        }
-      ;
-        List<PunishmentDTO> writeDTO = new ArrayList<>();
-        for (Punishment writeups: writeUpList) {
-            PunishmentDTO wu = new PunishmentDTO();
-            wu.setPunishment(writeups);
-            wu.setStudentEmail(writeups.getStudentEmail());
-            //get stduent info
-            Student student = studentService.findByStudentEmail(writeups.getStudentEmail());
-            wu.setFirstName(student.getFirstName());
-            wu.setLastName(student.getLastName());
-            writeDTO.add(wu);
-
-        }
-        
-        return new TeacherOverviewDTO(punishmentList,writeDTO, punishmentInfo, writeUpInfo, schoolWideShouts);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {

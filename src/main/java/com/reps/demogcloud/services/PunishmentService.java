@@ -1166,17 +1166,16 @@ public class PunishmentService {
     List<TeacherResponse> response = new ArrayList<>();
         for(Punishment punishment : punishmentList) {
             TeacherResponse info = new TeacherResponse();
-            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
             Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             info.setInfractionDescription(punishment.getInfractionDescription());
             info.setTeacherEmail(punishment.getTeacherEmail());
-            info.setInfractionName(infraction.getInfractionName());
+            info.setInfractionName(punishment.getInfractionName());
             info.setStudentFirstName(student.getFirstName());
             info.setStudentLastName(student.getLastName());
             info.setStudentEmail(punishment.getStudentEmail());
             info.setTimeCreated(punishment.getTimeCreated());
             info.setStatus(punishment.getStatus());
-            info.setLevel(infraction.getInfractionLevel());
+            info.setLevel(punishment.getInfractionLevel());
             response.add(info);
     }
         return response;
