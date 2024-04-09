@@ -29,9 +29,6 @@ public class EmployeeService {
     private final CustomFilters customFilters;
 
 
-
-
-
     public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters) {
         this.employeeRepository = employeeRepository;
         this.authService = authService;
@@ -39,17 +36,14 @@ public class EmployeeService {
     }
 
 
-
     public List<Employee> findAll() throws ResourceNotFoundException {
-      return customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
+        return customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
 
 
     }
 
 
-
-
-    public EmployeeResponse createNewEmployee (Employee request) {
+    public EmployeeResponse createNewEmployee(Employee request) {
         Set<RoleModel> roles = new HashSet<>();
         RoleModel teacher = new RoleModel();
         teacher.setRole("TEACHER");
@@ -63,7 +57,7 @@ public class EmployeeService {
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchoolName(request.getSchool());
         authenticationRequest.setRoles(roles);
-        if(doesEmployeeExist == null){
+        if (doesEmployeeExist == null) {
             try {
                 authService.createEmployeeUser(authenticationRequest);
                 return new EmployeeResponse("", employeeRepository.save(request));
@@ -72,27 +66,19 @@ public class EmployeeService {
                 return new EmployeeResponse(e.getMessage(), null);
             }
 
-        }
-        else{
+        } else {
             return new EmployeeResponse("Error: Email Already Registered In System", null);
 
         }
     }
 
-    public String deleteEmployee(String id) throws Exception {
+    public void deleteEmployee(String id) throws Exception {
         try {
             Optional<Employee> employeeOptional = employeeRepository.findById(id);
 
             if (employeeOptional.isPresent()) {
-                Employee deletedEmployee = employeeOptional.get();
                 employeeRepository.deleteById(id);
 
-                return new StringBuilder()
-                        .append(deletedEmployee.getFirstName())
-                        .append(" ")
-                        .append(deletedEmployee.getLastName())
-                        .append(" has been deleted")
-                        .toString();
             } else {
                 throw new Exception("Employee with ID " + id + " does not exist");
             }
@@ -150,14 +136,7 @@ public class EmployeeService {
                         Set<RoleModel> userRoles = employee.getRoles();
                         return userRoles != null && userRoles.stream()
                                 .anyMatch(roleModel -> roleModel.getRole().equals(role));
-                    })
-                    .collect(Collectors.toList());
-            Collections.sort(employeesWithRole, new Comparator<Employee>() {
-                @Override
-                public int compare(Employee o1, Employee o2) {
-                    return o1.getLastName().compareTo(o2.getLastName());
-                }
-            });
+                    }).sorted(Comparator.comparing(Employee::getLastName)).collect(Collectors.toList());
             return Optional.of(employeesWithRole);
         } else {
             return Optional.empty();

@@ -4,7 +4,6 @@ import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.student.Student;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -15,14 +14,17 @@ import java.util.Optional;
 
 @Service
 public class DTOService {
-    @Autowired
-    private PunishmentService punishmentService;
+    private final PunishmentService punishmentService;
 
-    @Autowired
-    private EmployeeService employeeService;
+    private final EmployeeService employeeService;
 
-    @Autowired
-    private StudentService studentService;
+    private final StudentService studentService;
+
+    public DTOService(PunishmentService punishmentService, EmployeeService employeeService, StudentService studentService) {
+        this.punishmentService = punishmentService;
+        this.employeeService = employeeService;
+        this.studentService = studentService;
+    }
 
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
@@ -111,7 +113,7 @@ public List<PunishmentDTO> getDTOPunishments() throws Exception {
             punishmentDTO.setPunishment(punishment);
             punishmentDTO.setStudentEmail(punishment.getStudentEmail());
 
-            //get stduent info
+            //get student info
             Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
             punishmentDTO.setFirstName(student.getFirstName());
             punishmentDTO.setLastName(student.getLastName());

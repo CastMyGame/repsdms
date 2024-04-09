@@ -365,7 +365,7 @@ public class PunishmentService {
 //                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return punishmentResponse;
-        }};
+        }}
 
     public Punishment rejectLevelThree(String punishmentId, String description) {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
