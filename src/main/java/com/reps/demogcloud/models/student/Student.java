@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -25,4 +26,12 @@ public class Student {
     private String grade;
     private String parentPhoneNumber;
     private String studentPhoneNumber;
+    //Set initial value to true
+    private boolean isArchived = false;
+    private String archivedBy;
+    private String archivedExplanation;
+    private LocalDate archivedOn;
+    private Integer points;
+    private String school;
+
 }

@@ -3,7 +3,10 @@ package com.reps.demogcloud.models.punishment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.joda.time.DateTime;
+import java.time.LocalDate;
+
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -12,5 +15,6 @@ public class ClosePunishmentRequest {
 
     private String infractionName;
     private String studentEmail;
-    private DateTime timeClosed;
+    private LocalDate timeClosed;
+    private List<StudentAnswer> studentAnswer;
 }

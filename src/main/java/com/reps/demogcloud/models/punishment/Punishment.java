@@ -5,11 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.joda.time.DateTime;
+import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.util.*;
 
 
 @Data
@@ -21,13 +21,33 @@ public class Punishment {
 
     @Id
     private String punishmentId;
-    private Student student;
-    private Infraction infraction;
+    private String studentEmail;
+    private String schoolName;
+    private String infractionId;
+    private String infractionName;
+    private String infractionLevel;
     private String status;
     private int closedTimes;
-//    private int infractionTimes;
-    private LocalDateTime timeCreated;
-    private LocalDateTime timeClosed;
+    private String closedExplanation;
+    //    private int infractionTimes;
+    private LocalDate timeCreated;
+    private LocalDate timeClosed;
     private String classPeriod;
     private String teacherEmail;
+    //Set initial value to true
+    private boolean isArchived = false;
+    private String archivedBy;
+    private String archivedExplanation;
+    private LocalDate archivedOn;
+    private int mapIndex = 0;
+    private Map<Date,List<String>> answerHistory;
+    private ArrayList<String> infractionDescription;
+
+    public void setAnswerHistory(Date date, List<String> context) {
+        if (answerHistory == null) {
+            answerHistory = new HashMap<>();
+        }
+
+        answerHistory.put(date, context);
+    }
 }

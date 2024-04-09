@@ -8,8 +8,14 @@ import java.util.List;
 
 @Repository
 public interface StudentRepository extends MongoRepository<Student,String> {
-    Student findByStudentIdNumber (String id);
-    //Select everything from students where last name is equal to our first argument
+    List<Student> findByIsArchived (boolean bool);
     List<Student> findByLastName(String lastName);
-    Student findByStudentEmail(String email);
+    List<Student> findByParentEmail(String email);
+    List<Student> findBySchool(String school);
+    Student findByStudentEmailIgnoreCase(String email);
+    Student findByStudentIdNumber (String id);
+
+    List<Student> findByIsArchivedAndSchool(boolean b, String school);
+
+    List<Student> findByIsArchivedAndLastNameAndSchool(Boolean bool,String lastName, String schoolName);
 }
