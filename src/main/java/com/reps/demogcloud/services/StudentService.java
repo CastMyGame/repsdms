@@ -230,8 +230,8 @@ public class StudentService {
                 if (days >= 1 && days < 3) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
-                    dto.setFirstName(student.getFirstName());
-                    dto.setLastName(student.getLastName());
+                    dto.setStudentFirstName(student.getFirstName());
+                    dto.setStudentLastName(student.getLastName());
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);
@@ -261,8 +261,8 @@ public class StudentService {
                 if (days >= 3) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
-                    dto.setFirstName(student.getFirstName());
-                    dto.setLastName(student.getLastName());
+                    dto.setStudentFirstName(student.getFirstName());
+                    dto.setStudentLastName(student.getLastName());
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);

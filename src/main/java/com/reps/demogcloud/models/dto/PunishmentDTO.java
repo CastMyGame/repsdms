@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class PunishmentDTO {
-    String firstName;
-    String lastName;
+    String studentFirstName;
+    String studentLastName;
     String studentEmail;
     Punishment punishment;
 

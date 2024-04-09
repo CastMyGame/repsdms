@@ -33,7 +33,7 @@ public class DTOController {
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
-    public ResponseEntity<AdminOverviewDTO> getAll() throws Exception {
+    public ResponseEntity<AdminOverviewDTO> getAll() {
         var message = dtoService.getAdminOverData();
         return ResponseEntity
                 .accepted()

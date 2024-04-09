@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
+import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
