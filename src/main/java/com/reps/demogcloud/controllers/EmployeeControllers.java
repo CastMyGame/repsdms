@@ -4,7 +4,6 @@ import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
 import com.reps.demogcloud.security.models.RoleModel;
-import com.reps.demogcloud.security.services.AuthService;
 import com.reps.demogcloud.services.EmployeeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -99,7 +98,7 @@ public class EmployeeControllers {
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
         try {
-            String employeeToDelete = employeeService.deleteEmployee(id);
+            employeeService.deleteEmployee(id);
 
             // If the service method executed successfully, return a 200 OK response
             return ResponseEntity.ok("Employee with ID " + id + " has been deleted.");

@@ -17,8 +17,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/school/v1")
 public class SchoolController {
-    @Autowired
     SchoolService schoolService;
+
+    @Autowired
+    public SchoolController(SchoolService schoolService) {
+        this.schoolService = schoolService;
+    }
 
     @PostMapping("/newSchool")
     public ResponseEntity<SchoolResponse> createSchool (@RequestBody School schoolRequest) {

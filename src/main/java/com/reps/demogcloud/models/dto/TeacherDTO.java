@@ -1,4 +1,4 @@
-package com.reps.demogcloud.models.punishment;
+package com.reps.demogcloud.models.dto;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 
 @Data
-public class TeacherResponse {
+public class TeacherDTO {
     private String studentEmail;
     private String studentFirstName;
     private String studentLastName;

@@ -2,30 +2,32 @@ package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.AssignmentRepository;
 import com.reps.demogcloud.models.assignments.Assignment;
+
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.expression.spel.ast.Assign;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Service
 @Slf4j
 public class AssignmentService {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final AssignmentRepository assignmentRepository;
 
     public AssignmentService(AssignmentRepository assignmentRepository) {
         this.assignmentRepository = assignmentRepository;
     }
-    public List<Assignment> getAllAssignments(){
-       return  assignmentRepository.findAll();
+    public List<Assignment> getAllAssignments() {
+        List<Assignment> assignments = new ArrayList<>();
+        try {
+            assignments = assignmentRepository.findAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+       return assignments;
     }
     public  Assignment createNewAssignment(Assignment assignments){
         return assignmentRepository.save(assignments);
@@ -45,9 +47,8 @@ public class AssignmentService {
             // Update other fields as needed
 
             // Save the updated assignment
-            Assignment updatedAssignment = assignmentRepository.save(existingAssignment);
+            return assignmentRepository.save(existingAssignment);
 
-            return updatedAssignment;
         } catch (NoSuchElementException e) {
             // Handle the case when the assignment with the given id is not found
             // You can throw a custom exception or return null depending on your requirements
