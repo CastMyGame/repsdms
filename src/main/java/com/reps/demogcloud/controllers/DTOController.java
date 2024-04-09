@@ -1,10 +1,11 @@
 package com.reps.demogcloud.controllers;
 
 
-import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.dto.AdminOverviewDTO;
+import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.dto.StudentOverviewDTO;
+import com.reps.demogcloud.models.dto.TeacherOverviewDTO;
 import com.reps.demogcloud.services.DTOService;
-import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +24,12 @@ import java.util.List;
 )
 @RequestMapping("/DTO/v1")
 public class DTOController {
-    @Autowired
     DTOService dtoService;
+
+    @Autowired
+    public DTOController(DTOService dtoService) {
+        this.dtoService = dtoService;
+    }
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")

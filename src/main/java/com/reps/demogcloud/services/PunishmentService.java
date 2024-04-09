@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
+import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -33,9 +34,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.data.mongodb.core.MongoTemplate;
+
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 
@@ -365,7 +365,7 @@ public class PunishmentService {
 //                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return punishmentResponse;
-        }};
+        }}
 
     public Punishment rejectLevelThree(String punishmentId, String description) {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
@@ -1178,7 +1178,7 @@ public class PunishmentService {
         return punishRepository.findByStudentEmailIgnoreCase(studentEmail);
     }
 
-    public List<TeacherResponse> getTeacherResponse(List<Punishment> punishmentList) {
+    public List<TeacherDTO> getTeacherResponse(List<Punishment> punishmentList) {
         // Extract student emails from the given punishmentList
         List<String> studentEmails = punishmentList.stream()
                 .map(Punishment::getStudentEmail)
@@ -1201,8 +1201,8 @@ public class PunishmentService {
                         .andExclude("_id")
         );
 
-        AggregationResults<TeacherResponse> results =
-                mongoTemplate.aggregate(aggregation, "Punishments", TeacherResponse.class);
+        AggregationResults<TeacherDTO> results =
+                mongoTemplate.aggregate(aggregation, "Punishments", TeacherDTO.class);
 
         return results.getMappedResults();
     }

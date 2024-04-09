@@ -1,7 +1,6 @@
 package com.reps.demogcloud.controllers;
 
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentDTO;
+import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -23,8 +22,12 @@ import java.util.List;
 @RequestMapping("/student/v1")
 public class StudentController {
 
-    @Autowired
     private StudentService studentService;
+
+    @Autowired
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
 
     //---------------------------------GET Controllers--------------------------------
     @GetMapping("/")
@@ -33,7 +36,7 @@ public class StudentController {
     }
 
     @GetMapping("/studentid/{studentId}")
-    public ResponseEntity<Student> getStudentByIdNumber(@PathVariable String studentId) throws Exception {
+    public ResponseEntity<Student> getStudentByIdNumber(@PathVariable String studentId) {
         var message = studentService.findByStudentId(studentId);
 
         return ResponseEntity

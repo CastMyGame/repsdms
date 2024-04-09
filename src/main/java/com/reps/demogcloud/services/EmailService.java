@@ -12,7 +12,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailService {
 
-    @Autowired JavaMailSender javaMailSender;
+    JavaMailSender javaMailSender;
+
+    @Autowired
+    public EmailService(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
 
     @Async
     public void sendEmail (String toEmail, String subject, String message) {

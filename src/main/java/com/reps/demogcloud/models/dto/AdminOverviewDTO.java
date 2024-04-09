@@ -1,9 +1,8 @@
-package com.reps.demogcloud.models.punishment;
+package com.reps.demogcloud.models.dto;
 
 import com.reps.demogcloud.models.employee.Employee;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.http.HttpStatus;
 
 import java.util.List;
 

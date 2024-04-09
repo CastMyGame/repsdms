@@ -2,7 +2,6 @@ package com.reps.demogcloud.security.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
@@ -11,8 +10,6 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,22 +26,16 @@ import java.util.Set;
 public class UserService implements UserDetailsService {
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
-
+    PasswordEncoder passwordEncoder;
     @Autowired
-    private EmployeeRepository employeeRepository;
-
+    EmployeeRepository employeeRepository;
     @Autowired
-    private UserRepository userRepository;
-
+    UserRepository userRepository;
     @Autowired
-    private StudentRepository studentRepository;
-
+    StudentRepository studentRepository;
     @Autowired
-    private JavaMailSender mailSender;
+    EmailService emailService;
 
-    @Autowired
-    private EmailService emailService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {

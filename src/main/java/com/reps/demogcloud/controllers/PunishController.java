@@ -2,14 +2,11 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,8 +22,12 @@ import java.util.List;
 )
 @RequestMapping("/punish/v1")
 public class PunishController {
-    @Autowired
     PunishmentService punishmentService;
+
+    @Autowired
+    public PunishController(PunishmentService punishmentService) {
+        this.punishmentService = punishmentService;
+    }
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/punishments")
@@ -44,15 +45,6 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
-
-//    @GetMapping("/{infractionName}")
-//    public ResponseEntity<List<Punishment>> getByInfraction(@PathVariable String infractionName) throws ResourceNotFoundException {
-//        var message = punishmentService.findByInfractionName(infractionName);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
 
     @GetMapping("/punishStatus/{status}")
     public ResponseEntity<List<Punishment>> getByStatus(@PathVariable String status) throws ResourceNotFoundException {
@@ -88,14 +80,6 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
-
-//    @GetMapping("/writeUps")
-//    public ResponseEntity<List<Punishment>> getPunishmentWriteUps() {
-//        List<Punishment> response = punishmentService.getAllReferrals();
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
 
     @GetMapping("/punishments/{studentEmail}")
     public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){
@@ -173,8 +157,8 @@ public class PunishController {
     }
 
     @PutMapping("/archived/{userId}/{punishmentId}")
-    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explaination ) {
-        Punishment response = punishmentService.archiveRecord(punishmentId,userId,explaination);
+    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explanation ) {
+        Punishment response = punishmentService.archiveRecord(punishmentId,userId,explanation);
         return ResponseEntity
                 .accepted()
                 .body(response);
@@ -214,16 +198,7 @@ public class PunishController {
                 .accepted()
                 .body(response);
     }
-//
-//    @PutMapping("/infractions")
-//    public ResponseEntity<List<Punishment>> updateAllInfractionId() {
-//        List<Punishment> response = punishmentService.updateInfractions();
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
-//
+
     @PutMapping("/emails")
     public ResponseEntity<List<Punishment>> updateAllStudentEmails() {
         List<Punishment> response = punishmentService.updateStudentEmails();

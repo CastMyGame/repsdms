@@ -1,7 +1,6 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.assignments.Assignment;
-import com.reps.demogcloud.models.student.Student;
 
 import com.reps.demogcloud.services.AssignmentService;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +19,16 @@ import java.util.List;
 @RequestMapping("/assignments/v1")
 public class assignmentController {
 
+    private AssignmentService assignmentService;
+
     @Autowired
-  private AssignmentService assignmentService;
+    public assignmentController(AssignmentService assignmentService) {
+        this.assignmentService = assignmentService;
+    }
 
     //-----------------------GET Controllers----------------------------
     @GetMapping("/")
-    public ResponseEntity<List<Assignment>> getAllQuestions() throws Exception {
+    public ResponseEntity<List<Assignment>> getAllQuestions() throws Exception{
         var message = assignmentService.getAllAssignments();
         return ResponseEntity
                 .accepted()
