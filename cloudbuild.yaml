@@ -5,3 +5,5 @@ steps:
   - id: 'Deploy to app engine using gcloud image'
     name: 'gcr.io/cloud-builders/gcloud'
     args: ['app', 'deploy', 'target/demo-gcloud-0.0.1-SNAPSHOT.jar']
+options:
+  logging: CLOUD_LOGGING_ONLY
