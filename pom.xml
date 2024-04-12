@@ -99,6 +99,15 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>com.google.cloud.tools</groupId>
+				<artifactId>appengine-maven-plugin</artifactId>
+				<version>2.7.0</version>
+				<configuration>
+					<deploy.projectId>repsdev31</deploy.projectId>
+					<version>1</version>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 
