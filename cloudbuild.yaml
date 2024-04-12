@@ -5,3 +5,5 @@ steps:
   - id: 'Deploy to app engine using gcloud image'
     name: 'gcr.io/cloud-builders/gcloud'
     args: ['app', 'deploy', 'target/appengine-staging/app.yaml']
+options:
+  logging: CLOUD_LOGGING_ONLY
