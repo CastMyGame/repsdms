@@ -1,5 +1,4 @@
 name: my-pr-trigger
-description: "Trigger on any PR targeting dev"
 github:
   owner: CastMyGame
   name: repsdms
