@@ -33,5 +33,6 @@ public class Student {
     private LocalDate archivedOn;
     private Integer points;
     private String school;
+    private Integer currency;
 
 }

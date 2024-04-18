@@ -29,5 +29,6 @@ public class Employee {
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;
+    private Integer currency;
 
 }

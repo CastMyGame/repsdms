@@ -5,6 +5,7 @@ import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -143,4 +144,13 @@ public class EmployeeService {
         }
     }
 
+    public Employee spendCurrency(String employeeEmail, Integer spend) {
+        Employee spender = employeeRepository.findByEmailIgnoreCase(employeeEmail);
+        Integer currency = spender.getCurrency();
+        // Make this addition so it can be used for adding or subtracting. We will pass
+        // a negative if it is being  used to spend and a positive if it is being used to add
+        Integer newCurrency = currency + spend;
+        spender.setCurrency(newCurrency);
+        return employeeRepository.save(spender);
+    }
 }

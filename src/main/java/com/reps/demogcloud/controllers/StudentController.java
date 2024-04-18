@@ -170,6 +170,14 @@ public class StudentController {
                 .body(response);
     }
 
+    @PutMapping("/currency/{studentEmail}")
+    public ResponseEntity<Student> archivedDeleted(@PathVariable String studentEmail, @RequestParam Integer spend) {
+        Student response = studentService.spendCurrency(studentEmail, spend);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     //---------------------------DELETE Controllers--------------------------
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteStudent (@RequestBody StudentRequest studentRequest) throws Exception {

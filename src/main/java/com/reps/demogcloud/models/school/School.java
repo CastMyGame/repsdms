@@ -17,5 +17,6 @@ public class School {
     private String schoolIdNumber;
     private String schoolName;
     private int maxPunishLevel;
+    private String currency;
 
 }

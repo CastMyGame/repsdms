@@ -291,4 +291,13 @@ public class StudentService {
     }
 
 
+    public Student spendCurrency(String studentEmail, Integer spend) {
+        Student spender = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        Integer currency = spender.getCurrency();
+        // Make this addition so it can be used for adding or subtracting. We will pass
+        // a negative if it is being  used to spend and a positive if it is being used to add
+        Integer newCurrency = currency + spend;
+        spender.setCurrency(newCurrency);
+        return studentRepository.save(spender);
+    }
 }
