@@ -155,8 +155,8 @@ public class StudentController {
     }
     //----------------------------PUT Controllers--------------------------------
     @PutMapping("/assignSchool")
-    public ResponseEntity<List<Student>> massAssignSchool(@RequestParam boolean isArchived) {
-        List<Student> response = studentService.massAssignForSchool(isArchived);
+    public ResponseEntity<List<Student>> massAssignSchool() {
+        List<Student> response = studentService.massAssignForSchool();
 
         return ResponseEntity
                 .accepted()
@@ -171,7 +171,7 @@ public class StudentController {
     }
 
     @PutMapping("/currency/{studentEmail}")
-    public ResponseEntity<Student> archivedDeleted(@PathVariable String studentEmail, @RequestParam Integer spend) {
+    public ResponseEntity<Student> spendCurrency(@PathVariable String studentEmail, @RequestParam Integer spend) {
         Student response = studentService.spendCurrency(studentEmail, spend);
         return ResponseEntity
                 .accepted()

@@ -17,4 +17,6 @@ public interface EmployeeRepository extends MongoRepository<Employee, String> {
     Employee findByEmployeeId (String employeeId);
 
     List<Employee> findByIsArchivedAndSchool(boolean bool, String school);
+
+    List<Employee> findBySchool (String school);
 }

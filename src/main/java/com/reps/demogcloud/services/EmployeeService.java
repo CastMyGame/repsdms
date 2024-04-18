@@ -5,6 +5,7 @@ import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.school.SchoolResponse;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
@@ -152,5 +153,17 @@ public class EmployeeService {
         Integer newCurrency = currency + spend;
         spender.setCurrency(newCurrency);
         return employeeRepository.save(spender);
+    }
+
+    public List<Employee> editSchool(String schoolName, String update) {
+        List<Employee> employees = employeeRepository.findBySchool(schoolName);
+        List<Employee> updated = new ArrayList<>();
+        for (Employee employee : employees) {
+            employee.setCurrency(50);
+            employeeRepository.save(employee);
+            updated.add(employee);
+        }
+
+        return updated;
     }
 }
