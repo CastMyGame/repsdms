@@ -1,11 +1,13 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -18,7 +20,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
-
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -35,17 +40,23 @@ public class StudentService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
     private final PunishRepository punishRepository;
+    private final SchoolRepository schoolRepository;
     private final AuthService authService;
+
+    private final MongoTemplate mongoTemplate;
+
 
 
     private final CustomFilters customFilters;
 
 
-    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, AuthService authService, CustomFilters customFilters) {
+    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, SchoolRepository schoolRepository, AuthService authService, MongoTemplate mongoTemplate, CustomFilters customFilters) {
 
         this.studentRepository = studentRepository;
         this.punishRepository = punishRepository;
+        this.schoolRepository = schoolRepository;
         this.authService = authService;
+        this.mongoTemplate = mongoTemplate;
         this.customFilters = customFilters;
     }
 
@@ -204,11 +215,11 @@ public class StudentService {
         return transferReceipt;
     }
 
-    public List<Student> massAssignForSchool(boolean isArchived) {
+    public List<Student> massAssignForSchool() {
         List<Student> students = studentRepository.findAll();
         List<Student> assignedStudents = new ArrayList<>();
         for(Student student : students) {
-            student.setArchived(isArchived);
+            student.setCurrency(0);
             studentRepository.save(student);
             assignedStudents.add(student);
         }
@@ -291,4 +302,11 @@ public class StudentService {
     }
 
 
+
+    public School getStudentSchool() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+
+        return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+    }
 }

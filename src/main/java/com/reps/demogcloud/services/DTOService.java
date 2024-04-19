@@ -3,6 +3,7 @@ package com.reps.demogcloud.services;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -75,8 +76,9 @@ public class DTOService {
     public StudentOverviewDTO getStudentOverData() throws Exception {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
         Student student = studentService.findByLoggedInStudent();
+        School school =  studentService.getStudentSchool();
 
-        return new StudentOverviewDTO(punishmentList,student);
+        return new StudentOverviewDTO(punishmentList, school, student);
     }
 
 

@@ -28,4 +28,15 @@ public class SchoolService {
             return new SchoolResponse(null, e.getMessage());
         }
     }
+
+    public SchoolResponse editSchool (String school, String update) {
+        School found = schoolRepository.findSchoolBySchoolName(school);
+        if (found != null) {
+            found.setCurrency(update);
+
+            return new SchoolResponse(schoolRepository.save(found), "");
+        } else {
+            return new SchoolResponse(null, "School not found");
+        }
+    }
 }

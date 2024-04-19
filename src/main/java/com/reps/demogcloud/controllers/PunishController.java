@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.mail.MessagingException;
 import java.util.List;
 
 
@@ -100,7 +101,7 @@ public class PunishController {
 
     //-----------------------------POST Controllers---------------------------
     @PostMapping("/punishId/close")
-    public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException {
+    public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException, MessagingException {
         System.out.println(closePunishmentRequest);
         var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail(), closePunishmentRequest.getStudentAnswer());
 
@@ -110,7 +111,7 @@ public class PunishController {
     }
 
     @PostMapping("/close/{id}")
-    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException {
+    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException, MessagingException {
         var message = punishmentService.closeByPunishmentId(id);
 
         return ResponseEntity
@@ -119,7 +120,7 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/form")
-    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) {
+    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
 
         return ResponseEntity
@@ -128,7 +129,7 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/formList")
-    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) {
+    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException {
         var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
 
         return ResponseEntity
@@ -157,7 +158,7 @@ public class PunishController {
     }
 
     @PutMapping("/archived/{userId}/{punishmentId}")
-    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explanation ) {
+    public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explanation ) throws MessagingException {
         Punishment response = punishmentService.archiveRecord(punishmentId,userId,explanation);
         return ResponseEntity
                 .accepted()
@@ -165,7 +166,7 @@ public class PunishController {
     }
 
     @PutMapping("/archived/restore/{punishmentId}")
-    public ResponseEntity<Punishment> restoreArchivedDeleted(@PathVariable String punishmentId) {
+    public ResponseEntity<Punishment> restoreArchivedDeleted(@PathVariable String punishmentId) throws MessagingException {
         Punishment response = punishmentService.restoreRecord(punishmentId);
         return ResponseEntity
                 .accepted()
@@ -174,7 +175,7 @@ public class PunishController {
 
     @PutMapping("/rejected/{punishmentId}")
     public ResponseEntity<Punishment> rejectLevelThree(@PathVariable String punishmentId,
-                                                       @RequestBody String description) {
+                                                       @RequestBody String description) throws MessagingException {
         Punishment response = punishmentService.rejectLevelThree(punishmentId, description);
         return ResponseEntity
                 .accepted()

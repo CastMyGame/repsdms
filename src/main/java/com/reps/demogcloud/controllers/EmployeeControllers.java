@@ -3,6 +3,8 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.school.SchoolResponse;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.services.EmployeeService;
 import org.springframework.http.HttpStatus;
@@ -92,6 +94,22 @@ public class EmployeeControllers {
             // If user not found, return a 404 Not Found response
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PutMapping("/currency/{employeeEmail}")
+    public ResponseEntity<Employee> archivedDeleted(@PathVariable String employeeEmail, @RequestParam Integer spend) {
+        Employee response = employeeService.spendCurrency(employeeEmail, spend);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/{schoolName}")
+    public ResponseEntity<List<Employee>> editSchool (@PathVariable String schoolName, @RequestParam String update) {
+        List<Employee> updated = employeeService.editSchool(schoolName, update);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
     //----------------------------DELETE Controllers----------------------------------
