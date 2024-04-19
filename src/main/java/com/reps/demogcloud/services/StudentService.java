@@ -20,7 +20,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
-
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -40,16 +43,20 @@ public class StudentService {
     private final SchoolRepository schoolRepository;
     private final AuthService authService;
 
+    private final MongoTemplate mongoTemplate;
+
+
 
     private final CustomFilters customFilters;
 
 
-    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, SchoolRepository schoolRepository, AuthService authService, CustomFilters customFilters) {
+    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, SchoolRepository schoolRepository, AuthService authService, MongoTemplate mongoTemplate, CustomFilters customFilters) {
 
         this.studentRepository = studentRepository;
         this.punishRepository = punishRepository;
         this.schoolRepository = schoolRepository;
         this.authService = authService;
+        this.mongoTemplate = mongoTemplate;
         this.customFilters = customFilters;
     }
 
@@ -295,15 +302,6 @@ public class StudentService {
     }
 
 
-    public Student spendCurrency(String studentEmail, Integer spend) {
-        Student spender = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-        Integer currency = spender.getCurrency();
-        // Make this addition so it can be used for adding or subtracting. We will pass
-        // a negative if it is being  used to spend and a positive if it is being used to add
-        Integer newCurrency = currency + spend;
-        spender.setCurrency(newCurrency);
-        return studentRepository.save(spender);
-    }
 
     public School getStudentSchool() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
