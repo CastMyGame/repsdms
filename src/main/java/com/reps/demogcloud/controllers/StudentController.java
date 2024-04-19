@@ -170,13 +170,6 @@ public class StudentController {
                 .body(response);
     }
 
-    @PutMapping("/currency/{studentEmail}")
-    public ResponseEntity<Student> spendCurrency(@PathVariable String studentEmail, @RequestParam Integer spend) {
-        Student response = studentService.spendCurrency(studentEmail, spend);
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
 
     //---------------------------DELETE Controllers--------------------------
     @DeleteMapping("/delete")
