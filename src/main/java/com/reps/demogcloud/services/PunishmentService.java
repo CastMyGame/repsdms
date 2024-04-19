@@ -7,7 +7,6 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
-import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
@@ -234,6 +233,13 @@ public class PunishmentService {
         System.out.println(findOpen);
 //        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
+         //save Points if more then zero
+            if(formRequest.getPoints() > 0 ){
+                int prevPoints = findMe.getPoints();
+                findMe.setPoints(prevPoints + formRequest.getPoints());
+                studentRepository.save(findMe);
+
+            }
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
@@ -241,7 +247,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
@@ -251,7 +257,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
@@ -261,7 +267,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
 
         if (findOpen.isEmpty()) {
@@ -271,7 +277,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
 
 
 
@@ -602,7 +608,7 @@ public class PunishmentService {
     }
 
 
-    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment,
+    private static PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
                                                            PunishRepository punishRepository,
                                                            StudentRepository studentRepository,
                                                            InfractionRepository infractionRepository,
@@ -814,9 +820,13 @@ public class PunishmentService {
             shoutOut.replace(",]","");
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
+            String pointsStatement = "";
+            if(formRequest.getPoints() > 0){
+                pointsStatement = "The teacher has added " + formRequest.getPoints() + " points to the student's Bucks Account. New Total Balance is " + student.getPoints() + " Points.";
+            }
             punishmentResponse.setMessage(" Hello," +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received a shout out from their teacher for the following: " + shoutOut + "\n" +
+                    " has received a shout out from their teacher for the following: " + shoutOut + "\n" + pointsStatement + "\n" +
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
