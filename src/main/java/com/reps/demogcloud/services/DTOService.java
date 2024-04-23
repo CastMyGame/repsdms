@@ -28,7 +28,7 @@ public class DTOService {
     }
 
 
-    public AdminOverviewDTO getAdminOverData(){
+    public AdminOverviewDTO getAdminOverData() throws Exception {
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
@@ -48,10 +48,14 @@ public class DTOService {
             teachersList = teachersListOpt.get();
         }
 
-        return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation,punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts,teachersList);
+        //Get Employee and School Information based on who is the logged in user
+        Employee teacher = employeeService.findByLoggedInEmployee();
+        School school = employeeService.getEmployeeSchool();
+
+        return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation,punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts,teachersList, teacher, school);
     }
 
-    public TeacherOverviewDTO getTeacherOverData(){
+    public TeacherOverviewDTO getTeacherOverData() throws Exception {
 
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
@@ -70,7 +74,11 @@ public class DTOService {
         //Get Shout-Outs Only, School Wide
         List<TeacherDTO> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts);
+        //Get Employee and School Information based on who is the logged in user
+        Employee teacher = employeeService.findByLoggedInEmployee();
+        School school = employeeService.getEmployeeSchool();
+
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {

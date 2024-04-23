@@ -1,12 +1,12 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.school.SchoolResponse;
-import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -27,14 +29,15 @@ public class EmployeeService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final EmployeeRepository employeeRepository;
     private final AuthService authService;
-
     private final CustomFilters customFilters;
+    private final SchoolRepository schoolRepository;
 
 
-    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters) {
+    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters, SchoolRepository schoolRepository) {
         this.employeeRepository = employeeRepository;
         this.authService = authService;
         this.customFilters = customFilters;
+        this.schoolRepository = schoolRepository;
     }
 
 
@@ -165,5 +168,23 @@ public class EmployeeService {
         }
 
         return updated;
+    }
+
+    public Employee findByLoggedInEmployee() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
+
+        if (findMe == null) {
+            throw new Exception("No employee with that email exists");
+        }
+
+        return findMe;
+    }
+
+    public School getEmployeeSchool() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
+
+        return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 }
