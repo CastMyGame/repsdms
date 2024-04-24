@@ -8,9 +8,11 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.dto.TeacherDTO;
+import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
+import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
@@ -55,6 +57,7 @@ public class PunishmentService {
     private final EmailService emailService;
     private final UserService userService;
     private final CustomFilters customFilters;
+    private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
 
 
@@ -237,9 +240,7 @@ public class PunishmentService {
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
          //save Points if more then zero
             if(formRequest.getCurrency() > 0 ){
-                int prevPoints = findMe.getCurrency();
-                findMe.setPoints(prevPoints + formRequest.getCurrency());
-                studentRepository.save(findMe);
+                employeeService.transferCurrency(new CurrencyTransferRequest(formRequest.getTeacherEmail(), formRequest.getStudentEmail(), formRequest.getCurrency()));
 
             }
             punishment.setStatus("SO");
