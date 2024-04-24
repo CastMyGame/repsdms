@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class PointsTransferRequest {
+public class CurrencyTransferRequest {
     private String teacherEmail;
     private String studentEmail;
     private Integer currencyTransferred;

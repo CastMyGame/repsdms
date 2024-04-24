@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +73,15 @@ public class DTOService {
         List<TeacherDTO> punishmentsFilteredByTeacherAndReferralsOnly = punishmentsFilteredByTeacher.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
 
         //Get Shout-Outs Only, School Wide
-        List<TeacherDTO> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
+        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
+        punishmentFilteredByShoutOuts.sort(new Comparator<TeacherDTO>() {
+            @Override
+            public int compare(TeacherDTO o1, TeacherDTO o2) {
+                if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
+                    return 0;
+                return o2.getTimeCreated().compareTo(o1.getTimeCreated());
+            }
+        });
 
         //Get Employee and School Information based on who is the logged in user
         Employee teacher = employeeService.findByLoggedInEmployee();
