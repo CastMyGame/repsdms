@@ -167,7 +167,7 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
-    @PostMapping("/currency/delete")
+    @PutMapping("/currency/delete")
     public ResponseEntity<TransactionResponse> deleteCurrency (@RequestBody TransactionRequest request) {
         TransactionResponse response = studentService.deleteCurrency(request);
         return ResponseEntity
