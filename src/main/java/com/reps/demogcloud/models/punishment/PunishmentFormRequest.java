@@ -18,6 +18,6 @@ public class PunishmentFormRequest {
     private String infractionPeriod;
     private String infractionDescription;
     private String teacherEmail;
-    private int points;
+    private int currency;
 
 }
