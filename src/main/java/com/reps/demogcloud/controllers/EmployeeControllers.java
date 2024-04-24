@@ -3,6 +3,7 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.employee.PointsTransferRequest;
 import com.reps.demogcloud.models.school.SchoolResponse;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
@@ -70,6 +71,14 @@ public class EmployeeControllers {
 
         EmployeeResponse employees =  employeeService.createNewEmployee(employee);
         return ResponseEntity.ok(employees);
+    }
+
+    @PutMapping("/currency/transfer")
+    public ResponseEntity<List<Student>> transferCurrency (@RequestBody List<PointsTransferRequest> requests) {
+        List<Student> response = employeeService.transferCurrency(requests);
+        return ResponseEntity
+                .accepted()
+                .body(response);
     }
 
 

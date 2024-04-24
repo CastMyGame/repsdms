@@ -236,9 +236,9 @@ public class PunishmentService {
 //        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
          //save Points if more then zero
-            if(formRequest.getPoints() > 0 ){
-                int prevPoints = findMe.getPoints();
-                findMe.setPoints(prevPoints + formRequest.getPoints());
+            if(formRequest.getCurrency() > 0 ){
+                int prevPoints = findMe.getCurrency();
+                findMe.setPoints(prevPoints + formRequest.getCurrency());
                 studentRepository.save(findMe);
 
             }
@@ -823,8 +823,8 @@ public class PunishmentService {
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
             String pointsStatement = "";
-            if(formRequest.getPoints() > 0){
-                pointsStatement = "The teacher has added " + formRequest.getPoints() + " points to the student's Bucks Account. New Total Balance is " + student.getPoints() + " Points.";
+            if(formRequest.getCurrency() > 0){
+                pointsStatement = "The teacher has added " + formRequest.getCurrency() + " to the student's Bucks Account. New Total Balance is " + student.getCurrency() + " Points.";
             }
 //            punishmentResponse.setMessage(" Hello," +
 //                    " Your child, " + student.getFirstName() + " " + student.getLastName() +

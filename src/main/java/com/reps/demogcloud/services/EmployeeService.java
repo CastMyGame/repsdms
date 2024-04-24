@@ -2,11 +2,14 @@ package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.SchoolRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
+import com.reps.demogcloud.models.employee.PointsTransferRequest;
 import com.reps.demogcloud.models.school.School;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -31,13 +34,15 @@ public class EmployeeService {
     private final AuthService authService;
     private final CustomFilters customFilters;
     private final SchoolRepository schoolRepository;
+    private final StudentRepository studentRepository;
 
 
-    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters, SchoolRepository schoolRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, AuthService authService, CustomFilters customFilters, SchoolRepository schoolRepository, StudentRepository studentRepository) {
         this.employeeRepository = employeeRepository;
         this.authService = authService;
         this.customFilters = customFilters;
         this.schoolRepository = schoolRepository;
+        this.studentRepository = studentRepository;
     }
 
 
@@ -186,5 +191,22 @@ public class EmployeeService {
         var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
 
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+    }
+
+    public List<Student> transferCurrency(List<PointsTransferRequest> requests) {
+        List<Student> students = new ArrayList<>();
+        for(PointsTransferRequest request: requests) {
+            Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
+            Student student = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+            if (teacher.getCurrency() < request.getCurrencyTransferred()) {
+                throw new ResourceNotFoundException("You do not have enough currency to give");
+            }
+            student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
+            studentRepository.save(student);
+            teacher.setCurrency(teacher.getCurrency() - request.getCurrencyTransferred());
+            employeeRepository.save(teacher);
+            students.add(student);
+        }
+        return students;
     }
 }
