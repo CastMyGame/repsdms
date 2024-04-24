@@ -309,4 +309,14 @@ public class StudentService {
 
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
+
+    public Student deleteCurrency(String studentEmail, Integer currency) throws ResourceNotFoundException {
+        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if(badStudent.getCurrency() < currency) {
+            throw new ResourceNotFoundException("You do not have enough currency to redeem this");
+        }
+        badStudent.setCurrency(badStudent.getCurrency() - currency);
+        studentRepository.save(badStudent);
+        return badStudent;
+    }
 }

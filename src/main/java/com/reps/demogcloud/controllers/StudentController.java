@@ -169,6 +169,14 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+    @PostMapping("/currency/delete")
+    public ResponseEntity<Student> deleteCurrency (@RequestParam String studentEmail,@RequestParam Integer points) {
+        Student response = studentService.deleteCurrency(studentEmail, points);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
 
 
     //---------------------------DELETE Controllers--------------------------
