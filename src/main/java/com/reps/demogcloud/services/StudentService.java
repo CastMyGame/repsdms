@@ -308,17 +308,21 @@ public class StudentService {
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 
-    public TransactionResponse deleteCurrency(TransactionRequest request) throws ResourceNotFoundException {
-        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
-        if(badStudent.getCurrency() < request.getCurrencySpend()) {
-            throw new ResourceNotFoundException("You do not have enough currency to redeem this");
+    public List<TransactionResponse> deleteCurrency(List<TransactionRequest> request) throws ResourceNotFoundException {
+        List<TransactionResponse> responses = new ArrayList<>();
+        for (TransactionRequest requests : request) {
+            Student badStudent = studentRepository.findByStudentEmailIgnoreCase(requests.getStudentEmail());
+            if (badStudent.getCurrency() < requests.getCurrencySpend()) {
+                throw new ResourceNotFoundException("You do not have enough currency to redeem this");
+            }
+            badStudent.setCurrency(badStudent.getCurrency() - requests.getCurrencySpend());
+            try {
+                studentRepository.save(badStudent);
+                responses.add(new TransactionResponse(requests, ""));
+            } catch (ResourceNotFoundException e) {
+                responses.add(new TransactionResponse(null, e.getMessage()));
+            }
         }
-        badStudent.setCurrency(badStudent.getCurrency() - request.getCurrencySpend());
-        try {
-            studentRepository.save(badStudent);
-            return new TransactionResponse(request, "");
-        } catch (ResourceNotFoundException e) {
-            return new TransactionResponse(null, e.getMessage());
-        }
+        return responses;
     }
 }

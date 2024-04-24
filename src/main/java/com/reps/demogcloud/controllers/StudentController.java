@@ -168,8 +168,8 @@ public class StudentController {
                 .body(response);
     }
     @PutMapping("/currency/delete")
-    public ResponseEntity<TransactionResponse> deleteCurrency (@RequestBody TransactionRequest request) {
-        TransactionResponse response = studentService.deleteCurrency(request);
+    public ResponseEntity<List<TransactionResponse>> deleteCurrency (@RequestBody List<TransactionRequest> request) {
+        List<TransactionResponse> response = studentService.deleteCurrency(request);
         return ResponseEntity
                 .accepted()
                 .body(response);
