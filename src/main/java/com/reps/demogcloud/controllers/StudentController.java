@@ -1,9 +1,7 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentRequest;
-import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.*;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -170,8 +168,8 @@ public class StudentController {
                 .body(response);
     }
     @PostMapping("/currency/delete")
-    public ResponseEntity<Student> deleteCurrency (@RequestParam String studentEmail,@RequestParam Integer points) {
-        Student response = studentService.deleteCurrency(studentEmail, points);
+    public ResponseEntity<TransactionResponse> deleteCurrency (@RequestBody TransactionRequest request) {
+        TransactionResponse response = studentService.deleteCurrency(request);
         return ResponseEntity
                 .accepted()
                 .body(response);

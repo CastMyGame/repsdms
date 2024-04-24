@@ -8,9 +8,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.school.School;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentRequest;
-import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.*;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
@@ -310,13 +308,17 @@ public class StudentService {
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 
-    public Student deleteCurrency(String studentEmail, Integer currency) throws ResourceNotFoundException {
-        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-        if(badStudent.getCurrency() < currency) {
+    public TransactionResponse deleteCurrency(TransactionRequest request) throws ResourceNotFoundException {
+        Student badStudent = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+        if(badStudent.getCurrency() < request.getCurrencySpend()) {
             throw new ResourceNotFoundException("You do not have enough currency to redeem this");
         }
-        badStudent.setCurrency(badStudent.getCurrency() - currency);
-        studentRepository.save(badStudent);
-        return badStudent;
+        badStudent.setCurrency(badStudent.getCurrency() - request.getCurrencySpend());
+        try {
+            studentRepository.save(badStudent);
+            return new TransactionResponse(request, "");
+        } catch (ResourceNotFoundException e) {
+            return new TransactionResponse(null, e.getMessage());
+        }
     }
 }
