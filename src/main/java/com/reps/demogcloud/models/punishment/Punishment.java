@@ -17,7 +17,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Document(collection = "Punishments")
-public class Punishment {
+public class Punishment implements Comparable<Punishment>{
 
     @Id
     private String punishmentId;
@@ -49,5 +49,10 @@ public class Punishment {
         }
 
         answerHistory.put(date, context);
+    }
+
+    @Override
+    public int compareTo(Punishment o) {
+        return getTimeCreated().compareTo(o.getTimeCreated());
     }
 }

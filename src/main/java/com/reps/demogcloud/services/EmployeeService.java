@@ -167,7 +167,7 @@ public class EmployeeService {
         List<Employee> employees = employeeRepository.findBySchool(schoolName);
         List<Employee> updated = new ArrayList<>();
         for (Employee employee : employees) {
-            employee.setCurrency(50);
+            employee.setCurrency(5);
             employeeRepository.save(employee);
             updated.add(employee);
         }
