@@ -3,8 +3,8 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.employee.PointsTransferRequest;
-import com.reps.demogcloud.models.school.SchoolResponse;
+import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
+import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.services.EmployeeService;
@@ -74,7 +74,7 @@ public class EmployeeControllers {
     }
 
     @PutMapping("/currency/transfer")
-    public ResponseEntity<List<Student>> transferCurrency (@RequestBody List<PointsTransferRequest> requests) {
+    public ResponseEntity<List<Student>> transferCurrency (@RequestBody List<CurrencyTransferRequest> requests) {
         List<Student> response = employeeService.transferCurrency(requests);
         return ResponseEntity
                 .accepted()
@@ -105,9 +105,9 @@ public class EmployeeControllers {
         }
     }
 
-    @PutMapping("/currency/{employeeEmail}")
-    public ResponseEntity<Employee> archivedDeleted(@PathVariable String employeeEmail, @RequestParam Integer spend) {
-        Employee response = employeeService.spendCurrency(employeeEmail, spend);
+    @PutMapping("/currency/spend")
+    public ResponseEntity<List<Student>> spendCurrency(@RequestBody List<CurrencySpendRequest> requests) {
+        List<Student> response = employeeService.spendCurrency(requests);
         return ResponseEntity
                 .accepted()
                 .body(response);

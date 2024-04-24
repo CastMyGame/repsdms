@@ -7,8 +7,9 @@ import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.employee.PointsTransferRequest;
+import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.school.School;
+import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
@@ -153,14 +154,14 @@ public class EmployeeService {
         }
     }
 
-    public Employee spendCurrency(String employeeEmail, Integer spend) {
-        Employee spender = employeeRepository.findByEmailIgnoreCase(employeeEmail);
-        Integer currency = spender.getCurrency();
-        // Make this addition so it can be used for adding or subtracting. We will pass
-        // a negative if it is being  used to spend and a positive if it is being used to add
-        Integer newCurrency = currency + spend;
-        spender.setCurrency(newCurrency);
-        return employeeRepository.save(spender);
+    public List<Student> spendCurrency(List<CurrencySpendRequest> requests) {
+        List<Student> spenders = new ArrayList<>();
+        for(CurrencySpendRequest request : requests) {
+            Student spender = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+            spender.setCurrency(spender.getCurrency() - request.getCurrencyTransferred());
+            spenders.add(studentRepository.save(spender));
+        }
+        return spenders;
     }
 
     public List<Employee> editSchool(String schoolName, String update) {
@@ -193,9 +194,9 @@ public class EmployeeService {
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 
-    public List<Student> transferCurrency(List<PointsTransferRequest> requests) {
+    public List<Student> transferCurrency(List<CurrencyTransferRequest> requests) {
         List<Student> students = new ArrayList<>();
-        for(PointsTransferRequest request: requests) {
+        for(CurrencyTransferRequest request: requests) {
             Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
             Student student = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
             if (teacher.getCurrency() < request.getCurrencyTransferred()) {
