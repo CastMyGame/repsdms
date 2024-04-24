@@ -155,8 +155,8 @@ public class StudentController {
     }
     //----------------------------PUT Controllers--------------------------------
     @PutMapping("/assignSchool")
-    public ResponseEntity<List<Student>> massAssignSchool(@RequestParam boolean isArchived) {
-        List<Student> response = studentService.massAssignForSchool(isArchived);
+    public ResponseEntity<List<Student>> massAssignSchool() {
+        List<Student> response = studentService.massAssignForSchool();
 
         return ResponseEntity
                 .accepted()
@@ -169,6 +169,7 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
 
     //---------------------------DELETE Controllers--------------------------
     @DeleteMapping("/delete")

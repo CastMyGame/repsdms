@@ -31,4 +31,12 @@ public class SchoolController {
                 ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(schoolResponse, HttpStatus.CREATED);
     }
+
+    @PutMapping("/{schoolName}")
+    public ResponseEntity<SchoolResponse> editSchool (@PathVariable String schoolName, @RequestParam String update) {
+        SchoolResponse schoolResponse = schoolService.editSchool(schoolName, update);
+        return schoolResponse.getSchool() == null
+                ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(schoolResponse, HttpStatus.OK);
+    }
 }

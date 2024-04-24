@@ -4,6 +4,7 @@ import com.reps.demogcloud.security.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -24,28 +25,39 @@ public class JwtFilterRequest extends OncePerRequestFilter {
     private UserService userService;
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-
-
         String authorizationHeader = request.getHeader("Authorization");
-        String username = null;
         String jwtToken = null;
 
-        if(authorizationHeader !=null && authorizationHeader.startsWith("Bearer ")){
-            jwtToken = authorizationHeader.substring(7); //we are grabbin what is after bearer
-            username = jwtUtils.extractUserName(jwtToken);
-
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwtToken = authorizationHeader.substring(7); // Extract token from Authorization header
+            System.out.println("THE TOKEN IN HEADER IS " + jwtToken);
         }
-        if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
 
-            UserDetails currentUserDetails =  userService.loadUserByUsername(username);
-            Boolean tokenValidated =   jwtUtils.validateToken(jwtToken, currentUserDetails);
-            if(tokenValidated){
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(currentUserDetails,null,currentUserDetails.getAuthorities());
-                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+        if (jwtToken != null && !jwtToken.isEmpty()) {
+            if (jwtUtils.isTokenBlacklisted(jwtToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Your session has expired. Please login again to continue");
+                return;
+            }
+
+            UserDetails currentUserDetails = userService.loadUserByUsername(jwtUtils.extractUserName(jwtToken));
+
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                Boolean tokenValidated = jwtUtils.validateToken(jwtToken, currentUserDetails);
+                if (tokenValidated) {
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(currentUserDetails, null, currentUserDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                } else {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Invalid JWT token");
+                    return;
+                }
             }
         }
-        filterChain.doFilter(request,response);
 
+        // Allow access to endpoints without authentication (e.g., /auth) here
+        filterChain.doFilter(request, response);
     }
 }

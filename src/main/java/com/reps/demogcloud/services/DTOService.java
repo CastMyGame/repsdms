@@ -3,6 +3,7 @@ package com.reps.demogcloud.services;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,7 +28,7 @@ public class DTOService {
     }
 
 
-    public AdminOverviewDTO getAdminOverData(){
+    public AdminOverviewDTO getAdminOverData() throws Exception {
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
@@ -47,10 +48,14 @@ public class DTOService {
             teachersList = teachersListOpt.get();
         }
 
-        return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation,punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts,teachersList);
+        //Get Employee and School Information based on who is the logged in user
+        Employee teacher = employeeService.findByLoggedInEmployee();
+        School school = employeeService.getEmployeeSchool();
+
+        return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation,punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts,teachersList, teacher, school);
     }
 
-    public TeacherOverviewDTO getTeacherOverData(){
+    public TeacherOverviewDTO getTeacherOverData() throws Exception {
 
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
@@ -69,14 +74,19 @@ public class DTOService {
         //Get Shout-Outs Only, School Wide
         List<TeacherDTO> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts);
+        //Get Employee and School Information based on who is the logged in user
+        Employee teacher = employeeService.findByLoggedInEmployee();
+        School school = employeeService.getEmployeeSchool();
+
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school);
     }
 
     public StudentOverviewDTO getStudentOverData() throws Exception {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
         Student student = studentService.findByLoggedInStudent();
+        School school =  studentService.getStudentSchool();
 
-        return new StudentOverviewDTO(punishmentList,student);
+        return new StudentOverviewDTO(punishmentList, school, student);
     }
 
 

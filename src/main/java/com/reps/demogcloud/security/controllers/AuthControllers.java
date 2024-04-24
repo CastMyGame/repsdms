@@ -16,10 +16,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import javax.mail.MessagingException;
+import javax.servlet.http.HttpServletRequest;
 import java.awt.desktop.SystemEventListener;
 import java.util.*;
 
@@ -53,6 +57,29 @@ public class AuthControllers {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+
+
+    @PostMapping("/v1/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        // Get the current authentication object
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println(authentication + " : " + "Find");
+
+        // Check if authentication object is not null and contains a token
+        if (authentication != null && authentication.getDetails() != null ) {
+            String authorizationHeader = request.getHeader("Authorization");
+            System.out.println(authorizationHeader);
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7); // Extract token after "Bearer "
+                jwtUtils.blacklistToken(token); // Assuming jwtUtils has a blacklistToken method
+                return ResponseEntity.ok("Logout successful");
+            } else {
+                return ResponseEntity.badRequest().body("Token not found in Authorization header");
+            }
+        } else {
+            return ResponseEntity.badRequest().body("No active session or token found");
+        }
+    }
 
     //------------------------GET Controllers----------------------
     @GetMapping("/test")
@@ -117,7 +144,7 @@ public class AuthControllers {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest){
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) throws MessagingException {
         String email = forgotPasswordRequest.getEmail();
     System.out.println(forgotPasswordRequest.getEmail());
         //check if email is in userRepository

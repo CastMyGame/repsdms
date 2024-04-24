@@ -7,7 +7,6 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.Twilio;
 //import com.twilio.rest.api.v2010.account.Message;
 //import com.twilio.type.PhoneNumber;
-import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
@@ -36,6 +35,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+
+import javax.mail.MessagingException;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
@@ -179,7 +180,7 @@ public class PunishmentService {
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
-    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) {
+    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
@@ -234,6 +235,13 @@ public class PunishmentService {
         System.out.println(findOpen);
 //        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
+         //save Points if more then zero
+            if(formRequest.getCurrency() > 0 ){
+                int prevPoints = findMe.getCurrency();
+                findMe.setPoints(prevPoints + formRequest.getCurrency());
+                studentRepository.save(findMe);
+
+            }
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
             punishRepository.save(punishment);
@@ -241,7 +249,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
@@ -251,7 +259,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
@@ -261,7 +269,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
 
         if (findOpen.isEmpty()) {
@@ -271,7 +279,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
 
 
 
@@ -288,7 +296,7 @@ public class PunishmentService {
         }
     }
 
-    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) {
+    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
         for(PunishmentFormRequest punishmentFormRequest : listRequest) {
             punishmentResponse.add(createNewPunishForm(punishmentFormRequest));
@@ -296,7 +304,7 @@ public class PunishmentService {
     }
 
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
-    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException {
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException, MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail,
                 infractionName, "OPEN");
@@ -368,7 +376,7 @@ public class PunishmentService {
             return punishmentResponse;
         }}
 
-    public Punishment rejectLevelThree(String punishmentId, String description) {
+    public Punishment rejectLevelThree(String punishmentId, String description) throws MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         //get punishment
         Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
@@ -411,7 +419,7 @@ public class PunishmentService {
         return punishment;
     }
 
-    public PunishmentResponse closeByPunishmentId(String punishmentId) throws ResourceNotFoundException {
+    public PunishmentResponse closeByPunishmentId(String punishmentId) throws ResourceNotFoundException, MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         Punishment findMe = punishRepository.findByPunishmentId(punishmentId);
         Student studentClose = studentRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
@@ -602,12 +610,12 @@ public class PunishmentService {
     }
 
 
-    private static PunishmentResponse sendEmailBasedOnType(Punishment punishment,
+    private static PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
                                                            PunishRepository punishRepository,
                                                            StudentRepository studentRepository,
                                                            InfractionRepository infractionRepository,
                                                            EmailService emailService,
-                                                           SchoolRepository schoolRepository) {
+                                                           SchoolRepository schoolRepository) throws MessagingException {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -814,18 +822,43 @@ public class PunishmentService {
             shoutOut.replace(",]","");
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received a shout out from their teacher for the following: " + shoutOut + "\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            String pointsStatement = "";
+            if(formRequest.getCurrency() > 0){
+                pointsStatement = "The teacher has added " + formRequest.getCurrency() + " to the student's Bucks Account. New Total Balance is " + student.getCurrency() + " Points.";
+            }
+//            punishmentResponse.setMessage(" Hello," +
+//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+//                    " has received a shout out from their teacher for the following: " + shoutOut + "\n" + pointsStatement + "\n" +
+//                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
+//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String message = "<!DOCTYPE html>\n" +
+                    "<html lang=\"en\">\n" +
+                    "<head>\n" +
+                    "    <meta charset=\"UTF-8\">\n" +
+                    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                    "    <title>Shout Out Notification</title>\n" +
+                    "</head>\n" +
+                    "<body>\n" +
+                    "    <div style=\"background-color: lightblue; padding: 10px;\">\n" + // Added header banner with light blue background color
+                    "        <h2 style=\"margin: 0;\">REPSDMS</h2>\n" + // Header text
+                    "    </div>\n" +
+                    "    <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
+                    "        <h1>Hello,</h1>\n" +
+                    "        <p>Your child, <strong>" + student.getFirstName() + " " + student.getLastName() + "</strong>, has received a shout out from their teacher for the following:</p>\n" +
+                    "        <p>" + shoutOut + "</p>\n" +
+                    "        <p>" + pointsStatement + "</p>\n" +
+                    "        <p>If you have any questions or concerns, you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.</p>\n" +
+                    "    </div>\n" +
+                    "</body>\n" +
+                    "</html>";
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
                     punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getSubject(),
-                    punishmentResponse.getMessage());
+                  message);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             String concern = punishment.getInfractionDescription().get(0);
@@ -1006,7 +1039,7 @@ public class PunishmentService {
         }
 
 
-    public Punishment archiveRecord(String punishmentId, String userId, String explanation) {
+    public Punishment archiveRecord(String punishmentId, String userId, String explanation) throws MessagingException {
         //Check for existing record
         Punishment existingRecord = findByPunishmentId(punishmentId);
         Student student = studentRepository.findByStudentEmailIgnoreCase(existingRecord.getStudentEmail());
@@ -1035,7 +1068,7 @@ public class PunishmentService {
 
     }
 
-    public Punishment restoreRecord(String punishmentId) {
+    public Punishment restoreRecord(String punishmentId) throws MessagingException {
         //Check for existing record
         Punishment existingRecord = punishRepository.findByPunishmentIdAndIsArchived(punishmentId,true);
         Student student = studentRepository.findByStudentEmailIgnoreCase(existingRecord.getStudentEmail());
