@@ -143,7 +143,7 @@ public class StudentController {
     }
 
     @PostMapping("/points/transfer")
-    public ResponseEntity<List<Student>> transferPoints (@RequestParam String givingStudentEmail,
+    public ResponseEntity<List<Student>> transferPoints (@RequestBody String givingStudentEmail,
                                                          @RequestParam String receivingStudentEmail,
                                                          @RequestParam Integer pointsTransferred) {
         List<Student> response = studentService.transferPoints(givingStudentEmail,

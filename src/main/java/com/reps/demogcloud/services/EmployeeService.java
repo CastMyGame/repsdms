@@ -194,20 +194,15 @@ public class EmployeeService {
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 
-    public List<Student> transferCurrency(List<CurrencyTransferRequest> requests) {
-        List<Student> students = new ArrayList<>();
-        for(CurrencyTransferRequest request: requests) {
+    public void transferCurrency(CurrencyTransferRequest request) {
             Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
             Student student = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
             if (teacher.getCurrency() < request.getCurrencyTransferred()) {
                 throw new ResourceNotFoundException("You do not have enough currency to give");
             }
-            student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
-            studentRepository.save(student);
             teacher.setCurrency(teacher.getCurrency() - request.getCurrencyTransferred());
             employeeRepository.save(teacher);
-            students.add(student);
-        }
-        return students;
+        student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
+        studentRepository.save(student);
     }
 }
