@@ -73,14 +73,6 @@ public class EmployeeControllers {
         return ResponseEntity.ok(employees);
     }
 
-//    @PutMapping("/currency/transfer")
-//    public ResponseEntity<List<Student>> transferCurrency (@RequestBody CurrencyTransferRequest requests) {
-//        Student response = employeeService.transferCurrency(requests);
-//        return ResponseEntity
-//                .accepted()
-//                .body(response);
-//    }
-
 
     //---------------------------PUT Controllers------------------------------
 
