@@ -37,6 +37,7 @@ public class Punishment implements Comparable<Punishment>{
     private boolean isArchived = false;
     // Set initial value to false until saved in review360 or other state discipline system
     private boolean isStateFiled = false;
+    private String stateIncidentNumber;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;

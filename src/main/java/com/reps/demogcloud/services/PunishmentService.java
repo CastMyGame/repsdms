@@ -1269,6 +1269,38 @@ public class PunishmentService {
 
         StateFormIntElement student = new StateFormIntElement(Integer.parseInt(writeUp.getStudentIdNumber()), (writeUp.getLastName() + " " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
         stateRequest.setStudentId(student);
+
+        StateFormIntElement school = new StateFormIntElement(5672, "Burke High School");
+        stateRequest.setOrganizationId(school);
+
+        StateFormIntElement location = new StateFormIntElement(52, "Classroom");
+        stateRequest.setLocationId(location);
+
+        StateFormIntElement positive = new StateFormIntElement(166470, "Other Positive Behavior");
+        stateRequest.setIncidentBehavior(positive);
+        stateRequest.setDescription(formRequest.getInfractionDescription());
+        List<StateFormIntElement> staffResponse = new ArrayList<>();
+        if (formRequest.getCurrency() > 0) {
+            staffResponse.add(new StateFormIntElement(166485, "Reward"));
+        }
+        staffResponse.add(new StateFormIntElement(166484, "Recognition"));
+        staffResponse.add(new StateFormIntElement(166486, "Other positive staff response"));
+        staffResponse.add(new StateFormIntElement(166487, "Parent Contact - Email"));
+        stateRequest.setStaffResponse(staffResponse);
+        stateRequest.setIncidentRoleId(1);
+        stateRequest.setReadyToAssignActions(false);
+        stateRequest.setBehaviorRequiredForActions(true);
+        stateRequest.setStudentNumber(writeUp.getStudentIdNumber());
+        stateRequest.setOrganizationId(school);
+
+        StateFormBooleanElement notTrue = new StateFormBooleanElement(false, "No");
+        stateRequest.setIsSpecialEd(notTrue);
+        stateRequest.setIs504(notTrue);
+
+        StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
+        stateRequest.setIsHomeless(homeless);
+        stateRequest.setRuleInstanceToken(null);
+
         }
     }
 
