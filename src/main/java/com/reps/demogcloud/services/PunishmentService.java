@@ -9,6 +9,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -31,6 +32,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -249,7 +251,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
+            StateFileResponse stateResponse = filePositiveWithState(formRequest);
             return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
@@ -1241,5 +1243,32 @@ public class PunishmentService {
 
         return results.getMappedResults();
     }
+
+    private StateFileResponse filePositiveWithState(PunishmentFormRequest formRequest) {
+        //Get Student and Teacher Details
+        Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+        Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
+
+        StateFileRequest stateRequest = new StateFileRequest();
+        // Set all the pieces of the State Request
+        StateFormIntElement incidentTypeId = new StateFormIntElement(40, "Positive Behavior Achievement");
+        stateRequest.setIncidentTypeId(incidentTypeId);
+        stateRequest.setIncidentConfigurationGroupId(207);
+
+        StateTimeElement versionDate = new StateTimeElement(LocalDate.now(), LocalTime.now());
+        stateRequest.setVersionDate(versionDate);
+        stateRequest.setIncidentDate(versionDate);
+
+        StateFormIntElement teacher = new StateFormIntElement(Integer.parseInt(wroteUp.getEmployeeId()), (wroteUp.getLastName() + " " + wroteUp.getFirstName()));
+        stateRequest.setReportedById(teacher);
+        stateRequest.setIncidentPartyId(-1);
+        stateRequest.setCurrentUser(teacher);
+
+        StateFormIntElement incidentParty = new StateFormIntElement(1, "");
+        stateRequest.setIncidentTypeId(incidentParty);
+
+        StateFormIntElement student = new StateFormIntElement(Integer.parseInt(writeUp.getStudentIdNumber()), (writeUp.getLastName() + " " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
+        stateRequest.setStudentId(student);
+        }
     }
 
