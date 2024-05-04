@@ -22,6 +22,12 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 
 import org.slf4j.Logger;
@@ -61,9 +67,6 @@ public class PunishmentService {
     private final CustomFilters customFilters;
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
-
-
-
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -185,7 +188,7 @@ public class PunishmentService {
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
-    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
+    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
@@ -251,7 +254,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            StateFileResponse stateResponse = filePositiveWithState(formRequest);
+            filePositiveWithState(formRequest);
             return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
@@ -299,7 +302,7 @@ public class PunishmentService {
         }
     }
 
-    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException {
+    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
         for(PunishmentFormRequest punishmentFormRequest : listRequest) {
             punishmentResponse.add(createNewPunishForm(punishmentFormRequest));
@@ -1244,7 +1247,7 @@ public class PunishmentService {
         return results.getMappedResults();
     }
 
-    private StateFileResponse filePositiveWithState(PunishmentFormRequest formRequest) {
+    private void filePositiveWithState(PunishmentFormRequest formRequest) throws IOException, InterruptedException {
         //Get Student and Teacher Details
         Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
@@ -1300,6 +1303,16 @@ public class PunishmentService {
         StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
         stateRequest.setIsHomeless(homeless);
         stateRequest.setRuleInstanceToken(null);
+        System.out.println(String.valueOf(stateRequest) + " Payload for state request");
+
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
+                .POST(HttpRequest.BodyPublishers.ofString(String.valueOf(stateRequest)))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         }
     }
