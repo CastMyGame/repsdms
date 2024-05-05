@@ -860,11 +860,11 @@ public class PunishmentService {
                     "</body>\n" +
                     "</html>";
 
-            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-                    punishmentResponse.getTeacherToEmail(),
-                    punishmentResponse.getStudentToEmail(),
-                    punishmentResponse.getSubject(),
-                  message);
+//            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
+//                    punishmentResponse.getTeacherToEmail(),
+//                    punishmentResponse.getStudentToEmail(),
+//                    punishmentResponse.getSubject(),
+//                  message);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             String concern = punishment.getInfractionDescription().get(0);
@@ -1262,7 +1262,7 @@ public class PunishmentService {
         stateRequest.setVersionDate(versionDate);
         stateRequest.setIncidentDate(versionDate);
 
-        StateFormIntElement teacher = new StateFormIntElement(Integer.parseInt(wroteUp.getEmployeeId()), (wroteUp.getLastName() + " " + wroteUp.getFirstName()));
+        StateFormIntElement teacher = new StateFormIntElement(2509677, "Iverson, Justin");
         stateRequest.setReportedById(teacher);
         stateRequest.setIncidentPartyId(-1);
         stateRequest.setCurrentUser(teacher);
@@ -1270,7 +1270,7 @@ public class PunishmentService {
         StateFormIntElement incidentParty = new StateFormIntElement(1, "");
         stateRequest.setIncidentTypeId(incidentParty);
 
-        StateFormIntElement student = new StateFormIntElement(Integer.parseInt(writeUp.getStudentIdNumber()), (writeUp.getLastName() + " " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
+        StateFormIntElement student = new StateFormIntElement(writeUp.getStateStudentId(), (writeUp.getLastName() + ", " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
         stateRequest.setStudentId(student);
 
         StateFormIntElement school = new StateFormIntElement(5672, "Burke High School");
@@ -1313,6 +1313,7 @@ public class PunishmentService {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
         }
     }
