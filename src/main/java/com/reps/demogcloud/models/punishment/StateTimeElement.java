@@ -11,6 +11,6 @@ import java.time.LocalTime;
 @Setter
 @AllArgsConstructor
 public class StateTimeElement {
-    private LocalDate date;
-    private LocalTime time;
+    private String date;
+    private String time;
 }

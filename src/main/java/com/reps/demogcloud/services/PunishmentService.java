@@ -1252,14 +1252,19 @@ public class PunishmentService {
         Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
 
+        DateTimeFormatter date = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        DateTimeFormatter time = DateTimeFormatter.ofPattern("h:mm a");
+
         StateFileRequest stateRequest = new StateFileRequest();
+        List<String> parties = new ArrayList<>();
+        stateRequest.setParties(parties);
         // Set all the pieces of the State Request
         StateFormIntElement incidentTypeId = new StateFormIntElement(40, "Positive Behavior Achievement");
         stateRequest.setIncidentTypeId(incidentTypeId);
         stateRequest.setIncidentConfigurationGroupId(207);
 
-        StateTimeElement versionDate = new StateTimeElement(LocalDate.now(), LocalTime.now());
-        stateRequest.setVersionDate(versionDate);
+        StateTimeElement versionDate = new StateTimeElement("5/6/2024", "1:00 PM");
+        stateRequest.setVersionDate(new StateTimeElement("5/6/2024", null));
         stateRequest.setIncidentDate(versionDate);
 
         StateFormIntElement teacher = new StateFormIntElement(2509677, "Iverson, Justin");
@@ -1268,7 +1273,7 @@ public class PunishmentService {
         stateRequest.setCurrentUser(teacher);
 
         StateFormIntElement incidentParty = new StateFormIntElement(1, "");
-        stateRequest.setIncidentTypeId(incidentParty);
+        stateRequest.setIncidentPartyTypeId(incidentParty);
 
         StateFormIntElement student = new StateFormIntElement(writeUp.getStateStudentId(), (writeUp.getLastName() + ", " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
         stateRequest.setStudentId(student);
@@ -1279,8 +1284,10 @@ public class PunishmentService {
         StateFormIntElement location = new StateFormIntElement(52, "Classroom");
         stateRequest.setLocationId(location);
 
-        StateFormIntElement positive = new StateFormIntElement(166470, "Other Positive Behavior");
-        stateRequest.setIncidentBehavior(positive);
+        List<FieldOptionElement> fieldElements = new ArrayList<>();
+        FieldOptionElement positive = new FieldOptionElement(166470, "Other Positive Behavior", "", null, false);
+        fieldElements.add(positive);
+        stateRequest.setIncidentBehavior(fieldElements);
         stateRequest.setDescription(formRequest.getInfractionDescription());
         List<StateFormIntElement> staffResponse = new ArrayList<>();
         if (formRequest.getCurrency() > 0) {
@@ -1303,7 +1310,7 @@ public class PunishmentService {
         StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
         stateRequest.setIsHomeless(homeless);
         stateRequest.setRuleInstanceToken(null);
-        System.out.println(String.valueOf(stateRequest) + " Payload for state request");
+        System.out.println(stateRequest + " Payload for state request");
 
         HttpClient client = HttpClient.newHttpClient();
 
@@ -1313,7 +1320,7 @@ public class PunishmentService {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println(response + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
+        System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
         }
     }
