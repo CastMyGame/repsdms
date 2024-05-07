@@ -1332,7 +1332,9 @@ public class PunishmentService {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .header("Content-Type", "application/json") // Set the Content-Type header
                 .build();
+
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
