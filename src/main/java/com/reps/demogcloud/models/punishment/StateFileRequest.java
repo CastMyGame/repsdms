@@ -1,7 +1,6 @@
 package com.reps.demogcloud.models.punishment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.*;
 
 import java.util.*;
@@ -26,6 +25,7 @@ public class StateFileRequest {
     private StateFormIntElement reportedById;
     @JsonProperty("IncidentParty_IncidentPartyId")
     private Integer incidentPartyId;
+    @JsonProperty("CurrentUser")
     private StateFormIntElement currentUser;
     @JsonProperty("IncidentParty_IncidentPartyTypeId")
     private StateFormIntElement incidentPartyTypeId;
@@ -62,4 +62,6 @@ public class StateFileRequest {
     @JsonProperty("RuleInstanceToken")
     private String ruleInstanceToken;
 
+    // Getters and setters
 }
+

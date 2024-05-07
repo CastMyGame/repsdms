@@ -1,7 +1,9 @@
 package com.reps.demogcloud.models.punishment;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 
+@Data
 @AllArgsConstructor
 public class FieldOptionElement {
     private Integer value;

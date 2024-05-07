@@ -1,6 +1,8 @@
 package com.reps.demogcloud.services;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
@@ -17,6 +19,7 @@ import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.utils.FieldOptionElementSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
@@ -1279,7 +1282,11 @@ public class PunishmentService {
         stateRequest.setStudentId(student);
 
         StateFormIntElement school = new StateFormIntElement(5672, "Burke High School");
+
+        //This is studuent org id
         stateRequest.setOrganizationId(school);
+
+        stateRequest.setOccurredAtOrganizationId(school);
 
         StateFormIntElement location = new StateFormIntElement(52, "Classroom");
         stateRequest.setLocationId(location);
@@ -1307,18 +1314,25 @@ public class PunishmentService {
         stateRequest.setIsSpecialEd(notTrue);
         stateRequest.setIs504(notTrue);
 
+        StateFormIntElement grade = new StateFormIntElement(9,"9th Grade");
+        stateRequest.setStudentGrade(grade);
+
         StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
         stateRequest.setIsHomeless(homeless);
         stateRequest.setRuleInstanceToken(null);
-        System.out.println(stateRequest + " Payload for state request");
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonRequest = mapper.writeValueAsString(stateRequest);
+
+        System.out.println(jsonRequest);
 
         HttpClient client = HttpClient.newHttpClient();
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
-                .POST(HttpRequest.BodyPublishers.ofString(String.valueOf(stateRequest)))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
                 .build();
-
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
