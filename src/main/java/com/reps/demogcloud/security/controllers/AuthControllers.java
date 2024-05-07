@@ -25,6 +25,11 @@ import org.springframework.web.bind.annotation.*;
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletRequest;
 import java.awt.desktop.SystemEventListener;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
 
 @CrossOrigin(
@@ -115,7 +120,7 @@ public class AuthControllers {
     }
 
     @PostMapping("/auth")
-    private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest){
+    private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest) throws IOException, InterruptedException {
         String username = authenticationRequest.getUsername().toLowerCase();
 
         String password = authenticationRequest.getPassword();
@@ -133,6 +138,16 @@ public class AuthControllers {
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
 
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/generate-token"))
+                .GET()
+                .build();
+
+        HttpResponse<String> responseToken = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println(responseToken.body() + "          THIS IS THE DAVID RESPONSE TOKEN!!!!!!!!!!!!!");
         System.out.println(generatedToken);
         return ResponseEntity.ok(response);
     }

@@ -1,6 +1,5 @@
 package com.reps.demogcloud.models.punishment;
-import com.reps.demogcloud.models.infraction.Infraction;
-import com.reps.demogcloud.models.student.Student;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -34,8 +33,11 @@ public class Punishment implements Comparable<Punishment>{
     private LocalDate timeClosed;
     private String classPeriod;
     private String teacherEmail;
-    //Set initial value to true
+    //Set initial value to false
     private boolean isArchived = false;
+    // Set initial value to false until saved in review360 or other state discipline system
+    private boolean isStateFiled = false;
+    private String stateIncidentNumber;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;

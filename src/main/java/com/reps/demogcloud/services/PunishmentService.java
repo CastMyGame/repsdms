@@ -1,6 +1,8 @@
 package com.reps.demogcloud.services;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
@@ -9,6 +11,7 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 //import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -16,11 +19,18 @@ import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.utils.FieldOptionElementSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 
 import org.slf4j.Logger;
@@ -31,6 +41,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -59,9 +70,6 @@ public class PunishmentService {
     private final CustomFilters customFilters;
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
-
-
-
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -183,7 +191,7 @@ public class PunishmentService {
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
-    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
+    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
@@ -249,7 +257,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
+            filePositiveWithState(formRequest);
             return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
@@ -297,7 +305,7 @@ public class PunishmentService {
         }
     }
 
-    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException {
+    public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
         for(PunishmentFormRequest punishmentFormRequest : listRequest) {
             punishmentResponse.add(createNewPunishForm(punishmentFormRequest));
@@ -855,11 +863,11 @@ public class PunishmentService {
                     "</body>\n" +
                     "</html>";
 
-            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-                    punishmentResponse.getTeacherToEmail(),
-                    punishmentResponse.getStudentToEmail(),
-                    punishmentResponse.getSubject(),
-                  message);
+//            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
+//                    punishmentResponse.getTeacherToEmail(),
+//                    punishmentResponse.getStudentToEmail(),
+//                    punishmentResponse.getSubject(),
+//                  message);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
             String concern = punishment.getInfractionDescription().get(0);
@@ -1241,5 +1249,95 @@ public class PunishmentService {
 
         return results.getMappedResults();
     }
+
+    private void filePositiveWithState(PunishmentFormRequest formRequest) throws IOException, InterruptedException {
+        //Get Student and Teacher Details
+        Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+        Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
+
+        DateTimeFormatter date = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        DateTimeFormatter time = DateTimeFormatter.ofPattern("h:mm a");
+
+        StateFileRequest stateRequest = new StateFileRequest();
+        List<String> parties = new ArrayList<>();
+        stateRequest.setParties(parties);
+        // Set all the pieces of the State Request
+        StateFormIntElement incidentTypeId = new StateFormIntElement(40, "Positive Behavior Achievement");
+        stateRequest.setIncidentTypeId(incidentTypeId);
+        stateRequest.setIncidentConfigurationGroupId(207);
+
+        StateTimeElement versionDate = new StateTimeElement("5/6/2024", "1:00 PM");
+        stateRequest.setVersionDate(new StateTimeElement("5/6/2024", null));
+        stateRequest.setIncidentDate(versionDate);
+
+        StateFormIntElement teacher = new StateFormIntElement(2509677, "Iverson, Justin");
+        stateRequest.setReportedById(teacher);
+        stateRequest.setIncidentPartyId(-1);
+        stateRequest.setCurrentUser(teacher);
+
+        StateFormIntElement incidentParty = new StateFormIntElement(1, "");
+        stateRequest.setIncidentPartyTypeId(incidentParty);
+
+        StateFormIntElement student = new StateFormIntElement(writeUp.getStateStudentId(), (writeUp.getLastName() + ", " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
+        stateRequest.setStudentId(student);
+
+        StateFormIntElement school = new StateFormIntElement(5672, "Burke High School");
+
+        //This is studuent org id
+        stateRequest.setOrganizationId(school);
+
+        stateRequest.setOccurredAtOrganizationId(school);
+
+        StateFormIntElement location = new StateFormIntElement(52, "Classroom");
+        stateRequest.setLocationId(location);
+
+        List<FieldOptionElement> fieldElements = new ArrayList<>();
+        FieldOptionElement positive = new FieldOptionElement(166470, "Other Positive Behavior", "", null, false);
+        fieldElements.add(positive);
+        stateRequest.setIncidentBehavior(fieldElements);
+        stateRequest.setDescription(formRequest.getInfractionDescription());
+        List<StateFormIntElement> staffResponse = new ArrayList<>();
+        if (formRequest.getCurrency() > 0) {
+            staffResponse.add(new StateFormIntElement(166485, "Reward"));
+        }
+        staffResponse.add(new StateFormIntElement(166484, "Recognition"));
+        staffResponse.add(new StateFormIntElement(166486, "Other positive staff response"));
+        staffResponse.add(new StateFormIntElement(166487, "Parent Contact - Email"));
+        stateRequest.setStaffResponse(staffResponse);
+        stateRequest.setIncidentRoleId(1);
+        stateRequest.setReadyToAssignActions(false);
+        stateRequest.setBehaviorRequiredForActions(true);
+        stateRequest.setStudentNumber(writeUp.getStudentIdNumber());
+        stateRequest.setOrganizationId(school);
+
+        StateFormBooleanElement notTrue = new StateFormBooleanElement(false, "No");
+        stateRequest.setIsSpecialEd(notTrue);
+        stateRequest.setIs504(notTrue);
+
+        StateFormIntElement grade = new StateFormIntElement(9,"9th Grade");
+        stateRequest.setStudentGrade(grade);
+
+        StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
+        stateRequest.setIsHomeless(homeless);
+        stateRequest.setRuleInstanceToken(null);
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonRequest = mapper.writeValueAsString(stateRequest);
+
+        System.out.println(jsonRequest);
+
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .header("Content-Type", "application/json") // Set the Content-Type header
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
+
+        }
     }
 

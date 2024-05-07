@@ -34,5 +34,6 @@ public class Student {
     private Integer points;
     private String school;
     private Integer currency;
+    private Integer stateStudentId;
 
 }

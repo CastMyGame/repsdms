@@ -30,5 +30,6 @@ public class Employee {
     private String archivedExplanation;
     private LocalDate archivedOn;
     private Integer currency;
+    private Integer stateEmployeeId;
 
 }

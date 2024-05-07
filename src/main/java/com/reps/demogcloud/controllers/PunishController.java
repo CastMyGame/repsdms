@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
+import java.io.IOException;
 import java.util.List;
 
 
@@ -120,7 +121,7 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/form")
-    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
+    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
 
         return ResponseEntity
@@ -129,7 +130,7 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/formList")
-    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException {
+    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
 
         return ResponseEntity
