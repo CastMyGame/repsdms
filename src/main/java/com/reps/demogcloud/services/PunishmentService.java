@@ -257,7 +257,7 @@ public class PunishmentService {
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            filePositiveWithState(formRequest);
+//            filePositiveWithState(formRequest);
             return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
         if(infraction.getInfractionName().equals("Behavioral Concern")) {
@@ -1128,16 +1128,28 @@ public class PunishmentService {
     }
 
     public List<Punishment> updateTimeCreated() {
-        List<Punishment> all = punishRepository.findAll();
+        List<Punishment> all = punishRepository.findByIsArchived(false);
         List<Punishment> saved = new ArrayList<>();
         for(Punishment punishment : all) {
-            int year = punishment.getTimeCreated().getYear();
-            Month month = punishment.getTimeCreated().getMonth();
-            int day = punishment.getTimeCreated().getDayOfMonth();
-            LocalDate time = LocalDate.of(year, month, day);
-            punishment.setTimeCreated(time);
-            punishRepository.save(punishment);
-            saved.add(punishment);
+            if (punishment.getInfractionName().equals("Tardy") ||
+                    punishment.getInfractionName().equals("Horseplay") ||
+                    punishment.getInfractionName().equals("Disruptive Behavior") ||
+                    punishment.getInfractionName().equals("Unauthorized Device/Cell Phone") ||
+                    punishment.getInfractionName().equals("Dress Code")) {
+                punishment.setArchived(true);
+                punishment.setArchivedBy("repsdiscipline@gmail.com");
+                punishment.setArchivedOn(LocalDate.now());
+                punishment.setArchivedExplanation("Burke Tardy Sweep 5/10");
+                punishRepository.save(punishment);
+                saved.add(punishment);
+            }
+//            int year = punishment.getTimeCreated().getYear();
+//            Month month = punishment.getTimeCreated().getMonth();
+//            int day = punishment.getTimeCreated().getDayOfMonth();
+//            LocalDate time = LocalDate.of(year, month, day);
+//            punishment.setTimeCreated(time);
+//            punishRepository.save(punishment);
+//            saved.add(punishment);
         }
         return saved;
     }

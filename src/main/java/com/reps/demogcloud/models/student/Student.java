@@ -1,5 +1,6 @@
 package com.reps.demogcloud.models.student;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @NoArgsConstructor
 @Getter
 @Document(collection = "students")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Student {
     @Id
     private String studentIdNumber;
