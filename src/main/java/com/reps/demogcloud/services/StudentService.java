@@ -227,7 +227,7 @@ public class StudentService {
     }
 
     public List<PunishmentDTO> getDetentionList(String school){
-        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
+        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -238,7 +238,7 @@ public class StudentService {
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 1 && days < 3) {
+                if (days == 1) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
@@ -258,7 +258,8 @@ public class StudentService {
 
 
     public List<PunishmentDTO> getIssList(String school){
-        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
+        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
+        System.out.println(punishments.size() + "Size of array");
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -269,7 +270,7 @@ public class StudentService {
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 3) {
+                if (days > 1) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
