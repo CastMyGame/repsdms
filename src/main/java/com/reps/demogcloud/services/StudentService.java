@@ -90,6 +90,7 @@ public class StudentService {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
+            System.out.println(email);
             throw new Exception("No student with that email exists");
         }
 
