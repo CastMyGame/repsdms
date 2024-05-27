@@ -138,6 +138,15 @@ public class PunishController {
                 .body(message);
     }
 
+//    @PostMapping("/startPunish/adminReferral")
+//    public ResponseEntity<List<PunishmentResponse>> createNewAdminReferralBulk(@RequestBody List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
+//        var message = punishmentService.createNewAdminReferralBulk(adminReferralListRequest);
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
+
     @PostMapping("/studentsReport/{studentEmail}")
     public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
         List<Punishment> message = punishmentService.getAllPunishmentsForStudents(studentEmail);

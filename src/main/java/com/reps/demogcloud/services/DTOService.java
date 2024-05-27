@@ -41,7 +41,16 @@ public class DTOService {
         List<TeacherDTO> punishmentsFilteredByReferralsOnly = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
 
         //Get Shout-Outs Only, School Wide
-        List<TeacherDTO> punishmentFilteredByShoutOuts = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList();
+        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
+
+        punishmentFilteredByShoutOuts.sort(new Comparator<TeacherDTO>() {
+            @Override
+            public int compare(TeacherDTO o1, TeacherDTO o2) {
+                if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
+                    return 0;
+                return o2.getTimeCreated().compareTo(o1.getTimeCreated());
+            }
+        });
 
         Optional<List<Employee>> teachersListOpt = employeeService.findAllByRole("TEACHER");
         List<Employee> teachersList = new ArrayList<>();
