@@ -173,8 +173,6 @@ public class PunishController {
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
         }
-
-        // Assuming punishmentService.updateGuidanceFollowUp accepts LocalDate
         Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate);
 
         return ResponseEntity.accepted().body(updatedPunishment);
