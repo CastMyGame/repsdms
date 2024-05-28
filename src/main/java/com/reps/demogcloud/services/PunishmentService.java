@@ -2,7 +2,6 @@ package com.reps.demogcloud.services;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
@@ -15,11 +14,10 @@ import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
-import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
-import com.reps.demogcloud.security.utils.FieldOptionElementSerializer;
+import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
@@ -41,9 +39,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalTime;
-import java.time.Month;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -303,6 +300,45 @@ public class PunishmentService {
             return sendCFREmailBasedOnType(punishment, studentRepository, infractionRepository, schoolRepository);
 
         }
+    }
+
+
+    public PunishmentResponse createNewGuidanceForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
+//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+        LocalDate now = LocalDate.now();
+
+        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+
+        Punishment punishment = new Punishment();
+        ArrayList<String> description = new ArrayList<>();
+        description.add(formRequest.getInfractionDescription());
+        punishment.setGuidanceTitle(formRequest.getGuidanceTitle());
+        punishment.setStudentEmail(formRequest.getStudentEmail());
+        punishment.setPunishmentId(UUID.randomUUID().toString());
+        punishment.setTimeCreated(now);
+        punishment.setTeacherEmail(formRequest.getTeacherEmail());
+        punishment.setInfractionDescription(description);
+        punishment.setSchoolName(ourSchool.getSchoolName());
+        punishment.setInfractionName("Guidance Referral");
+        punishment.setStatus("Open");
+        punishRepository.save(punishment);
+
+        PunishmentResponse response  = new PunishmentResponse();
+        response.setPunishment(punishment);
+        response.setMessage("Succesfully Created Guidance Referreal");
+
+            return  response;
+
+
+    }
+
+    public List<PunishmentResponse> createGuidance(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
+        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
+        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
+            punishmentResponse.add(createNewGuidanceForm(punishmentFormRequest));
+        } return  punishmentResponse;
     }
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
@@ -1351,6 +1387,66 @@ public class PunishmentService {
         System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
         }
+
+    public Punishment updateGuidance(String id, ThreadEvent event) {
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment == null){
+            PunishmentResponse response = new PunishmentResponse();
+            response.setError("No Guidance with Found");
+            return null;
+        }
+
+        LocalDate timePosted = LocalDate.now();
+
+        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent(event.getEvent());
+        newEvent.setDate(timePosted);
+        newEvent.setContent(event.getContent());
+        events.add(newEvent);
+
+        punishment.setNotesArray(events);
+
+        return punishRepository.save(punishment);
+
+    }
+
+    public List<Punishment> getAllGuidanceReferrals(String status) {
+        return punishRepository.findByInfractionNameAndStatus("Guidance Referral",status);
+
+    }
+
+    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp) {
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment == null){
+            PunishmentResponse response = new PunishmentResponse();
+            response.setError("No Guidance with Found");
+            return null;
+        }
+
+        LocalDate timePosted = LocalDate.now();
+
+
+
+        try {
+            punishment.setFollowUpDate(scheduleFollowUp);
+        } catch (DateTimeParseException e) {
+            System.out.println("Invalid date format: " + e.getMessage());
+        }
+
+        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent("Follow Up");
+        newEvent.setDate(timePosted);
+        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
+        events.add(newEvent);
+
+        punishment.setNotesArray(events);
+
+        return punishRepository.save(punishment);
+    }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();

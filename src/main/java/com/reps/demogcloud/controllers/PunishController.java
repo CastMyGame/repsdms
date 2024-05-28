@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -132,6 +136,53 @@ public class PunishController {
     @PostMapping("/startPunish/formList")
     public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/guidance/formList")
+    public ResponseEntity<List<PunishmentResponse>> startGuidence(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.createGuidance(punishmentListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PutMapping("/updateGuidance/notes/{id}")
+    public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.updateGuidance(id,event);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
+
+    @PutMapping("/updateGuidance/followup/{id}")
+    public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+        String scheduleFollowUp = payload.get("followUpDate");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        LocalDate followUpDate;
+        try {
+            followUpDate = LocalDate.parse(scheduleFollowUp, formatter);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
+        }
+
+        // Assuming punishmentService.updateGuidanceFollowUp accepts LocalDate
+        Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate);
+
+        return ResponseEntity.accepted().body(updatedPunishment);
+    }
+
+    @GetMapping("/guidance/{status}")
+    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status) throws MessagingException, IOException, InterruptedException {
+        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status);
 
         return ResponseEntity
                 .accepted()
