@@ -322,7 +322,7 @@ public class PunishmentService {
         punishment.setInfractionDescription(description);
         punishment.setSchoolName(ourSchool.getSchoolName());
         punishment.setInfractionName("Guidance Referral");
-        punishment.setStatus("Open");
+        punishment.setStatus("OPEN");
         punishRepository.save(punishment);
 
         PunishmentResponse response  = new PunishmentResponse();
