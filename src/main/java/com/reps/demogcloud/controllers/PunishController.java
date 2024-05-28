@@ -151,7 +151,7 @@ public class PunishController {
                 .body(message);
     }
 
-    @PutMapping("/updateGuidance/notes/{id}")
+    @PutMapping("/guidance/notes/{id}")
     public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.updateGuidance(id,event);
 
@@ -162,7 +162,7 @@ public class PunishController {
 
 
 
-    @PutMapping("/updateGuidance/followup/{id}")
+    @PutMapping("/guidance/followup/{id}")
     public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
         String scheduleFollowUp = payload.get("followUpDate");
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -174,6 +174,14 @@ public class PunishController {
             return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
         }
         Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate);
+
+        return ResponseEntity.accepted().body(updatedPunishment);
+    }
+
+    @PutMapping("/guidance/status/{id}")
+    public ResponseEntity<Punishment> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+        String newStatus = payload.get("status");
+        Punishment updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
 
         return ResponseEntity.accepted().body(updatedPunishment);
     }

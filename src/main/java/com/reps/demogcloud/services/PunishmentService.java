@@ -1448,6 +1448,22 @@ public class PunishmentService {
         return punishRepository.save(punishment);
     }
 
+    public Punishment updateGuidanceStatus(String id, String newStatus) {
+        Punishment getReferral = punishRepository.findByPunishmentId(id);
+        getReferral.setStatus(newStatus);
+
+        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
+
+        LocalDate timePosted = LocalDate.now();
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent("Status");
+        newEvent.setDate(timePosted);
+        newEvent.setContent("The Status of This Task was Changed to " + newStatus);
+        events.add(newEvent);
+
+        return punishRepository.save(getReferral);
+    }
+
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
 //        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {
