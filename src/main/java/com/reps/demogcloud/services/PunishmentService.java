@@ -229,6 +229,21 @@ public class PunishmentService {
         punishment.setInfractionLevel(infraction.getInfractionLevel());
         punishment.setInfractionName(infraction.getInfractionName());
 
+        // If there is a guidance description, mark it as an open guidance referral and add that description as the first of the notes array
+        // This allows us to just tag a punishment already being made or allow a teacher to do one by themself or a self driven student
+
+        if(!formRequest.getGuidanceDescription().isEmpty()) {
+            List<ThreadEvent> guidanceDescription = new ArrayList<>();
+            ThreadEvent event = new ThreadEvent();
+            event.setEvent("NOTE");
+            event.setDate(LocalDate.now());
+            event.setContent(formRequest.getGuidanceDescription());
+            guidanceDescription.add(event);
+            punishment.setGuidanceOpen(true);
+            punishment.setGuidanceStatus("OPEN");
+            punishment.setNotesArray(guidanceDescription);
+        }
+
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
@@ -303,43 +318,42 @@ public class PunishmentService {
     }
 
 
-    public PunishmentResponse createNewGuidanceForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
-//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-        LocalDate now = LocalDate.now();
+//    public PunishmentResponse createNewGuidanceForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
+////        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+//        LocalDate now = LocalDate.now();
+//
+//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+//
+//        Punishment punishment = new Punishment();
+//        ArrayList<String> description = new ArrayList<>();
+//        description.add(formRequest.getInfractionDescription());
+//        punishment.setStudentEmail(formRequest.getStudentEmail());
+//        punishment.setPunishmentId(UUID.randomUUID().toString());
+//        punishment.setTimeCreated(now);
+//        punishment.setTeacherEmail(formRequest.getTeacherEmail());
+//        punishment.setInfractionDescription(description);
+//        punishment.setSchoolName(ourSchool.getSchoolName());
+//        punishment.setInfractionName("Guidance Referral");
+//        punishment.setStatus("OPEN");
+//        punishRepository.save(punishment);
+//
+//        PunishmentResponse response  = new PunishmentResponse();
+//        response.setPunishment(punishment);
+//        response.setMessage("Succesfully Created Guidance Referreal");
+//
+//            return  response;
+//
+//
+//    }
 
-        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-
-        Punishment punishment = new Punishment();
-        ArrayList<String> description = new ArrayList<>();
-        description.add(formRequest.getInfractionDescription());
-        punishment.setGuidanceTitle(formRequest.getGuidanceTitle());
-        punishment.setStudentEmail(formRequest.getStudentEmail());
-        punishment.setPunishmentId(UUID.randomUUID().toString());
-        punishment.setTimeCreated(now);
-        punishment.setTeacherEmail(formRequest.getTeacherEmail());
-        punishment.setInfractionDescription(description);
-        punishment.setSchoolName(ourSchool.getSchoolName());
-        punishment.setInfractionName("Guidance Referral");
-        punishment.setStatus("OPEN");
-        punishRepository.save(punishment);
-
-        PunishmentResponse response  = new PunishmentResponse();
-        response.setPunishment(punishment);
-        response.setMessage("Succesfully Created Guidance Referreal");
-
-            return  response;
-
-
-    }
-
-    public List<PunishmentResponse> createGuidance(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
-        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
-            punishmentResponse.add(createNewGuidanceForm(punishmentFormRequest));
-        } return  punishmentResponse;
-    }
+//    public List<PunishmentResponse> createGuidance(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
+//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
+//        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
+//            punishmentResponse.add(createNewGuidanceForm(punishmentFormRequest));
+//        } return  punishmentResponse;
+//    }
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();

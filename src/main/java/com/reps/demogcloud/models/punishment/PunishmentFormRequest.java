@@ -18,7 +18,7 @@ public class PunishmentFormRequest {
     private String infractionDescription;
     private String teacherEmail;
     private int currency;
-    private String guidanceTitle;
+    private String guidanceDescription;
 
 
 }
