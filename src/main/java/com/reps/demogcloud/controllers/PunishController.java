@@ -142,14 +142,14 @@ public class PunishController {
                 .body(message);
     }
 
-    @PostMapping("/guidance/formList")
-    public ResponseEntity<List<PunishmentResponse>> startGuidence(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
-        var message = punishmentService.createGuidance(punishmentListRequest);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @PostMapping("/guidance/formList")
+//    public ResponseEntity<List<PunishmentResponse>> startGuidence(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
+//        var message = punishmentService.createGuidance(punishmentListRequest);
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
     @PutMapping("/guidance/notes/{id}")
     public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {

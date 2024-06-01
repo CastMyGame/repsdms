@@ -208,13 +208,14 @@ public class PunishmentService {
         Infraction infraction = new Infraction();
         if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         && !formRequest.getInfractionName().equals("Behavioral Concern")
-        && !formRequest.getInfractionName().equals("Failure to Complete Work")) {
+        && !formRequest.getInfractionName().equals("Failure to Complete Work")
+                && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
+                && !formRequest.getInfractionName().equals("Student Guidance Referral")) {
             infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         } else {
             infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
         }
         Punishment punishment = new Punishment();
-//        punishment.setStudent(findMe);
         ArrayList<String> description = new ArrayList<>();
         description.add(formRequest.getInfractionDescription());
         punishment.setStudentEmail(formRequest.getStudentEmail());
@@ -239,7 +240,7 @@ public class PunishmentService {
             event.setDate(LocalDate.now());
             event.setContent(formRequest.getGuidanceDescription());
             guidanceDescription.add(event);
-            punishment.setGuidanceOpen(true);
+            punishment.setGuidance(true);
             punishment.setGuidanceStatus("OPEN");
             punishment.setNotesArray(guidanceDescription);
         }
@@ -256,12 +257,10 @@ public class PunishmentService {
                                 .toList();
 
         System.out.println(findOpen);
-//        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
          //save Points if more then zero
             if(formRequest.getCurrency() > 0 ){
                 employeeService.transferCurrency(new CurrencyTransferRequest(formRequest.getTeacherEmail(), formRequest.getStudentEmail(), formRequest.getCurrency()));
-
             }
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
@@ -404,13 +403,9 @@ public class PunishmentService {
             return response;
         } else {
         findMe.setStatus("CLOSED");
-//        System.out.println(findMe.getClosedTimes());
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-//        System.out.println(findMe.getClosedTimes());
-//        System.out.println(findMe.getTeacherEmail());
         findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
-//        System.out.println(findMe);
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
             punishmentResponse.setMessage(" Hello, \n" +
@@ -1427,7 +1422,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> getAllGuidanceReferrals(String status) {
-        return punishRepository.findByInfractionNameAndStatus("Guidance Referral",status);
+        return punishRepository.findByIsGuidanceAndGuidanceStatus(true,status);
 
     }
 
