@@ -165,6 +165,8 @@ public class PunishController {
     @PutMapping("/guidance/followup/{id}")
     public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
         String scheduleFollowUp = payload.get("followUpDate");
+        String statusChange = payload.get("guidanceStatus");
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
         LocalDate followUpDate;
@@ -173,7 +175,7 @@ public class PunishController {
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
         }
-        Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate);
+        Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate,statusChange);
 
         return ResponseEntity.accepted().body(updatedPunishment);
     }

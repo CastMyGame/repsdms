@@ -13,7 +13,7 @@ import java.util.function.Function;
 
 @Service
 public class JwtUtils {
-    private static final long EXPIRATION_TIME = 10 * 60 * 1000; // 10 minutes
+    private static final long EXPIRATION_TIME = 20 * 60 * 1000; // 10 minutes
     private final SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private final Set<String> blacklistedTokens = new HashSet<>();
 

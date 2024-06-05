@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.mail.MessagingException;
 
@@ -1426,7 +1428,7 @@ public class PunishmentService {
 
     }
 
-    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp) {
+    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
         Punishment punishment = punishRepository.findByPunishmentId(id);
         if(punishment == null){
             PunishmentResponse response = new PunishmentResponse();
@@ -1435,8 +1437,6 @@ public class PunishmentService {
         }
 
         LocalDate timePosted = LocalDate.now();
-
-
 
         try {
             punishment.setFollowUpDate(scheduleFollowUp);
@@ -1453,13 +1453,14 @@ public class PunishmentService {
         events.add(newEvent);
 
         punishment.setNotesArray(events);
+        punishment.setGuidanceStatus(statusChange);
 
         return punishRepository.save(punishment);
     }
 
     public Punishment updateGuidanceStatus(String id, String newStatus) {
         Punishment getReferral = punishRepository.findByPunishmentId(id);
-        getReferral.setStatus(newStatus);
+        getReferral.setGuidanceStatus(newStatus);
 
         List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
 
@@ -1471,6 +1472,24 @@ public class PunishmentService {
         events.add(newEvent);
 
         return punishRepository.save(getReferral);
+    }
+
+    //Schduler for Domant Guidance Files
+
+//    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
+@Scheduled(cron = "0 25 1 * * ?") // Run at 1:20 AM every day
+@Transactional
+    public void updateDormantGuidanceReferrals (){
+        System.out.println("Runing");
+        LocalDate today = LocalDate.now();
+        List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
+        for (Punishment punishment : punishments) {
+            punishment.setGuidanceStatus("OPEN");
+            punishRepository.save(punishment);
+            logger.info("Updated punishment with id: " + punishment.getPunishmentId());
+
+        }
+
     }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
