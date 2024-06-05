@@ -19,6 +19,7 @@ import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
@@ -1475,14 +1476,13 @@ public class PunishmentService {
     }
 
     //Schduler for Domant Guidance Files
-
-//    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
-@Scheduled(cron = "0 25 1 * * ?") // Run at 1:20 AM every day
+    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
 @Transactional
     public void updateDormantGuidanceReferrals (){
-        System.out.println("Runing");
         LocalDate today = LocalDate.now();
+        System.out.println(today);
         List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
+        System.out.println(punishments);
         for (Punishment punishment : punishments) {
             punishment.setGuidanceStatus("OPEN");
             punishRepository.save(punishment);
