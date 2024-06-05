@@ -188,9 +188,10 @@ public class PunishController {
         return ResponseEntity.accepted().body(updatedPunishment);
     }
 
-    @GetMapping("/guidance/{status}")
-    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status) throws MessagingException, IOException, InterruptedException {
-        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status);
+    @GetMapping("/guidance/{status}/{userFilter}")
+    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
+
+        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
 
         return ResponseEntity
                 .accepted()

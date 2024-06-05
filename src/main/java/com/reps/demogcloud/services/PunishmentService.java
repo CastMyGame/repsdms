@@ -1424,9 +1424,48 @@ public class PunishmentService {
 
     }
 
-    public List<Punishment> getAllGuidanceReferrals(String status) {
-        return punishRepository.findByIsGuidanceAndGuidanceStatus(true,status);
 
+
+    public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
+        List<Punishment> allReferrals = punishRepository.findByIsGuidanceAndGuidanceStatus(true, status);
+        if (filterByLoggedIn) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication != null && authentication.getPrincipal() != null
+                    ? authentication.getName()
+                    : "";
+
+            return getLoggedInUserGuidanceReferrals(allReferrals, username);
+        }
+
+        return allReferrals;
+    }
+
+    public List<Punishment> getLoggedInUserGuidanceReferrals(List<Punishment> punishments, String guidanceEmail) {
+        // Extract student emails from the punishments list
+        List<String> studentEmails = punishments.stream()
+                .map(Punishment::getStudentEmail)
+                .collect(Collectors.toList());
+
+        // Build the aggregation pipeline
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where("studentEmail").in(studentEmails)),
+                project("studentEmail", "guidanceEmail")
+        );
+
+        // Execute the aggregation query and map the results to a Map
+        AggregationResults<Map> results =
+                mongoTemplate.aggregate(aggregation, "students", Map.class);
+
+        // Extract the student emails associated with the specified guidance email
+        List<String> studentEmailsForGuidance = results.getMappedResults().stream()
+                .filter(result -> guidanceEmail.equals(result.get("guidanceEmail")))
+                .map(result -> (String) result.get("studentEmail"))
+                .collect(Collectors.toList());
+
+        // Filter punishments based on the extracted student emails
+        return punishments.stream()
+                .filter(p -> studentEmailsForGuidance.contains(p.getStudentEmail()))
+                .collect(Collectors.toList());
     }
 
     public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
