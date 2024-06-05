@@ -6,9 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,5 +18,7 @@ public class PunishmentFormRequest {
     private String infractionDescription;
     private String teacherEmail;
     private int currency;
+    private String guidanceDescription;
+
 
 }

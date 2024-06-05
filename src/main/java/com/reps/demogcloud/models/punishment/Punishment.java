@@ -44,6 +44,13 @@ public class Punishment implements Comparable<Punishment>{
     private int mapIndex = 0;
     private Map<Date,List<String>> answerHistory;
     private ArrayList<String> infractionDescription;
+    private String guidanceTitle;
+    private boolean isGuidance = false;
+    private String guidanceStatus;
+    private LocalDate followUpDate;
+    private List<ThreadEvent> notesArray;
+
+
 
     public void setAnswerHistory(Date date, List<String> context) {
         if (answerHistory == null) {
@@ -53,8 +60,11 @@ public class Punishment implements Comparable<Punishment>{
         answerHistory.put(date, context);
     }
 
-    @Override
+
+
     public int compareTo(Punishment o) {
         return getTimeCreated().compareTo(o.getTimeCreated());
     }
 }
+
+

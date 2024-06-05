@@ -2,7 +2,6 @@ package com.reps.demogcloud.services;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
@@ -15,12 +14,12 @@ import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
-import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
-import com.reps.demogcloud.security.utils.FieldOptionElementSerializer;
+import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
@@ -37,17 +36,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalTime;
-import java.time.Month;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.mail.MessagingException;
 
@@ -211,13 +211,14 @@ public class PunishmentService {
         Infraction infraction = new Infraction();
         if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         && !formRequest.getInfractionName().equals("Behavioral Concern")
-        && !formRequest.getInfractionName().equals("Failure to Complete Work")) {
+        && !formRequest.getInfractionName().equals("Failure to Complete Work")
+                && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
+                && !formRequest.getInfractionName().equals("Student Guidance Referral")) {
             infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         } else {
             infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
         }
         Punishment punishment = new Punishment();
-//        punishment.setStudent(findMe);
         ArrayList<String> description = new ArrayList<>();
         description.add(formRequest.getInfractionDescription());
         punishment.setStudentEmail(formRequest.getStudentEmail());
@@ -232,6 +233,21 @@ public class PunishmentService {
         punishment.setInfractionLevel(infraction.getInfractionLevel());
         punishment.setInfractionName(infraction.getInfractionName());
 
+        // If there is a guidance description, mark it as an open guidance referral and add that description as the first of the notes array
+        // This allows us to just tag a punishment already being made or allow a teacher to do one by themself or a self driven student
+
+        if(!formRequest.getGuidanceDescription().isEmpty()) {
+            List<ThreadEvent> guidanceDescription = new ArrayList<>();
+            ThreadEvent event = new ThreadEvent();
+            event.setEvent("NOTE");
+            event.setDate(LocalDate.now());
+            event.setContent(formRequest.getGuidanceDescription());
+            guidanceDescription.add(event);
+            punishment.setGuidance(true);
+            punishment.setGuidanceStatus("OPEN");
+            punishment.setNotesArray(guidanceDescription);
+        }
+
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
@@ -244,12 +260,10 @@ public class PunishmentService {
                                 .toList();
 
         System.out.println(findOpen);
-//        Infraction infraction = infractionRepository.findByInfractionId(formRequest.getInfractionId());
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
          //save Points if more then zero
             if(formRequest.getCurrency() > 0 ){
                 employeeService.transferCurrency(new CurrencyTransferRequest(formRequest.getTeacherEmail(), formRequest.getStudentEmail(), formRequest.getCurrency()));
-
             }
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
@@ -305,6 +319,44 @@ public class PunishmentService {
         }
     }
 
+
+//    public PunishmentResponse createNewGuidanceForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
+////        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+//        LocalDate now = LocalDate.now();
+//
+//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+//
+//        Punishment punishment = new Punishment();
+//        ArrayList<String> description = new ArrayList<>();
+//        description.add(formRequest.getInfractionDescription());
+//        punishment.setStudentEmail(formRequest.getStudentEmail());
+//        punishment.setPunishmentId(UUID.randomUUID().toString());
+//        punishment.setTimeCreated(now);
+//        punishment.setTeacherEmail(formRequest.getTeacherEmail());
+//        punishment.setInfractionDescription(description);
+//        punishment.setSchoolName(ourSchool.getSchoolName());
+//        punishment.setInfractionName("Guidance Referral");
+//        punishment.setStatus("OPEN");
+//        punishRepository.save(punishment);
+//
+//        PunishmentResponse response  = new PunishmentResponse();
+//        response.setPunishment(punishment);
+//        response.setMessage("Succesfully Created Guidance Referreal");
+//
+//            return  response;
+//
+//
+//    }
+
+//    public List<PunishmentResponse> createGuidance(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
+//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
+//        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
+//            punishmentResponse.add(createNewGuidanceForm(punishmentFormRequest));
+//        } return  punishmentResponse;
+//    }
+
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
         for(PunishmentFormRequest punishmentFormRequest : listRequest) {
@@ -354,13 +406,9 @@ public class PunishmentService {
             return response;
         } else {
         findMe.setStatus("CLOSED");
-//        System.out.println(findMe.getClosedTimes());
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-//        System.out.println(findMe.getClosedTimes());
-//        System.out.println(findMe.getTeacherEmail());
         findMe.setTimeClosed(LocalDate.now());
         punishRepository.save(findMe);
-//        System.out.println(findMe);
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
             punishmentResponse.setMessage(" Hello, \n" +
@@ -1351,6 +1399,137 @@ public class PunishmentService {
         System.out.println(response.body() + " THIS IS THE RESPONSE FROM CREATING THE REFERRAL!!!!!!!!!!!!!!!!!!!!!! :0 :) :D");
 
         }
+
+    public Punishment updateGuidance(String id, ThreadEvent event) {
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment == null){
+            PunishmentResponse response = new PunishmentResponse();
+            response.setError("No Guidance with Found");
+            return null;
+        }
+
+        LocalDate timePosted = LocalDate.now();
+
+        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent(event.getEvent());
+        newEvent.setDate(timePosted);
+        newEvent.setContent(event.getContent());
+        events.add(newEvent);
+
+        punishment.setNotesArray(events);
+
+        return punishRepository.save(punishment);
+
+    }
+
+
+
+    public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
+        List<Punishment> allReferrals = punishRepository.findByIsGuidanceAndGuidanceStatus(true, status);
+        if (filterByLoggedIn) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication != null && authentication.getPrincipal() != null
+                    ? authentication.getName()
+                    : "";
+
+            return getLoggedInUserGuidanceReferrals(allReferrals, username);
+        }
+
+        return allReferrals;
+    }
+
+    public List<Punishment> getLoggedInUserGuidanceReferrals(List<Punishment> punishments, String guidanceEmail) {
+        // Extract student emails from the punishments list
+        List<String> studentEmails = punishments.stream()
+                .map(Punishment::getStudentEmail)
+                .collect(Collectors.toList());
+
+        // Build the aggregation pipeline
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where("studentEmail").in(studentEmails)),
+                project("studentEmail", "guidanceEmail")
+        );
+
+        // Execute the aggregation query and map the results to a Map
+        AggregationResults<Map> results =
+                mongoTemplate.aggregate(aggregation, "students", Map.class);
+
+        // Extract the student emails associated with the specified guidance email
+        List<String> studentEmailsForGuidance = results.getMappedResults().stream()
+                .filter(result -> guidanceEmail.equals(result.get("guidanceEmail")))
+                .map(result -> (String) result.get("studentEmail"))
+                .collect(Collectors.toList());
+
+        // Filter punishments based on the extracted student emails
+        return punishments.stream()
+                .filter(p -> studentEmailsForGuidance.contains(p.getStudentEmail()))
+                .collect(Collectors.toList());
+    }
+
+    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment == null){
+            PunishmentResponse response = new PunishmentResponse();
+            response.setError("No Guidance with Found");
+            return null;
+        }
+
+        LocalDate timePosted = LocalDate.now();
+
+        try {
+            punishment.setFollowUpDate(scheduleFollowUp);
+        } catch (DateTimeParseException e) {
+            System.out.println("Invalid date format: " + e.getMessage());
+        }
+
+        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent("Follow Up");
+        newEvent.setDate(timePosted);
+        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
+        events.add(newEvent);
+
+        punishment.setNotesArray(events);
+        punishment.setGuidanceStatus(statusChange);
+
+        return punishRepository.save(punishment);
+    }
+
+    public Punishment updateGuidanceStatus(String id, String newStatus) {
+        Punishment getReferral = punishRepository.findByPunishmentId(id);
+        getReferral.setGuidanceStatus(newStatus);
+
+        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
+
+        LocalDate timePosted = LocalDate.now();
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent("Status");
+        newEvent.setDate(timePosted);
+        newEvent.setContent("The Status of This Task was Changed to " + newStatus);
+        events.add(newEvent);
+
+        return punishRepository.save(getReferral);
+    }
+
+    //Schduler for Domant Guidance Files
+    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
+@Transactional
+    public void updateDormantGuidanceReferrals (){
+        LocalDate today = LocalDate.now();
+        System.out.println(today);
+        List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
+        System.out.println(punishments);
+        for (Punishment punishment : punishments) {
+            punishment.setGuidanceStatus("OPEN");
+            punishRepository.save(punishment);
+            logger.info("Updated punishment with id: " + punishment.getPunishmentId());
+
+        }
+
+    }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
