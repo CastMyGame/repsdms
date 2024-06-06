@@ -291,7 +291,7 @@ public class StudentService {
         return punishedStudents;
     }
 
-    public static int getWorkDaysBetweenTwoDates(LocalDate startTime, LocalDate endTime) {
+    public int getWorkDaysBetweenTwoDates(LocalDate startTime, LocalDate endTime) {
         final DayOfWeek startW = startTime.getDayOfWeek();
         final DayOfWeek endW = endTime.getDayOfWeek();
         final long days = ChronoUnit.DAYS.between(startTime, endTime);

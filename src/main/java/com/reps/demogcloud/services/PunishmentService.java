@@ -70,6 +70,7 @@ public class PunishmentService {
     private final CustomFilters customFilters;
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
+    private final StudentService studentService;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -1514,7 +1515,7 @@ public class PunishmentService {
         return punishRepository.save(getReferral);
     }
 
-    //Schduler for Domant Guidance Files
+    //Scheduler for Dormant Guidance Files
     @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
 @Transactional
     public void updateDormantGuidanceReferrals (){
@@ -1529,6 +1530,26 @@ public class PunishmentService {
 
         }
 
+    }
+
+//    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
+    @Bean
+//    @Transactional
+    public void alertIssAndDetention () throws MessagingException {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
+        for(Punishment punishment : punishments) {
+            // Get the student and school from the punishment
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            if (studentService.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
+                emailService.sendAlertEmail("DETENTION", punishment);
+            } else {
+                emailService.sendAlertEmail("ISS", punishment);
+            }
+
+
+        }
     }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
