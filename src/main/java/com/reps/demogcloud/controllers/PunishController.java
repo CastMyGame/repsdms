@@ -161,6 +161,17 @@ public class PunishController {
     }
 
 
+    @PutMapping("/guidance/resources/{id}")
+    public ResponseEntity<Punishment> updateAndSendResources(@PathVariable String id, @RequestBody ResourceUpdateRequest request) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.sendResourcesAndMakeNotes(id, request);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
+
 
     @PutMapping("/guidance/followup/{id}")
     public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {

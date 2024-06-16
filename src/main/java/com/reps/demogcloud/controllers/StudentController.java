@@ -1,6 +1,7 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -89,9 +90,12 @@ public class StudentController {
     }
 
     @GetMapping("/detentionList/{school}")
+
+
+
     public ResponseEntity<List<PunishmentDTO>> getDetentionList(@PathVariable String school) {
         List<PunishmentDTO> response = studentService.getDetentionList(school);
-
+        Punishment punish = new Punishment();
         return ResponseEntity
                 .accepted()
                 .body(response);

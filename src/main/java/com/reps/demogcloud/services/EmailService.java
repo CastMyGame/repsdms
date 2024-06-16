@@ -71,6 +71,30 @@ public class EmailService {
     }
 
     @Async
+    public void sendEmailGeneric (String [] ccEmails,
+                              String recipientEmail,
+                              String subject,
+                              String msg) throws MessagingException {
+
+        MimeMessage message = javaMailSender.createMimeMessage();
+        message.setSubject(subject);
+        MimeMessageHelper helper;
+        helper = new MimeMessageHelper(message,true);
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(recipientEmail);
+        helper.setCc(ccEmails);
+        helper.setText(msg,true);
+
+
+//        mailMessage.setTo(parentEmail);
+//        mailMessage.setCc(teacherEmail, studentEmail);
+//        mailMessage.setSubject(subject);
+//        mailMessage.setText(message);
+//        mailMessage.setFrom("REPS.DMS@gmail.com");
+        javaMailSender.send(message);
+    }
+
+    @Async
     public void sendContactUsMail(ContactUsRequest request) {
         SimpleMailMessage mailMessage = new SimpleMailMessage();
         mailMessage.setTo(request.getEmail());

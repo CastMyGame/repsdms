@@ -1424,6 +1424,45 @@ public class PunishmentService {
 
     }
 
+    public Punishment sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
+        System.out.println(request);
+        Punishment punishment = punishRepository.findByPunishmentId(id);
+        if(punishment == null){
+            PunishmentResponse response = new PunishmentResponse();
+            response.setError("No Guidance with Found");
+            return null;
+        }
+
+        LocalDate timePosted = LocalDate.now();
+        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent(request.getEvent().getEvent());
+        newEvent.setDate(timePosted);
+        newEvent.setContent(request.getEvent().getContent());
+        events.add(newEvent);
+
+        punishment.setNotesArray(events);
+
+        Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+
+        String resourceMessage = "Hello,\n" +
+                student.getFirstName() + " " + student.getLastName() +
+                ", Guidance has sent you the following resources for your consideration:\n" +
+                String.join("\n", request.getUrls());
+
+        String subject = "Burke High School Guidance's Resources ";
+        String[] ccList = {punishment.getTeacherEmail(),student.getGuidanceEmail()};
+        emailService.sendEmailGeneric(
+               ccList,
+                student.getStudentEmail(),
+                subject,
+                resourceMessage);
+
+        return punishRepository.save(punishment);
+
+    }
+
 
 
     public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
