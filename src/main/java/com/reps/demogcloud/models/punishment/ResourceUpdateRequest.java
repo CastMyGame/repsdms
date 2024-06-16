@@ -1,24 +1,17 @@
 package com.reps.demogcloud.models.punishment;
 
 
+import lombok.Data;
+
+import java.util.List;
+
+
+@Data
 public class ResourceUpdateRequest {
-    private ThreadEvent event;
-    private String[] urls;
+    private List<ResourceOption> resourceOptionList;
 
     // Getters and Setters
-    public ThreadEvent getEvent() {
-        return event;
-    }
 
-    public void setEvent(ThreadEvent event) {
-        this.event = event;
-    }
-
-    public String[] getUrls() {
-        return urls;
-    }
-
-    public void setUrls(String[] urls) {
-        this.urls = urls;
-    }
 }
+
+

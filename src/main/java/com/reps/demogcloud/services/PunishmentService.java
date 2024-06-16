@@ -1427,9 +1427,9 @@ public class PunishmentService {
     public Punishment sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
         System.out.println(request);
         Punishment punishment = punishRepository.findByPunishmentId(id);
-        if(punishment == null){
+        if (punishment == null) {
             PunishmentResponse response = new PunishmentResponse();
-            response.setError("No Guidance with Found");
+            response.setError("No Guidance Found");
             return null;
         }
 
@@ -1437,32 +1437,61 @@ public class PunishmentService {
         List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
-        newEvent.setEvent(request.getEvent().getEvent());
+        newEvent.setEvent("Resources");
         newEvent.setDate(timePosted);
-        newEvent.setContent(request.getEvent().getContent());
+
+        // Extract URLs from ResourceOption list
+        List<String> labels = request.getResourceOptionList().stream()
+                .map(ResourceOption::getLabel)
+                .toList();
+
+        // Set the content of the new event
+        newEvent.setContent("Resources Sent, " + String.join(", ", labels));
         events.add(newEvent);
 
         punishment.setNotesArray(events);
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
 
-        String resourceMessage = "Hello,\n" +
-                student.getFirstName() + " " + student.getLastName() +
-                ", Guidance has sent you the following resources for your consideration:\n" +
-                String.join("\n", request.getUrls());
+        // Construct the resource message in HTML format
+        StringBuilder resourceMessage = new StringBuilder();
+        resourceMessage.append("<html>")
+                .append("<body>")
+                .append("<p>Hello,<br>")
+                .append(student.getFirstName())
+                .append(" ")
+                .append(student.getLastName())
+                .append(", Guidance has sent you the following resources for your consideration:</p>")
+                .append("<ul>");
 
-        String subject = "Burke High School Guidance's Resources ";
-        String[] ccList = {punishment.getTeacherEmail(),student.getGuidanceEmail()};
+        for (ResourceOption item : request.getResourceOptionList() ) {
+            resourceMessage.append("<li><a href=\"")
+                    .append(item.getUrl())
+                    .append("\">")
+                    .append(item.getLabel())
+                    .append("</a></li>");
+        }
+
+        resourceMessage.append("</ul>")
+                .append("</body>")
+                .append("</html>");
+
+        String finalMessage = resourceMessage.toString();
+
+        String subject = "Burke High School Guidance's Resources";
+//        String[] ccList = {punishment.getTeacherEmail(), student.getGuidanceEmail()};
+        String[] ccList = {"dochollidayp@gmail.com"};
+
+
         emailService.sendEmailGeneric(
-               ccList,
+                ccList,
                 student.getStudentEmail(),
                 subject,
-                resourceMessage);
+                finalMessage// Use HTML message
+        );
 
         return punishRepository.save(punishment);
-
     }
-
 
 
     public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
