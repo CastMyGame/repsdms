@@ -1479,8 +1479,7 @@ public class PunishmentService {
         String finalMessage = resourceMessage.toString();
 
         String subject = "Burke High School Guidance's Resources";
-//        String[] ccList = {punishment.getTeacherEmail(), student.getGuidanceEmail()};
-        String[] ccList = {"dochollidayp@gmail.com"};
+        String[] ccList = {punishment.getTeacherEmail(), student.getGuidanceEmail()};
 
 
         emailService.sendEmailGeneric(
