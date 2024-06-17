@@ -1446,7 +1446,7 @@ public class PunishmentService {
                 .toList();
 
         // Set the content of the new event
-        newEvent.setContent("Resources Sent, " + String.join(", ", labels));
+        newEvent.setContent("Resources Sent: " + String.join(", ", labels));
         events.add(newEvent);
 
         punishment.setNotesArray(events);
