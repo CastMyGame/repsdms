@@ -19,9 +19,5 @@ public class Infraction {
     @Id
     private String infractionId;
     private String infractionName;
-//    private ArrayList<String> infractionDescription;
     private String infractionLevel;
-//    private String infractionUrl;
-//    private String infractionAssign;
-
 }
