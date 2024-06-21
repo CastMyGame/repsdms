@@ -1568,6 +1568,19 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         }
     }
 
+
+
+    public String deleteGuidanceReferral(String id) throws ResourceNotFoundException {
+        try {
+            guidanceRepository.deleteById(id);
+
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+        return "Punishment has been deleted";
+    }
+
+
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
 //        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {

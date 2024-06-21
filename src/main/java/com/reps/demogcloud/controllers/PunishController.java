@@ -316,4 +316,13 @@ public class PunishController {
                 .accepted()
                 .body(delete);
     }
+
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteGuidanceReferral (@PathVariable String id) throws ResourceNotFoundException {
+        var delete = punishmentService.deleteGuidanceReferral(id);
+        return ResponseEntity
+                .accepted()
+                .body(delete);
+    }
 }
