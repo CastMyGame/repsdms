@@ -84,6 +84,7 @@ public class EmailService {
     }
 
     public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
+        System.out.println("Sending Email Alert");
         if(detention.equals("DETENTION")) {
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
@@ -100,6 +101,9 @@ public class EmailService {
             String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
             helper.setCc(cssArray);
             helper.setText(msg, true);
+            javaMailSender.send(message);
+
+
         } else if(detention.equals("ISS")) {
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
@@ -116,6 +120,8 @@ public class EmailService {
             String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
             helper.setCc(cssArray);
             helper.setText(msg, true);
+            javaMailSender.send(message);
+
         }
     }
 }

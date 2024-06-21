@@ -1536,9 +1536,12 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
         List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
+        System.out.println("size "+punishments.size());
         for(Punishment punishment : punishments) {
             // Get the student and school from the punishment
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            System.out.println("student: " + findMe);
+
             if (studentService.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
                 emailService.sendAlertEmail("DETENTION", punishment);
             } else {
