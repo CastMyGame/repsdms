@@ -36,9 +36,7 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
 
     List<Punishment> findByInfractionNameAndStatus(String infractionName, String status);
 
-    List<Punishment> findByIsGuidanceAndGuidanceStatus(boolean guidance, String status);
-
-    List<Punishment> findByFollowUpDateAndGuidanceStatus(LocalDate today, String dormant);
+//    List<Punishment> findByFollowUpDateAndGuidanceStatus(LocalDate today, String dormant);
 
     List<Punishment> findByIsArchivedAndStatus (boolean isArchived, String status);
 }

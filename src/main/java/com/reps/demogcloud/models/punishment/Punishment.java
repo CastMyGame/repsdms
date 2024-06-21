@@ -44,11 +44,6 @@ public class Punishment implements Comparable<Punishment>{
     private int mapIndex = 0;
     private Map<Date,List<String>> answerHistory;
     private ArrayList<String> infractionDescription;
-    private String guidanceTitle;
-    private boolean isGuidance = false;
-    private String guidanceStatus;
-    private LocalDate followUpDate;
-    private List<ThreadEvent> notesArray;
 
 
 
