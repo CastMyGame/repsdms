@@ -188,15 +188,15 @@ public class PunishController {
         return ResponseEntity.accepted().body(updatedPunishment);
     }
 
-    @GetMapping("/guidance/{status}/{userFilter}")
-    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
-
-        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
+//    @GetMapping("/guidance/{status}/{userFilter}")
+//    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
+//
+//        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
+//
+//        return ResponseEntity
+//                .accepted()
+//                .body(message);
+//    }
 
 //    @PostMapping("/startPunish/adminReferral")
 //    public ResponseEntity<List<PunishmentResponse>> createNewAdminReferralBulk(@RequestBody List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {

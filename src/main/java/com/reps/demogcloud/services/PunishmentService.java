@@ -228,9 +228,9 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
             event.setDate(LocalDate.now());
             event.setContent(formRequest.getGuidanceDescription());
             guidanceDescription.add(event);
-            punishment.setGuidance(true);
-            punishment.setGuidanceStatus("OPEN");
-            punishment.setNotesArray(guidanceDescription);
+//            punishment.setGuidance(true);
+//            punishment.setGuidanceStatus("OPEN");
+//            punishment.setNotesArray(guidanceDescription);
         }
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
@@ -1408,15 +1408,15 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         LocalDate timePosted = LocalDate.now();
 
-        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+//        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent(event.getEvent());
         newEvent.setDate(timePosted);
         newEvent.setContent(event.getContent());
-        events.add(newEvent);
-
-        punishment.setNotesArray(events);
+//        events.add(newEvent);
+//
+//        punishment.setNotesArray(events);
 
         return punishRepository.save(punishment);
 
@@ -1424,19 +1424,19 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
 
 
-    public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
-        List<Punishment> allReferrals = punishRepository.findByIsGuidanceAndGuidanceStatus(true, status);
-        if (filterByLoggedIn) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication != null && authentication.getPrincipal() != null
-                    ? authentication.getName()
-                    : "";
-
-            return getLoggedInUserGuidanceReferrals(allReferrals, username);
-        }
-
-        return allReferrals;
-    }
+//    public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
+//        List<Punishment> allReferrals = punishRepository.findByIsGuidanceAndGuidanceStatus(true, status);
+//        if (filterByLoggedIn) {
+//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//            String username = authentication != null && authentication.getPrincipal() != null
+//                    ? authentication.getName()
+//                    : "";
+//
+//            return getLoggedInUserGuidanceReferrals(allReferrals, username);
+//        }
+//
+//        return allReferrals;
+//    }
 
     public List<Punishment> getLoggedInUserGuidanceReferrals(List<Punishment> punishments, String guidanceEmail) {
         // Extract student emails from the punishments list
@@ -1477,57 +1477,57 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         LocalDate timePosted = LocalDate.now();
 
         try {
-            punishment.setFollowUpDate(scheduleFollowUp);
+//            punishment.setFollowUpDate(scheduleFollowUp);
         } catch (DateTimeParseException e) {
             System.out.println("Invalid date format: " + e.getMessage());
         }
 
-        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+//        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Follow Up");
         newEvent.setDate(timePosted);
-        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
-        events.add(newEvent);
-
-        punishment.setNotesArray(events);
-        punishment.setGuidanceStatus(statusChange);
+//        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
+//        events.add(newEvent);
+//
+//        punishment.setNotesArray(events);
+//        punishment.setGuidanceStatus(statusChange);
 
         return punishRepository.save(punishment);
     }
 
     public Punishment updateGuidanceStatus(String id, String newStatus) {
         Punishment getReferral = punishRepository.findByPunishmentId(id);
-        getReferral.setGuidanceStatus(newStatus);
-
-        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
+//        getReferral.setGuidanceStatus(newStatus);
+//
+//        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
 
         LocalDate timePosted = LocalDate.now();
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Status");
         newEvent.setDate(timePosted);
         newEvent.setContent("The Status of This Task was Changed to " + newStatus);
-        events.add(newEvent);
+//        events.add(newEvent);
 
         return punishRepository.save(getReferral);
     }
 
-    //Scheduler for Dormant Guidance Files
-    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
-@Transactional
-    public void updateDormantGuidanceReferrals (){
-        LocalDate today = LocalDate.now();
-        System.out.println(today);
-        List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
-        System.out.println(punishments);
-        for (Punishment punishment : punishments) {
-            punishment.setGuidanceStatus("OPEN");
-            punishRepository.save(punishment);
-            logger.info("Updated punishment with id: " + punishment.getPunishmentId());
-
-        }
-
-    }
+//    //Scheduler for Dormant Guidance Files
+//    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
+//@Transactional
+//    public void updateDormantGuidanceReferrals (){
+//        LocalDate today = LocalDate.now();
+//        System.out.println(today);
+//        List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
+//        System.out.println(punishments);
+//        for (Punishment punishment : punishments) {
+////            punishment.setGuidanceStatus("OPEN");
+//            punishRepository.save(punishment);
+//            logger.info("Updated punishment with id: " + punishment.getPunishmentId());
+//
+//        }
+//
+//    }
 
 //    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
 //    @Bean
