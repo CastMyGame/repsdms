@@ -17,7 +17,6 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
-import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -70,6 +69,7 @@ public class PunishmentService {
     private final CustomFilters customFilters;
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
+    private final StudentService studentService;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -128,22 +128,6 @@ public class PunishmentService {
         logger.debug(String.valueOf(fetchData));
         return fetchData;
     }
-
-//    public Punishment findByPunishmentId(Punishment punishment) throws ResourceNotFoundException {
-//        var fetchData = punishRepository.findByPunishmentId(punishment.getPunishmentId());
-//
-//        if (fetchData == null) {
-//            throw new ResourceNotFoundException("No punishments with that ID exist");
-//        }
-//        if(fetchData.isArchived()){
-//            throw new ResourceNotFoundException("Punishment with that Id is archived");
-//        }
-
-
-
-//        logger.debug(String.valueOf(fetchData));
-//        return fetchData;
-//    }
 
     public Punishment findByPunishmentId(String punishmentId) throws ResourceNotFoundException {
         var fetchData = punishRepository.findByPunishmentId(punishmentId);
@@ -209,15 +193,16 @@ public class PunishmentService {
         String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
         Infraction infraction = new Infraction();
-        if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
-        && !formRequest.getInfractionName().equals("Behavioral Concern")
-        && !formRequest.getInfractionName().equals("Failure to Complete Work")
-                && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
-                && !formRequest.getInfractionName().equals("Student Guidance Referral")) {
-            infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
-        } else {
-            infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
-        }
+if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
+                    && !formRequest.getInfractionName().equals("Behavioral Concern")
+                    && !formRequest.getInfractionName().equals("Failure to Complete Work")
+                    && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
+                    && !formRequest.getInfractionName().equals("Student Guidance Referral")
+&& !formRequest.isAdminReferral()) {
+                infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
+            } else {
+    infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
+}
         Punishment punishment = new Punishment();
         ArrayList<String> description = new ArrayList<>();
         description.add(formRequest.getInfractionDescription());
@@ -260,6 +245,18 @@ public class PunishmentService {
                                 .toList();
 
         System.out.println(findOpen);
+
+        // If It is an admin referral, set to open and make sure send email is correct
+        if(formRequest.isAdminReferral()) {
+            punishment.setStatus("OPEN");
+            punishment.setTimeClosed(now);
+            punishRepository.save(punishment);
+
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+        }
         if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
          //save Points if more then zero
             if(formRequest.getCurrency() > 0 ){
@@ -686,6 +683,7 @@ public class PunishmentService {
         School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
         punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + student.getFirstName() + " " + student.getLastName());
         if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
+            ////               CHANGE THIS WHEN YOU GET UPDATED EMAIL FOR ADMIN REFERRAL   /////////////////////////
 
             List<Punishment> punishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
                     student.getStudentEmail(), infraction.getInfractionName(), "CLOSED",false
@@ -1514,7 +1512,7 @@ public class PunishmentService {
         return punishRepository.save(getReferral);
     }
 
-    //Schduler for Domant Guidance Files
+    //Scheduler for Dormant Guidance Files
     @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
 @Transactional
     public void updateDormantGuidanceReferrals (){
@@ -1529,6 +1527,29 @@ public class PunishmentService {
 
         }
 
+    }
+
+//    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
+//    @Bean
+//    @Transactional
+    public void alertIssAndDetention () throws MessagingException {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
+        System.out.println("size "+punishments.size());
+        for(Punishment punishment : punishments) {
+            // Get the student and school from the punishment
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            System.out.println("student: " + findMe);
+
+            if (studentService.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
+                emailService.sendAlertEmail("DETENTION", punishment);
+            } else {
+                emailService.sendAlertEmail("ISS", punishment);
+            }
+
+
+        }
     }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {

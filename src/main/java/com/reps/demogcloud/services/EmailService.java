@@ -1,5 +1,8 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,19 +14,18 @@ import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     JavaMailSender javaMailSender;
+    private final StudentRepository studentRepository;
 
     @Autowired
-    public EmailService(JavaMailSender javaMailSender) {
+    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository) {
         this.javaMailSender = javaMailSender;
+        this.studentRepository = studentRepository;
     }
 
     @Async
@@ -79,5 +81,47 @@ public class EmailService {
         mailMessage.setText(request.getMessage());
         mailMessage.setFrom("REPS.DMS@GMAIL.COM");
         javaMailSender.send(mailMessage);
+    }
+
+    public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
+        System.out.println("Sending Email Alert");
+        if(detention.equals("DETENTION")) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
+                " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
+                    " they will receive lunch detention and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
+                    " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
+
+            MimeMessage message = javaMailSender.createMimeMessage();
+            message.setSubject("DETENTION REMINDER");
+            MimeMessageHelper helper;
+            helper = new MimeMessageHelper(message, true);
+            helper.setFrom("REPS.DMS@gmail.com");
+            helper.setTo(findMe.getParentEmail());
+            String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
+            helper.setCc(cssArray);
+            helper.setText(msg, true);
+            javaMailSender.send(message);
+
+
+        } else if(detention.equals("ISS")) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+            String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
+                    " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
+                    " they will receive ISS and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
+                    " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
+
+            MimeMessage message = javaMailSender.createMimeMessage();
+            message.setSubject("DETENTION REMINDER");
+            MimeMessageHelper helper;
+            helper = new MimeMessageHelper(message, true);
+            helper.setFrom("REPS.DMS@gmail.com");
+            helper.setTo(findMe.getParentEmail());
+            String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
+            helper.setCc(cssArray);
+            helper.setText(msg, true);
+            javaMailSender.send(message);
+
+        }
     }
 }
