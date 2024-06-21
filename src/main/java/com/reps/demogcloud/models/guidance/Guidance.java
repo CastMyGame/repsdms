@@ -33,6 +33,7 @@ public class Guidance {
     private String status;
     private List<ThreadEvent> notesArray;
     private String linkToPunishment;
+    private LocalDate followUpDate;
 
 
 }

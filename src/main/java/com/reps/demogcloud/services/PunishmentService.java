@@ -1473,50 +1473,59 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
                 .collect(Collectors.toList());
     }
 
-    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
-        Punishment punishment = punishRepository.findByPunishmentId(id);
-        if(punishment == null){
-            PunishmentResponse response = new PunishmentResponse();
-            response.setError("No Guidance with Found");
+    public Guidance updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
+        Optional<Guidance> record = guidanceRepository.findById(id);
+        if(record.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setError("No Guidance with id "+ id+ " was found");
             return null;
         }
 
         LocalDate timePosted = LocalDate.now();
+        Guidance guidance = record.get();
 
         try {
-//            punishment.setFollowUpDate(scheduleFollowUp);
+            guidance.setFollowUpDate(scheduleFollowUp);
         } catch (DateTimeParseException e) {
             System.out.println("Invalid date format: " + e.getMessage());
         }
 
-//        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+        guidance.setStatus(statusChange);
+
+
+        List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Follow Up");
         newEvent.setDate(timePosted);
-//        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
-//        events.add(newEvent);
-//
-//        punishment.setNotesArray(events);
-//        punishment.setGuidanceStatus(statusChange);
+        newEvent.setContent("Follow up for this task has been set for " + guidance.getFollowUpDate().toString());
+        events.add(newEvent);
+        guidance.setNotesArray(events);
+        guidance.setStatus(statusChange);
 
-        return punishRepository.save(punishment);
+        return guidanceRepository.save(guidance);
     }
 
-    public Punishment updateGuidanceStatus(String id, String newStatus) {
-        Punishment getReferral = punishRepository.findByPunishmentId(id);
-//        getReferral.setGuidanceStatus(newStatus);
-//
-//        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
+    public Guidance updateGuidanceStatus(String id, String newStatus) {
+        Optional<Guidance> getReferral = guidanceRepository.findById(id);
+
+        if(getReferral.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setError("Guidance Referral with id "+ " was not found");
+            return null;
+        }
+       Guidance record = getReferral.get();
+        record.setStatus(newStatus);
+       List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
 
         LocalDate timePosted = LocalDate.now();
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Status");
         newEvent.setDate(timePosted);
         newEvent.setContent("The Status of This Task was Changed to " + newStatus);
-//        events.add(newEvent);
+        events.add(newEvent);
 
-        return punishRepository.save(getReferral);
+        return guidanceRepository.save(record);
     }
 
 //    //Scheduler for Dormant Guidance Files

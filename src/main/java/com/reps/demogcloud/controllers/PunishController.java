@@ -164,31 +164,31 @@ public class PunishController {
 
 
 
-//    @PutMapping("/guidance/followup/{id}")
-//    public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
-//        String scheduleFollowUp = payload.get("followUpDate");
-//        String statusChange = payload.get("guidanceStatus");
-//
-//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-//
-//        LocalDate followUpDate;
-//        try {
-//            followUpDate = LocalDate.parse(scheduleFollowUp, formatter);
-//        } catch (DateTimeParseException e) {
-//            return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
-//        }
-//        Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate,statusChange);
-//
-//        return ResponseEntity.accepted().body(updatedPunishment);
-//    }
+    @PutMapping("/guidance/followup/{id}")
+    public ResponseEntity<Guidance> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+        String scheduleFollowUp = payload.get("followUpDate");
+        String newStatus = payload.get("status");
 
-//    @PutMapping("/guidance/status/{id}")
-//    public ResponseEntity<Punishment> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
-//        String newStatus = payload.get("status");
-//        Punishment updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
-//
-//        return ResponseEntity.accepted().body(updatedPunishment);
-//    }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        LocalDate followUpDate;
+        try {
+            followUpDate = LocalDate.parse(scheduleFollowUp, formatter);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
+        }
+        Guidance updatedGuidance = punishmentService.updateGuidanceFollowUp(id, followUpDate,newStatus);
+
+        return ResponseEntity.accepted().body(updatedGuidance);
+    }
+
+    @PutMapping("/guidance/status/{id}")
+    public ResponseEntity<Guidance> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+        String newStatus = payload.get("status");
+        Guidance updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
+
+        return ResponseEntity.accepted().body(updatedPunishment);
+    }
 
     @GetMapping("/guidance/{status}/{userFilter}")
     public ResponseEntity<List<Guidance>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
