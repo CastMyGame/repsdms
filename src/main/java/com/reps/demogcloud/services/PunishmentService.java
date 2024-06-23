@@ -1551,20 +1551,5 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         }
     }
-
-//    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
-//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-//        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {
-//            punishmentResponse.add(createNewAdminReferral(punishmentFormRequest));
-//        } return  punishmentResponse;
-//    }
-
-//    private PunishmentResponse createNewAdminReferral(PunishmentFormRequest punishmentFormRequest) {
-//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-//        LocalDate now = LocalDate.now();
-//
-//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-//    }
 }
 
