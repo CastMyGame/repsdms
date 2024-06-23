@@ -12,6 +12,8 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
@@ -25,9 +27,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OfficeReferralService {
 
-    StudentRepository studentRepository;
-    SchoolRepository schoolRepository;
-    OfficeReferralRepository officeReferralRepository;
+    private final StudentRepository studentRepository;
+    private final SchoolRepository schoolRepository;
+    private final OfficeReferralRepository officeReferralRepository;
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) throws MessagingException, IOException, InterruptedException {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();

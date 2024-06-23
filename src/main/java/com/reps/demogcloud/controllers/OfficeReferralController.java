@@ -6,7 +6,9 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
 import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.services.OfficeReferralService;
+import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +28,11 @@ import java.util.List;
 public class OfficeReferralController {
 
     OfficeReferralService officeReferralService;
+
+    @Autowired
+    public OfficeReferralController(OfficeReferralService officeReferralService) {
+        this.officeReferralService = officeReferralService;
+    }
     @PostMapping("/startPunish/adminReferral")
     public ResponseEntity<List<OfficeReferral>> createNewAdminReferralBulk(@RequestBody List<OfficeReferralRequest> officeReferralListRequest) throws MessagingException, IOException, InterruptedException {
         var message = officeReferralService.createNewAdminReferralBulk(officeReferralListRequest);
