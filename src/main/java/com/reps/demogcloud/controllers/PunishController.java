@@ -2,6 +2,9 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceRequest;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
@@ -142,17 +145,17 @@ public class PunishController {
                 .body(message);
     }
 
-//    @PostMapping("/guidance/formList")
-//    public ResponseEntity<List<PunishmentResponse>> startGuidence(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
-//        var message = punishmentService.createGuidance(punishmentListRequest);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
+    @PostMapping("/guidance/formList")
+    public ResponseEntity<List<GuidanceResponse>> startGuidence(@RequestBody List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.createGuidance(guidanceList);
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 
     @PutMapping("/guidance/notes/{id}")
-    public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) {
+    public ResponseEntity<Guidance> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+
         var message = punishmentService.updateGuidance(id,event);
 
         return ResponseEntity
@@ -163,9 +166,10 @@ public class PunishController {
 
 
     @PutMapping("/guidance/followup/{id}")
-    public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<Guidance> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
         String scheduleFollowUp = payload.get("followUpDate");
-        String statusChange = payload.get("guidanceStatus");
+        String newStatus = payload.get("status");
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -175,28 +179,29 @@ public class PunishController {
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
         }
-        Punishment updatedPunishment = punishmentService.updateGuidanceFollowUp(id, followUpDate,statusChange);
+        Guidance updatedGuidance = punishmentService.updateGuidanceFollowUp(id, followUpDate,newStatus);
 
-        return ResponseEntity.accepted().body(updatedPunishment);
+        return ResponseEntity.accepted().body(updatedGuidance);
     }
 
     @PutMapping("/guidance/status/{id}")
-    public ResponseEntity<Punishment> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<Guidance> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
         String newStatus = payload.get("status");
-        Punishment updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
+        Guidance updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
 
         return ResponseEntity.accepted().body(updatedPunishment);
     }
 
-//    @GetMapping("/guidance/{status}/{userFilter}")
-//    public ResponseEntity<List<Punishment>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
-//
-//        List<Punishment> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
+    @GetMapping("/guidance/{status}/{userFilter}")
+    public ResponseEntity<List<Guidance>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
+
+        List<Guidance> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
 
     @PostMapping("/studentsReport/{studentEmail}")
     public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
@@ -301,6 +306,15 @@ public class PunishController {
     @DeleteMapping("/delete")
     public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {
         var delete = punishmentService.deletePunishment(punishment);
+        return ResponseEntity
+                .accepted()
+                .body(delete);
+    }
+
+
+    @DeleteMapping("/guidance/delete")
+    public ResponseEntity<String> deleteGuidanceReferral (@PathVariable String id) throws ResourceNotFoundException {
+        var delete = punishmentService.deleteGuidanceReferral(id);
         return ResponseEntity
                 .accepted()
                 .body(delete);

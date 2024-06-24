@@ -5,8 +5,11 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
@@ -311,4 +314,33 @@ public class StudentService {
 
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
+
+    public Student updateStudentNotes(String id, ThreadEvent event) {
+        Optional<Student> studentOptional = studentRepository.findById(id);
+
+        if(studentOptional.isEmpty()){
+            StudentResponse response = new StudentResponse();
+            response.setError("No Student with id " + id +" was found");
+            return null;
+
+        }
+
+        Student record = studentOptional.get();
+        LocalDate timePosted = LocalDate.now();
+
+        List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent(event.getEvent());
+        newEvent.setDate(timePosted);
+        newEvent.setContent(event.getContent());
+        events.add(newEvent);
+//
+        record.setNotesArray(events);
+
+        return studentRepository.save(record);
+
+
+    }
+
 }

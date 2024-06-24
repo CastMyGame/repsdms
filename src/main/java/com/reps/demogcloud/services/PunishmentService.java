@@ -10,6 +10,9 @@ import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceRequest;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
@@ -17,7 +20,6 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
@@ -34,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -45,7 +46,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.mail.MessagingException;
 
@@ -69,6 +69,7 @@ public class PunishmentService {
     private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
     private final StudentService studentService;
+    private final GuidanceRepository guidanceRepository;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -315,42 +316,43 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
     }
 
 
-//    public PunishmentResponse createNewGuidanceForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
-////        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
-//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-//        LocalDate now = LocalDate.now();
-//
-//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-//
-//        Punishment punishment = new Punishment();
-//        ArrayList<String> description = new ArrayList<>();
-//        description.add(formRequest.getInfractionDescription());
-//        punishment.setStudentEmail(formRequest.getStudentEmail());
-//        punishment.setPunishmentId(UUID.randomUUID().toString());
-//        punishment.setTimeCreated(now);
-//        punishment.setTeacherEmail(formRequest.getTeacherEmail());
-//        punishment.setInfractionDescription(description);
-//        punishment.setSchoolName(ourSchool.getSchoolName());
-//        punishment.setInfractionName("Guidance Referral");
-//        punishment.setStatus("OPEN");
-//        punishRepository.save(punishment);
-//
-//        PunishmentResponse response  = new PunishmentResponse();
-//        response.setPunishment(punishment);
-//        response.setMessage("Succesfully Created Guidance Referreal");
-//
-//            return  response;
-//
-//
-//    }
+    public GuidanceResponse createNewGuidanceForm(GuidanceRequest request) throws MessagingException, IOException, InterruptedException {
+//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+        LocalDate now = LocalDate.now();
 
-//    public List<PunishmentResponse> createGuidance(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
-//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-//        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
-//            punishmentResponse.add(createNewGuidanceForm(punishmentFormRequest));
-//        } return  punishmentResponse;
-//    }
+        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(studentRecord.getSchool());
+
+        Guidance guidanceObj = new Guidance();
+        guidanceObj.setStudentEmail(request.getGuidance().getStudentEmail());
+        guidanceObj.setGuidanceId(UUID.randomUUID().toString());
+        guidanceObj.setTimeCreated(now);
+        guidanceObj.setTeacherEmail(request.getGuidance().getTeacherEmail());
+        guidanceObj.setReferralDescription(request.getGuidance().getReferralDescription());
+        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setStatus("OPEN");
+        guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
+        guidanceObj.setLinkToPunishment(request.getLinkToPunishment());
+        guidanceRepository.save(guidanceObj);
+
+        GuidanceResponse response  = new GuidanceResponse();
+        ArrayList<Guidance> guidances = new ArrayList<>();
+        guidances.add(guidanceObj);
+        response.setGuidance(guidances);
+        response.setMessage("Successfully Created Guidance Referral");
+
+        return  response;
+
+
+    }
+
+    public List<GuidanceResponse> createGuidance(List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
+        List<GuidanceResponse> response = new ArrayList<>();
+        for(GuidanceRequest request : guidanceList) {
+            response.add(createNewGuidanceForm(request));
+        } return  response;
+    }
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
@@ -1396,56 +1398,61 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         }
 
-    public Punishment updateGuidance(String id, ThreadEvent event) {
-        Punishment punishment = punishRepository.findByPunishmentId(id);
-        if(punishment == null){
-            PunishmentResponse response = new PunishmentResponse();
-            response.setError("No Guidance with Found");
+    public Guidance updateGuidance(String id, ThreadEvent event) {
+        Optional<Guidance> guidance = guidanceRepository.findById(id);
+
+        if(guidance.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setError("No Guidance with id " + id +" was found");
             return null;
+
         }
 
+        Guidance record = guidance.get();
         LocalDate timePosted = LocalDate.now();
 
-//        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+        List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent(event.getEvent());
         newEvent.setDate(timePosted);
         newEvent.setContent(event.getContent());
-//        events.add(newEvent);
+        events.add(newEvent);
 //
-//        punishment.setNotesArray(events);
+        record.setNotesArray(events);
 
-        return punishRepository.save(punishment);
+        return guidanceRepository.save(record);
+
 
     }
 
 
 
-//    public List<Punishment> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
-//        List<Punishment> allReferrals = punishRepository.findByIsGuidanceAndGuidanceStatus(true, status);
-//        if (filterByLoggedIn) {
-//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//            String username = authentication != null && authentication.getPrincipal() != null
-//                    ? authentication.getName()
-//                    : "";
-//
-//            return getLoggedInUserGuidanceReferrals(allReferrals, username);
-//        }
-//
-//        return allReferrals;
-//    }
+    public List<Guidance> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
+        List<Guidance> allReferrals = guidanceRepository.findAllByStatus(status);
+        if (filterByLoggedIn) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication != null && authentication.getPrincipal() != null
+                    ? authentication.getName()
+                    : "";
 
-    public List<Punishment> getLoggedInUserGuidanceReferrals(List<Punishment> punishments, String guidanceEmail) {
-        // Extract student emails from the punishments list
-        List<String> studentEmails = punishments.stream()
-                .map(Punishment::getStudentEmail)
-                .collect(Collectors.toList());
+            return getLoggedInUserGuidanceReferrals(allReferrals, username);
+        }
 
-        // Build the aggregation pipeline
-        Aggregation aggregation = newAggregation(
-                match(Criteria.where("studentEmail").in(studentEmails)),
-                project("studentEmail", "guidanceEmail")
+        return allReferrals;
+    }
+
+    public List<Guidance> getLoggedInUserGuidanceReferrals(List<Guidance> guidanceList, String loggedInGuidanceEmail) {
+        //Extrat Student Email from Guidance List
+        List<String> studentEmails = guidanceList.stream()
+                .map(Guidance::getStudentEmail)
+                .collect(Collectors.toList());;
+
+
+        // Build the aggregation pipeline to match students by the extracted student emails
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("studentEmail").in(studentEmails)),
+                Aggregation.project("studentEmail", "guidanceEmail")
         );
 
         // Execute the aggregation query and map the results to a Map
@@ -1454,60 +1461,69 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         // Extract the student emails associated with the specified guidance email
         List<String> studentEmailsForGuidance = results.getMappedResults().stream()
-                .filter(result -> guidanceEmail.equals(result.get("guidanceEmail")))
+                .filter(result -> loggedInGuidanceEmail.equals(result.get("guidanceEmail")))
                 .map(result -> (String) result.get("studentEmail"))
                 .collect(Collectors.toList());
 
         // Filter punishments based on the extracted student emails
-        return punishments.stream()
-                .filter(p -> studentEmailsForGuidance.contains(p.getStudentEmail()))
+        return guidanceList.stream()
+                .filter(g -> studentEmailsForGuidance.contains(g.getStudentEmail()))
                 .collect(Collectors.toList());
     }
 
-    public Punishment updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
-        Punishment punishment = punishRepository.findByPunishmentId(id);
-        if(punishment == null){
-            PunishmentResponse response = new PunishmentResponse();
-            response.setError("No Guidance with Found");
+    public Guidance updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
+        Optional<Guidance> record = guidanceRepository.findById(id);
+        if(record.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setError("No Guidance with id "+ id+ " was found");
             return null;
         }
 
         LocalDate timePosted = LocalDate.now();
+        Guidance guidance = record.get();
 
         try {
-//            punishment.setFollowUpDate(scheduleFollowUp);
+            guidance.setFollowUpDate(scheduleFollowUp);
         } catch (DateTimeParseException e) {
             System.out.println("Invalid date format: " + e.getMessage());
         }
 
-//        List<ThreadEvent> events = punishment.getNotesArray() == null ? new ArrayList<>() : punishment.getNotesArray();
+        guidance.setStatus(statusChange);
+
+
+        List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Follow Up");
         newEvent.setDate(timePosted);
-//        newEvent.setContent("Follow up for this task has been set for " + punishment.getFollowUpDate().toString());
-//        events.add(newEvent);
-//
-//        punishment.setNotesArray(events);
-//        punishment.setGuidanceStatus(statusChange);
+        newEvent.setContent("Follow up for this task has been set for " + guidance.getFollowUpDate().toString());
+        events.add(newEvent);
+        guidance.setNotesArray(events);
+        guidance.setStatus(statusChange);
 
-        return punishRepository.save(punishment);
+        return guidanceRepository.save(guidance);
     }
 
-    public Punishment updateGuidanceStatus(String id, String newStatus) {
-        Punishment getReferral = punishRepository.findByPunishmentId(id);
-//        getReferral.setGuidanceStatus(newStatus);
-//
-//        List<ThreadEvent> events = getReferral.getNotesArray() == null ? new ArrayList<>() : getReferral.getNotesArray();
+    public Guidance updateGuidanceStatus(String id, String newStatus) {
+        Optional<Guidance> getReferral = guidanceRepository.findById(id);
+
+        if(getReferral.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setError("Guidance Referral with id "+ " was not found");
+            return null;
+        }
+       Guidance record = getReferral.get();
+        record.setStatus(newStatus);
+       List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
 
         LocalDate timePosted = LocalDate.now();
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Status");
         newEvent.setDate(timePosted);
         newEvent.setContent("The Status of This Task was Changed to " + newStatus);
-//        events.add(newEvent);
+        events.add(newEvent);
 
-        return punishRepository.save(getReferral);
+        return guidanceRepository.save(record);
     }
 
 //    //Scheduler for Dormant Guidance Files
@@ -1549,5 +1565,34 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         }
     }
+
+
+
+    public String deleteGuidanceReferral(String id) throws ResourceNotFoundException {
+        try {
+            guidanceRepository.deleteById(id);
+
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("That infraction does not exist");
+        }
+        return "Punishment has been deleted";
+    }
+
+
+//    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
+//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
+//        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {
+//            punishmentResponse.add(createNewAdminReferral(punishmentFormRequest));
+//        } return  punishmentResponse;
+//    }
+
+//    private PunishmentResponse createNewAdminReferral(PunishmentFormRequest punishmentFormRequest) {
+//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+//        LocalDate now = LocalDate.now();
+//
+//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
+//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+//    }
+
 }
 

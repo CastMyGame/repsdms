@@ -1,6 +1,8 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -11,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.mail.MessagingException;
+import java.io.IOException;
 import java.util.List;
 
 @CrossOrigin(origins = {
@@ -168,6 +172,15 @@ public class StudentController {
         return ResponseEntity
                 .accepted()
                 .body(response);
+    }
+
+    @PutMapping("/notes/{id}")
+    public ResponseEntity<Student> updateGuidance(@PathVariable String id, @RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+        var message = studentService.updateStudentNotes(id,event);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
     }
 
 
