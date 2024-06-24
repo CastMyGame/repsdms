@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
@@ -94,8 +93,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-       List<Punishment> punishments = punishRepository.findByIsArchived(false);
-        return punishments;
+       return punishRepository.findByIsArchived(false);
     }
 
     public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
@@ -1551,20 +1549,5 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         }
     }
-
-//    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
-//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-//        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {
-//            punishmentResponse.add(createNewAdminReferral(punishmentFormRequest));
-//        } return  punishmentResponse;
-//    }
-
-//    private PunishmentResponse createNewAdminReferral(PunishmentFormRequest punishmentFormRequest) {
-//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-//        LocalDate now = LocalDate.now();
-//
-//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-//    }
 }
 
