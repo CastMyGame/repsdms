@@ -152,7 +152,7 @@ public class PunishController {
 //    }
 
     @PutMapping("/guidance/notes/{id}")
-    public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<Punishment> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) {
         var message = punishmentService.updateGuidance(id,event);
 
         return ResponseEntity
@@ -163,7 +163,7 @@ public class PunishController {
 
 
     @PutMapping("/guidance/followup/{id}")
-    public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<Punishment> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) {
         String scheduleFollowUp = payload.get("followUpDate");
         String statusChange = payload.get("guidanceStatus");
 
@@ -181,7 +181,7 @@ public class PunishController {
     }
 
     @PutMapping("/guidance/status/{id}")
-    public ResponseEntity<Punishment> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<Punishment> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) {
         String newStatus = payload.get("status");
         Punishment updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
 

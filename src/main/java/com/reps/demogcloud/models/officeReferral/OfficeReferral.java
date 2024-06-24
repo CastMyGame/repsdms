@@ -1,6 +1,5 @@
 package com.reps.demogcloud.models.officeReferral;
 
-import com.reps.demogcloud.models.punishment.Punishment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;

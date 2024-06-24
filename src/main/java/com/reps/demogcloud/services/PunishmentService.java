@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
@@ -94,8 +93,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-       List<Punishment> punishments = punishRepository.findByIsArchived(false);
-        return punishments;
+       return punishRepository.findByIsArchived(false);
     }
 
     public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
