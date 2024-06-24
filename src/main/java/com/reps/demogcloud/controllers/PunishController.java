@@ -155,6 +155,7 @@ public class PunishController {
 
     @PutMapping("/guidance/notes/{id}")
     public ResponseEntity<Guidance> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+
         var message = punishmentService.updateGuidance(id,event);
 
         return ResponseEntity
@@ -166,6 +167,7 @@ public class PunishController {
 
     @PutMapping("/guidance/followup/{id}")
     public ResponseEntity<Guidance> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
         String scheduleFollowUp = payload.get("followUpDate");
         String newStatus = payload.get("status");
 
@@ -184,6 +186,7 @@ public class PunishController {
 
     @PutMapping("/guidance/status/{id}")
     public ResponseEntity<Guidance> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
         String newStatus = payload.get("status");
         Guidance updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
 
@@ -199,15 +202,6 @@ public class PunishController {
                 .accepted()
                 .body(message);
     }
-
-//    @PostMapping("/startPunish/adminReferral")
-//    public ResponseEntity<List<PunishmentResponse>> createNewAdminReferralBulk(@RequestBody List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
-//        var message = punishmentService.createNewAdminReferralBulk(adminReferralListRequest);
-//
-//        return ResponseEntity
-//                .accepted()
-//                .body(message);
-//    }
 
     @PostMapping("/studentsReport/{studentEmail}")
     public ResponseEntity<List<Punishment>> getAllPunishmentsForStudents(@PathVariable String studentEmail) {
