@@ -8,10 +8,13 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
@@ -32,6 +35,7 @@ public class OfficeReferralService {
     private final SchoolRepository schoolRepository;
     private final OfficeReferralRepository officeReferralRepository;
     private final EmailService emailService;
+    private final AuthService authService;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) throws MessagingException, IOException, InterruptedException {
@@ -130,6 +134,17 @@ public class OfficeReferralService {
 
     public List<OfficeReferral> findByAdminEmail(String adminEmail) {
         return officeReferralRepository.findByAdminEmail(adminEmail);
+    }
+
+    public List<OfficeReferral> findByStudentEmail(String studentEmail) {
+        return officeReferralRepository.findByStudentEmailIgnoreCase(studentEmail);
+    }
+
+    public List<OfficeReferral> findByLoggedInStudent() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+
+        return officeReferralRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
     }
 
     public OfficeReferral findByReferralId(String referralId) throws ResourceNotFoundException {

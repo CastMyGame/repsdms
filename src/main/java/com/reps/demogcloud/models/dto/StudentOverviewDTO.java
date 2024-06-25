@@ -1,5 +1,6 @@
 package com.reps.demogcloud.models.dto;
 
+import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
@@ -12,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class StudentOverviewDTO {
    private List<Punishment> punishments;
+   private List<OfficeReferral> officeReferrals;
    private School school;
    private Student student;
 

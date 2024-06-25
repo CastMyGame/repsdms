@@ -9,5 +9,7 @@ import java.util.List;
 @Repository
 public interface OfficeReferralRepository extends MongoRepository<OfficeReferral, String> {
     List<OfficeReferral> findByAdminEmail(String adminEmail);
+
+    List<OfficeReferral> findByStudentEmailIgnoreCase(String studentEmail);
     OfficeReferral findByOfficeReferralId(String officeReferralId);
 }

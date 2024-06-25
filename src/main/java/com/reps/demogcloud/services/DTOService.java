@@ -1,10 +1,14 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -15,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@AllArgsConstructor
 public class DTOService {
     private final PunishmentService punishmentService;
 
@@ -22,11 +27,9 @@ public class DTOService {
 
     private final StudentService studentService;
 
-    public DTOService(PunishmentService punishmentService, EmployeeService employeeService, StudentService studentService) {
-        this.punishmentService = punishmentService;
-        this.employeeService = employeeService;
-        this.studentService = studentService;
-    }
+    private final OfficeReferralService officeReferralService;
+
+    private final SchoolService schoolService;
 
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
@@ -99,12 +102,22 @@ public class DTOService {
         return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school);
     }
 
-    public StudentOverviewDTO getStudentOverData() throws Exception {
+    public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
+        List<OfficeReferral> referralList = officeReferralService.findByLoggedInStudent();
         Student student = studentService.findByLoggedInStudent();
         School school =  studentService.getStudentSchool();
 
-        return new StudentOverviewDTO(punishmentList, school, student);
+        return new StudentOverviewDTO(punishmentList, referralList, school, student);
+    }
+
+    public StudentOverviewDTO getStudentOverData(String studentEmail) throws Exception {
+        List<Punishment> punishmentList = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
+        List<OfficeReferral> referralList = officeReferralService.findByStudentEmail(studentEmail);
+        Student student = studentService.findByStudentEmail(studentEmail);
+        School school =  schoolService.findSchoolByName(student.getSchool());
+
+        return new StudentOverviewDTO(punishmentList, referralList, school, student);
     }
 
 
