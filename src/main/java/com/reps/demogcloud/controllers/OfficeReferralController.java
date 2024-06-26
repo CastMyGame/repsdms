@@ -3,6 +3,8 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
+import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.services.OfficeReferralService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +60,24 @@ public class OfficeReferralController {
     @PostMapping("/startPunish/adminReferral")
     public ResponseEntity<List<OfficeReferral>> createNewAdminReferralBulk(@RequestBody List<OfficeReferralRequest> officeReferralListRequest) throws MessagingException, IOException, InterruptedException {
         var message = officeReferralService.createNewAdminReferralBulk(officeReferralListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/closeId")
+    public ResponseEntity<OfficeReferralResponse> closeByReferralId(@RequestBody String id) throws ResourceNotFoundException, MessagingException {
+        var message = officeReferralService.closeByReferralId(id);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/submit/{id}")
+    public ResponseEntity<OfficeReferralResponse> submitByReferralId(@PathVariable String id) throws ResourceNotFoundException, MessagingException {
+        var message = officeReferralService.submitByReferralId(id);
 
         return ResponseEntity
                 .accepted()

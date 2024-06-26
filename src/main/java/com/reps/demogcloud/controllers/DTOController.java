@@ -60,7 +60,17 @@ public class DTOController {
 
     @GetMapping("/StudentOverviewData")
     public ResponseEntity<StudentOverviewDTO> getAllStudentOverview() throws Exception {
-        var message = dtoService.getStudentOverData();
+        var message = dtoService.getLoggedInStudentOverData();
+        return ResponseEntity
+                .accepted()
+                .body(message);
+
+
+    }
+
+    @GetMapping("/StudentOverviewData/{studentEmail}")
+    public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(String studentEmail) throws Exception {
+        var message = dtoService.getStudentOverData(studentEmail);
         return ResponseEntity
                 .accepted()
                 .body(message);
