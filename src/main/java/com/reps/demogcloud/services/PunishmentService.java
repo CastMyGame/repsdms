@@ -1647,7 +1647,9 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
          guidanceRepository.save(guidance);
          GuidanceResponse response = new GuidanceResponse();
-         response.setGuidance((List<Guidance>) guidance);
+         List<Guidance> listOfGuidance = new ArrayList<>();
+         listOfGuidance.add(guidance);
+         response.setGuidance(listOfGuidance);
          return response;
     }
 
