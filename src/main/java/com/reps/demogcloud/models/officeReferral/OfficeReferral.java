@@ -18,6 +18,8 @@ public class OfficeReferral implements Comparable<OfficeReferral>{
     @Id
     private String officeReferralId;
     private OfficeReferralCode referralCode;
+    private String infractionName;
+    private String infractionLevel;
     private String studentEmail;
     private String adminEmail;
     private String teacherEmail;
