@@ -205,4 +205,15 @@ public class EmployeeService {
         student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
         studentRepository.save(student);
     }
+
+    public Employee findByUserName(String email) {
+        Employee employee = employeeRepository.findByEmailIgnoreCase(email);
+        if(employee == null){
+            throw new ResourceNotFoundException("No employees with that email exist");
+
+        }
+        return employee;
+    }
 }
+
+

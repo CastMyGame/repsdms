@@ -44,6 +44,12 @@ public class EmployeeControllers {
         return ResponseEntity.ok(employees);
     }
 
+    @GetMapping("/employees/{id}")
+    private ResponseEntity<Employee> getUserById(@PathVariable String email){
+        Employee employees =  employeeService.findByUserName(email);
+        return ResponseEntity.ok(employees);
+    }
+
     @GetMapping("/employees/{role}")
     private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
         Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
