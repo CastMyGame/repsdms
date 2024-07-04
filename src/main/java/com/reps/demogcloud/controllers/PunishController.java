@@ -302,6 +302,16 @@ public class PunishController {
                 .body(response);
     }
 
+    @PutMapping("/guidance/resources/{id}")
+    public ResponseEntity<GuidanceResponse> updateAndSendResources(@PathVariable String id, @RequestBody ResourceUpdateRequest request) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.sendResourcesAndMakeNotes(id, request);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")
     public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {

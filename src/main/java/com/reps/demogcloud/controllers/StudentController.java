@@ -2,6 +2,7 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
@@ -28,6 +29,7 @@ public class StudentController {
 
     private StudentService studentService;
 
+
     @Autowired
     public StudentController(StudentService studentService) {
         this.studentService = studentService;
@@ -47,6 +49,8 @@ public class StudentController {
                 .accepted()
                 .body(message);
     }
+
+
 
     @GetMapping("/allStudents")
     public ResponseEntity<List<Student>> findAllStudents () {
@@ -182,6 +186,7 @@ public class StudentController {
                 .accepted()
                 .body(message);
     }
+
 
 
     //---------------------------DELETE Controllers--------------------------

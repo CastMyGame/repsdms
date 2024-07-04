@@ -124,4 +124,22 @@ public class EmailService {
 
         }
     }
+
+    @Async
+    public void sendEmailGeneric (String [] ccEmails,
+                                  String recipientEmail,
+                                  String subject,
+                                  String msg) throws MessagingException {
+
+        MimeMessage message = javaMailSender.createMimeMessage();
+        message.setSubject(subject);
+        MimeMessageHelper helper;
+        helper = new MimeMessageHelper(message,true);
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(recipientEmail);
+        helper.setCc(ccEmails);
+        helper.setText(msg,true);
+
+        javaMailSender.send(message);
+    }
 }

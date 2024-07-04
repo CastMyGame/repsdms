@@ -1578,6 +1578,82 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         return "Punishment has been deleted";
     }
 
+    public GuidanceResponse sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
+        System.out.println(request);
+        Optional<Guidance> guidanceOptional = guidanceRepository.findById(id);
+        if(guidanceOptional.isEmpty()){
+            GuidanceResponse response = new GuidanceResponse();
+            response.setMessage("No Guidance Found by Id: "+ id);
+            return response;
+        }
+
+
+        Guidance guidance = guidanceOptional.get();
+        LocalDate timePosted = LocalDate.now();
+        List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent("Resources");
+        newEvent.setDate(timePosted);
+
+        // Extract URLs from ResourceOption list
+        List<String> labels = request.getResourceOptionList().stream()
+                .map(ResourceOption::getLabel)
+                .toList();
+
+        // Set the content of the new event
+        newEvent.setContent("Resources Sent: " + String.join(", ", labels));
+        events.add(newEvent);
+
+        guidance.setNotesArray(events);
+
+        Student student = studentRepository.findByStudentEmailIgnoreCase(guidance.getStudentEmail());
+
+        // Construct the resource message in HTML format
+        StringBuilder resourceMessage = new StringBuilder();
+        resourceMessage.append("<html>")
+                .append("<body>")
+                .append("<p>Hello,<br>")
+                .append(student.getFirstName())
+                .append(" ")
+                .append(student.getLastName())
+                .append(", Guidance has sent you the following resources for your consideration:</p>")
+                .append("<ul>");
+
+        for (ResourceOption item : request.getResourceOptionList() ) {
+            resourceMessage.append("<li><a href=\"")
+                    .append(item.getUrl())
+                    .append("\">")
+                    .append(item.getLabel())
+                    .append("</a></li>");
+        }
+
+        resourceMessage.append("</ul>")
+                .append("</body>")
+                .append("</html>");
+
+        String finalMessage = resourceMessage.toString();
+
+        String subject = "Burke High School Guidance's Resources";
+        String[] ccList = {guidance.getTeacherEmail(), student.getGuidanceEmail()};
+
+
+        emailService.sendEmailGeneric(
+                ccList,
+                student.getStudentEmail(),
+                subject,
+                finalMessage// Use HTML message
+        );
+
+         guidanceRepository.save(guidance);
+         GuidanceResponse response = new GuidanceResponse();
+         List<Guidance> listOfGuidance = new ArrayList<>();
+         listOfGuidance.add(guidance);
+         response.setGuidance(listOfGuidance);
+         return response;
+    }
+
+
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
