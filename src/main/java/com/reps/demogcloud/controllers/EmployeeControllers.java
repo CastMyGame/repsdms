@@ -44,7 +44,7 @@ public class EmployeeControllers {
         return ResponseEntity.ok(employees);
     }
 
-    @GetMapping("/employees/{id}")
+    @GetMapping("/employees/email/{email}")
     private ResponseEntity<Employee> getUserById(@PathVariable String email){
         Employee employees =  employeeService.findByUserName(email);
         return ResponseEntity.ok(employees);
