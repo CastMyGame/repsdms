@@ -1,10 +1,12 @@
 package com.reps.demogcloud.data.filters;
 
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
@@ -29,6 +31,8 @@ public class CustomFilters {
     private StudentRepository studentRepository;
     @Autowired
     private EmployeeRepository employeeRepository;
+    @Autowired
+    private OfficeReferralRepository officeReferralRepository;
 
 
 
@@ -47,6 +51,14 @@ public class CustomFilters {
 
     public List<Punishment> FetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+    }
+
+    public List<OfficeReferral> FetchOfficeReferralsByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<OfficeReferral> archivedRecords = officeReferralRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }

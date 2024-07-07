@@ -4,6 +4,7 @@ import com.reps.demogcloud.data.InfractionRepository;
 import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -43,6 +44,7 @@ public class OfficeReferralService {
     private final EmailService emailService;
     private final AuthService authService;
     private final InfractionRepository infractionRepository;
+    private final CustomFilters customFilters;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) throws MessagingException, IOException, InterruptedException {
@@ -71,7 +73,7 @@ public class OfficeReferralService {
         request.setSchoolName(ourSchool.getSchoolName());
         request.setStatus("OPEN");
         request.setTimeCreated(now);
-        request.setInfractionDescription(description);
+        request.setReferralDescription(description);
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
         return officeReferralRepository.save(request);
@@ -97,7 +99,7 @@ public class OfficeReferralService {
         //get punishment
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
         Student studentReject = studentRepository.findByStudentEmailIgnoreCase(referral.getStudentEmail());
-        ArrayList<String> infractionContext = referral.getInfractionDescription();
+        ArrayList<String> infractionContext = referral.getReferralDescription();
         String resetContext = infractionContext.get(1);
         List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
 
@@ -112,7 +114,7 @@ public class OfficeReferralService {
             referral.setAnswerHistory(currentDate, new ArrayList<>(contextToStore));
 
         }
-        referral.setInfractionDescription(studentAnswer);
+        referral.setReferralDescription(studentAnswer);
 
         referral.setStatus("OPEN");
 
@@ -138,6 +140,10 @@ public class OfficeReferralService {
     public List<OfficeReferral> findAll() {
         return officeReferralRepository.findAll();
     }
+
+    // Methods that Need Global Filters Due for schools
+    public List<OfficeReferral> findAllSchool() {
+        return customFilters.FetchOfficeReferralsByIsArchivedAndSchool(false);    }
 
     public List<OfficeReferral> findByAdminEmail(String adminEmail) {
         return officeReferralRepository.findByAdminEmail(adminEmail);
