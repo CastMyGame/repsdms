@@ -19,7 +19,8 @@ import java.util.List;
 @CrossOrigin(
         origins = {
                 "http://localhost:3000/",
-                "https://repsdiscipline.vercel.app"
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 @RequestMapping("/DTO/v1")

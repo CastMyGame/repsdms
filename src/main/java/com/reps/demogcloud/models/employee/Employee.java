@@ -1,5 +1,6 @@
 package com.reps.demogcloud.models.employee;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.reps.demogcloud.security.models.RoleModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,6 +17,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Document(collection = "employee")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Employee {
     @Id
     private String employeeId;
