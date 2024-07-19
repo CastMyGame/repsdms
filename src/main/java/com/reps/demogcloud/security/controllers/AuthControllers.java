@@ -34,7 +34,9 @@ import java.util.*;
 
 @CrossOrigin(
         origins = {
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 
