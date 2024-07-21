@@ -147,7 +147,7 @@ public class PunishController {
     }
 
     @PostMapping("/guidance/formList")
-    public ResponseEntity<List<GuidanceResponse>> startGuidence(@RequestBody List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<List<GuidanceResponse>> startGuidance(@RequestBody List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createGuidance(guidanceList);
         return ResponseEntity
                 .accepted()
