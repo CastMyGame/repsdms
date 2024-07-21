@@ -334,6 +334,7 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
         guidanceObj.setLinkToPunishment(request.getLinkToPunishment());
+        guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
         guidanceRepository.save(guidanceObj);
 
         GuidanceResponse response  = new GuidanceResponse();
