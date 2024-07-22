@@ -14,11 +14,13 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Array;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
@@ -343,4 +345,35 @@ public class StudentService {
 
     }
 
+    public Student updateSpotters(UpdateSpottersRequest request) {
+        Student findMe = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+        ArrayList<String> spotters = new ArrayList<>();
+        if(findMe.getSpotters() != null) {
+            spotters.addAll(findMe.getSpotters());
+        }
+
+        for(String email: request.getSpotters()) {
+            spotters.add(email);
+        }
+
+        findMe.setSpotters(spotters);
+
+        return studentRepository.save(findMe);
+    }
+
+    public Student deleteSpotters(UpdateSpottersRequest request) {
+        Student findMe = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+        ArrayList<String> spotters = new ArrayList<>();
+        if(findMe.getSpotters() != null) {
+            spotters.addAll(findMe.getSpotters());
+        }
+
+        for(String email: request.getSpotters()) {
+                spotters.remove(email);
+        }
+
+        findMe.setSpotters(spotters);
+
+        return studentRepository.save(findMe);
+    }
 }

@@ -1639,7 +1639,6 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         ArrayList<String> ccList = new ArrayList<>();
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());
-        ccList.addAll(student.getSpotters());
 
 
         emailService.sendEmailGeneric(

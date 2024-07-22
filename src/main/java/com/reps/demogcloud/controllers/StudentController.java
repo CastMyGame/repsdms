@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -188,6 +189,13 @@ public class StudentController {
                 .body(message);
     }
 
+    @PutMapping("/spotters")
+    public ResponseEntity<Student> updateSpotters(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.updateSpotters(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
 
 
     //---------------------------DELETE Controllers--------------------------
@@ -197,6 +205,13 @@ public class StudentController {
         return ResponseEntity
                 .accepted()
                 .body(delete);
+    }
+
+    @DeleteMapping("/spotters")
+    public ResponseEntity<Student> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.deleteSpotters(request);
+
+        return ResponseEntity.accepted().body(student);
     }
 
 }

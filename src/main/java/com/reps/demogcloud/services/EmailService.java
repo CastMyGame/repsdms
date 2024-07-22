@@ -61,12 +61,10 @@ public class EmailService {
         helper = new MimeMessageHelper(message,true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(parentEmail);
-        ArrayList<String> cssArray = new ArrayList<>();
-        cssArray.add(teacherEmail);
-        cssArray.add(studentEmail);
-        cssArray.addAll(findMe.getSpotters());
-        for(String email:cssArray) {
-            helper.setCc(email);
+        helper.addCc(teacherEmail);
+        helper.addCc(studentEmail);
+        for (String email: findMe.getSpotters()) {
+            helper.addBcc(email);
         }
         helper.setText(msg,true);
 
@@ -93,7 +91,6 @@ public class EmailService {
     public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
         System.out.println("Sending Email Alert");
         if(detention.equals("DETENTION")) {
-            ArrayList<String> cssArray = new ArrayList<>();
 
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
@@ -108,11 +105,10 @@ public class EmailService {
             helper.setFrom("REPS.DMS@gmail.com");
             helper.setTo(findMe.getParentEmail());
 
-            cssArray.add(punishment.getTeacherEmail());
-            cssArray.add(findMe.getStudentEmail());
-            cssArray.addAll(findMe.getSpotters());
-            for(String email:cssArray) {
-                helper.setCc(email);
+            helper.addCc(punishment.getTeacherEmail());
+            helper.addCc(findMe.getStudentEmail());
+            for(String email: findMe.getSpotters()) {
+                helper.addBcc(email);
             }
             helper.setText(msg, true);
             javaMailSender.send(message);
@@ -131,8 +127,11 @@ public class EmailService {
             helper = new MimeMessageHelper(message, true);
             helper.setFrom("REPS.DMS@gmail.com");
             helper.setTo(findMe.getParentEmail());
-            String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
-            helper.setCc(cssArray);
+            helper.addCc(punishment.getTeacherEmail());
+            helper.addCc(findMe.getStudentEmail());
+            for(String email: findMe.getSpotters()) {
+                helper.addBcc(email);
+            }
             helper.setText(msg, true);
             javaMailSender.send(message);
 
@@ -152,7 +151,7 @@ public class EmailService {
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(recipientEmail);
         for(String email:ccEmails) {
-            helper.setCc(email);
+            helper.addBcc(email);
         }
         helper.setText(msg,true);
 
