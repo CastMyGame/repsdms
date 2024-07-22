@@ -11,7 +11,6 @@ import java.util.List;
 @Setter
 public class GuidanceRequest {
     private Guidance guidance;
-    private String linkToPunishment;
 
 
 }

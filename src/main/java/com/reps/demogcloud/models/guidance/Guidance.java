@@ -34,6 +34,8 @@ public class Guidance {
     private List<ThreadEvent> notesArray;
     private String linkToPunishment;
     private LocalDate followUpDate;
+    private String infractionName;
+
 
 
 }
