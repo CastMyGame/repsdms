@@ -1636,7 +1636,10 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         String finalMessage = resourceMessage.toString();
 
         String subject = "Burke High School Guidance's Resources";
-        String[] ccList = {guidance.getTeacherEmail(), student.getGuidanceEmail()};
+        ArrayList<String> ccList = new ArrayList<>();
+        ccList.add(student.getGuidanceEmail());
+        ccList.add(guidance.getTeacherEmail());
+        ccList.addAll(student.getSpotters());
 
 
         emailService.sendEmailGeneric(

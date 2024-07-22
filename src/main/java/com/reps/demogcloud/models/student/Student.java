@@ -41,6 +41,7 @@ public class Student {
     private Integer currency;
     private Integer stateStudentId;
     private List<ThreadEvent> notesArray;
+    private List<String> spotters;
 
 
 }
