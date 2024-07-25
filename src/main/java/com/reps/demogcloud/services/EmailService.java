@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +53,7 @@ public class EmailService {
                               String studentEmail,
                               String subject,
                               String msg) throws MessagingException {
+        Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
 
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
@@ -59,8 +61,11 @@ public class EmailService {
         helper = new MimeMessageHelper(message,true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(parentEmail);
-        String[] cssArray = {teacherEmail,studentEmail};
-        helper.setCc(cssArray);
+        helper.addCc(teacherEmail);
+        helper.addCc(studentEmail);
+        for (String email: findMe.getSpotters()) {
+            helper.addBcc(email);
+        }
         helper.setText(msg,true);
 
 
@@ -86,6 +91,7 @@ public class EmailService {
     public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
         System.out.println("Sending Email Alert");
         if(detention.equals("DETENTION")) {
+
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
                 " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
@@ -98,8 +104,12 @@ public class EmailService {
             helper = new MimeMessageHelper(message, true);
             helper.setFrom("REPS.DMS@gmail.com");
             helper.setTo(findMe.getParentEmail());
-            String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
-            helper.setCc(cssArray);
+
+            helper.addCc(punishment.getTeacherEmail());
+            helper.addCc(findMe.getStudentEmail());
+            for(String email: findMe.getSpotters()) {
+                helper.addBcc(email);
+            }
             helper.setText(msg, true);
             javaMailSender.send(message);
 
@@ -117,8 +127,11 @@ public class EmailService {
             helper = new MimeMessageHelper(message, true);
             helper.setFrom("REPS.DMS@gmail.com");
             helper.setTo(findMe.getParentEmail());
-            String[] cssArray = {punishment.getTeacherEmail(), findMe.getStudentEmail()};
-            helper.setCc(cssArray);
+            helper.addCc(punishment.getTeacherEmail());
+            helper.addCc(findMe.getStudentEmail());
+            for(String email: findMe.getSpotters()) {
+                helper.addBcc(email);
+            }
             helper.setText(msg, true);
             javaMailSender.send(message);
 
@@ -126,7 +139,7 @@ public class EmailService {
     }
 
     @Async
-    public void sendEmailGeneric (String [] ccEmails,
+    public void sendEmailGeneric (ArrayList<String> ccEmails,
                                   String recipientEmail,
                                   String subject,
                                   String msg) throws MessagingException {
@@ -137,7 +150,9 @@ public class EmailService {
         helper = new MimeMessageHelper(message,true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(recipientEmail);
-        helper.setCc(ccEmails);
+        for(String email:ccEmails) {
+            helper.addBcc(email);
+        }
         helper.setText(msg,true);
 
         javaMailSender.send(message);
