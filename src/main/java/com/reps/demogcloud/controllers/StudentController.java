@@ -189,9 +189,9 @@ public class StudentController {
                 .body(message);
     }
 
-    @PutMapping("/spotters")
-    public ResponseEntity<Student> updateSpotters(@RequestBody UpdateSpottersRequest request) {
-        var student = studentService.updateSpotters(request);
+    @PutMapping("/addAsSpotter")
+    public ResponseEntity<List<Student>> addAsSpotter(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.addAsSpotter(request);
 
         return ResponseEntity.accepted().body(student);
     }
@@ -208,7 +208,7 @@ public class StudentController {
     }
 
     @DeleteMapping("/spotters")
-    public ResponseEntity<Student> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
+    public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
         var student = studentService.deleteSpotters(request);
 
         return ResponseEntity.accepted().body(student);

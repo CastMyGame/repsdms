@@ -8,5 +8,5 @@ import java.util.List;
 public class UpdateSpottersRequest {
 
     private List<String> spotters;
-    private String studentEmail;
+    private List<String> studentEmail;
 }

@@ -98,8 +98,9 @@ public class DTOService {
         //Get Employee and School Information based on who is the logged in user
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
+        List<Student> studentPopulation = studentService.findBySchool(school.getSchoolName());
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school, studentPopulation);
     }
 
     public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {
