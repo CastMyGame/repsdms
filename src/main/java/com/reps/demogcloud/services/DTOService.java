@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.student.StudentDataDTO;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -98,9 +99,13 @@ public class DTOService {
         //Get Employee and School Information based on who is the logged in user
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
+        List<StudentDataDTO> studentEmails = new ArrayList<>();
         List<Student> studentPopulation = studentService.findBySchool(school.getSchoolName());
+        for (Student student : studentPopulation) {
+            studentEmails.add(new StudentDataDTO(student.getFirstName() + " " + student.getLastName(), student.getStudentEmail()));
+        }
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school, studentPopulation);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school, studentEmails);
     }
 
     public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {

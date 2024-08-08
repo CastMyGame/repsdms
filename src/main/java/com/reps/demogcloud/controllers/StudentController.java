@@ -207,7 +207,7 @@ public class StudentController {
                 .body(delete);
     }
 
-    @DeleteMapping("/spotters")
+    @DeleteMapping("/removeAsSpotter")
     public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
         var student = studentService.deleteSpotters(request);
 

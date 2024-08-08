@@ -3,6 +3,7 @@ package com.reps.demogcloud.models.dto;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.student.StudentDataDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -16,5 +17,5 @@ public class TeacherOverviewDTO {
    private List<TeacherDTO> shoutOutsResponse;
    private Employee teacher;
    private School school;
-   private List<Student> studentPopulation;
+   private List<StudentDataDTO> studentPopulation;
 }
