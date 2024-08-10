@@ -386,4 +386,15 @@ public class StudentService {
         }
         return studentsSpotted;
     }
+
+    public Student removeSpotterByEmail(String email, Student student) {
+        Student recordToUpdate = studentRepository.findByStudentIdNumber(student.getStudentIdNumber());
+        List<String> currentSpotters = recordToUpdate.getSpotters();
+        currentSpotters.remove(email);
+        recordToUpdate.setSpotters(currentSpotters);
+        return studentRepository.save(recordToUpdate);
+
+        }
+
+
 }
