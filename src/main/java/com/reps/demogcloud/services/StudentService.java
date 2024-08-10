@@ -232,6 +232,10 @@ public class StudentService {
         return assignedStudents;
     }
 
+    public List<Student> findBySchool(String school) {
+        return studentRepository.findBySchool(school);
+    }
+
     public List<PunishmentDTO> getDetentionList(String school){
         List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
@@ -345,35 +349,46 @@ public class StudentService {
 
     }
 
-    public Student updateSpotters(UpdateSpottersRequest request) {
-        Student findMe = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
-        ArrayList<String> spotters = new ArrayList<>();
-        if(findMe.getSpotters() != null) {
-            spotters.addAll(findMe.getSpotters());
+    public List<Student> addAsSpotter(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for(String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
+
+            spotters.addAll(request.getSpotters());
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
         }
-
-        for(String email: request.getSpotters()) {
-            spotters.add(email);
-        }
-
-        findMe.setSpotters(spotters);
-
-        return studentRepository.save(findMe);
+        return studentsSpotted;
     }
 
-    public Student deleteSpotters(UpdateSpottersRequest request) {
-        Student findMe = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
-        ArrayList<String> spotters = new ArrayList<>();
-        if(findMe.getSpotters() != null) {
-            spotters.addAll(findMe.getSpotters());
-        }
+    public List<Student> deleteSpotters(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for (String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
 
-        for(String email: request.getSpotters()) {
+            for (String email : request.getSpotters()) {
                 spotters.remove(email);
+            }
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
         }
+        return studentsSpotted;
+    }
 
-        findMe.setSpotters(spotters);
-
-        return studentRepository.save(findMe);
+    public List<Student> findBySpotter(String spotterEmail) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
     }
 }

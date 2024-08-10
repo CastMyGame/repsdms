@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -8,7 +7,6 @@ import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
