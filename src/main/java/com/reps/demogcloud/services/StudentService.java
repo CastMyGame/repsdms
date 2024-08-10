@@ -386,4 +386,9 @@ public class StudentService {
         }
         return studentsSpotted;
     }
+
+    public List<Student> findBySpotter(String spotterEmail) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
+    }
 }

@@ -117,6 +117,16 @@ public class StudentController {
                 .body(response);
     }
 
+    @GetMapping("/findBySpotter/{spotterEmail}")
+    public ResponseEntity<List<Student>> getBySpotter(@PathVariable String spotterEmail) {
+        List<Student> response = studentService.findBySpotter(spotterEmail);
+
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     //-----------------------------POST Controllers-----------------------------------
     @PostMapping("/newStudent")
     public ResponseEntity<StudentResponse> createStudent (@RequestBody Student studentRequest) {
@@ -196,6 +206,13 @@ public class StudentController {
         return ResponseEntity.accepted().body(student);
     }
 
+    @PutMapping("/removeAsSpotter")
+    public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.deleteSpotters(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
 
 
     //---------------------------DELETE Controllers--------------------------
@@ -207,11 +224,6 @@ public class StudentController {
                 .body(delete);
     }
 
-    @DeleteMapping("/removeAsSpotter")
-    public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
-        var student = studentService.deleteSpotters(request);
 
-        return ResponseEntity.accepted().body(student);
-    }
 
 }
