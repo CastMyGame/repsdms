@@ -226,4 +226,12 @@ public class StudentController {
 
 
 
+    @PutMapping("/remove-spotter/{email}")
+    public ResponseEntity<Student> removeSpotterByEmail(@PathVariable String email,@RequestBody Student student) {
+        Student response = studentService.removeSpotterByEmail(email,student);
+
+        return ResponseEntity.accepted().body(response);
+    }
+
+
 }
