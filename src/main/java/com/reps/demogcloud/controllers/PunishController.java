@@ -26,7 +26,8 @@ import java.util.Map;
 @CrossOrigin(
         origins = {
                 "http://localhost:3000/",
-                "https://repsdiscipline.vercel.app"
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 @RequestMapping("/punish/v1")
@@ -145,13 +146,15 @@ public class PunishController {
                 .body(message);
     }
 
-    @PostMapping("/guidance/formList")
-    public ResponseEntity<List<GuidanceResponse>> startGuidence(@RequestBody List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
-        var message = punishmentService.createGuidance(guidanceList);
+    @PostMapping("/guidance/new")
+    public ResponseEntity<GuidanceResponse> createNewGuidance(@RequestBody GuidanceRequest guidanceRequests) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.createNewGuidanceFormSimple(guidanceRequests);
+
         return ResponseEntity
                 .accepted()
                 .body(message);
     }
+
 
     @PutMapping("/guidance/notes/{id}")
     public ResponseEntity<Guidance> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {

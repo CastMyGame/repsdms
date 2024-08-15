@@ -14,11 +14,13 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Array;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
@@ -230,6 +232,10 @@ public class StudentService {
         return assignedStudents;
     }
 
+    public List<Student> findBySchool(String school) {
+        return studentRepository.findBySchool(school);
+    }
+
     public List<PunishmentDTO> getDetentionList(String school){
         List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
@@ -341,6 +347,59 @@ public class StudentService {
         return studentRepository.save(record);
 
 
+    }
+
+    public List<Student> addAsSpotter(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for(String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
+
+            spotters.addAll(request.getSpotters());
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
+        }
+        return studentsSpotted;
+    }
+
+    public List<Student> deleteSpotters(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for (String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
+
+            for (String email : request.getSpotters()) {
+                spotters.remove(email);
+            }
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
+        }
+        return studentsSpotted;
+    }
+
+    public Student removeSpotterByEmail(String email, Student student) {
+        Student recordToUpdate = studentRepository.findByStudentIdNumber(student.getStudentIdNumber());
+        List<String> currentSpotters = recordToUpdate.getSpotters();
+        currentSpotters.remove(email);
+        recordToUpdate.setSpotters(currentSpotters);
+        return studentRepository.save(recordToUpdate);
+
+        }
+
+
+    public List<Student> findBySpotter(String spotterEmail) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
     }
 
 }

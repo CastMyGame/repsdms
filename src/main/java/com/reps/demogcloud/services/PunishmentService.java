@@ -185,23 +185,23 @@ public class PunishmentService {
         List<Punishment> closedPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "CLOSED");
 
         List<Integer> closedTimes = new ArrayList<>();
-        for(Punishment punishment : closedPunishments) {
+        for (Punishment punishment : closedPunishments) {
             closedTimes.add(punishment.getClosedTimes());
         }
 
         String level = levelCheck(closedTimes, maxLevel);
         System.out.println(level);
         Infraction infraction = new Infraction();
-if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
-                    && !formRequest.getInfractionName().equals("Behavioral Concern")
-                    && !formRequest.getInfractionName().equals("Failure to Complete Work")
-                    && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
-                    && !formRequest.getInfractionName().equals("Student Guidance Referral")
-&& !formRequest.isAdminReferral()) {
-                infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
-            } else {
-    infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
-}
+        if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
+                && !formRequest.getInfractionName().equals("Behavioral Concern")
+                && !formRequest.getInfractionName().equals("Failure to Complete Work")
+                && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
+                && !formRequest.getInfractionName().equals("Student Guidance Referral")
+                && !formRequest.isAdminReferral()) {
+            infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
+        } else {
+            infraction = infractionRepository.findByInfractionName(formRequest.getInfractionName());
+        }
         Punishment punishment = new Punishment();
         ArrayList<String> description = new ArrayList<>();
         description.add(formRequest.getInfractionDescription());
@@ -217,73 +217,77 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         punishment.setInfractionLevel(infraction.getInfractionLevel());
         punishment.setInfractionName(infraction.getInfractionName());
 
-        // If there is a guidance description, mark it as an open guidance referral and add that description as the first of the notes array
-        // This allows us to just tag a punishment already being made or allow a teacher to do one by themself or a self driven student
-
-        if(!formRequest.getGuidanceDescription().isEmpty()) {
-            List<ThreadEvent> guidanceDescription = new ArrayList<>();
-            ThreadEvent event = new ThreadEvent();
-            event.setEvent("NOTE");
-            event.setDate(LocalDate.now());
-            event.setContent(formRequest.getGuidanceDescription());
-            guidanceDescription.add(event);
-//            punishment.setGuidance(true);
-//            punishment.setGuidanceStatus("OPEN");
-//            punishment.setNotesArray(guidanceDescription);
-        }
-
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
         fetchPunishmentData.addAll(pendingPunishmentData);
         var findOpen = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
         var openFilter = findOpen.stream()
-                        .filter(x-> x.getStatus().equals("OPEN"))
-                                .toList();
+                .filter(x -> x.getStatus().equals("OPEN"))
+                .toList();
 
         System.out.println(findOpen);
 
         // If It is an admin referral, set to open and make sure send email is correct
-        if(formRequest.isAdminReferral()) {
+        if (formRequest.isAdminReferral()) {
             punishment.setStatus("OPEN");
             punishment.setTimeClosed(now);
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
-        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
-         //save Points if more then zero
-            if(formRequest.getCurrency() > 0 ){
+        if (infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
+            //save Points if more then zero
+            if (formRequest.getCurrency() > 0) {
                 employeeService.transferCurrency(new CurrencyTransferRequest(formRequest.getTeacherEmail(), formRequest.getStudentEmail(), formRequest.getCurrency()));
             }
             punishment.setStatus("SO");
             punishment.setTimeClosed(now);
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 //            filePositiveWithState(formRequest);
-            return sendEmailBasedOnType(formRequest,punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
-        if(infraction.getInfractionName().equals("Behavioral Concern")) {
+        if (infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
             punishment.setTimeClosed(now);
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
         }
-        if(infraction.getInfractionName().equals("Failure to Complete Work")) {
+        if (infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
             punishment.setTimeClosed(now);
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            };
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -293,7 +297,12 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
 
         if (findOpen.isEmpty()) {
             punishment.setStatus("OPEN");
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -301,11 +310,15 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
             return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
 
 
-
         } else {
             punishment.setStatus("CFR");
             punishment.setTimeClosed(LocalDate.now());
-            punishRepository.save(punishment);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -313,27 +326,45 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
             return sendCFREmailBasedOnType(punishment, studentRepository, infractionRepository, schoolRepository);
 
         }
+
+
+    }
+
+    public  void LinkAssignmentToGuidance(Student student,PunishmentFormRequest formRequest,Punishment punishment) throws MessagingException, IOException, InterruptedException {
+            GuidanceRequest guidanceRequest = new GuidanceRequest();
+            Guidance guidance = new Guidance();
+            guidance.setGuidanceEmail(student.getGuidanceEmail());
+            guidance.setStudentEmail(student.getStudentEmail());
+            guidance.setLinkToPunishment(punishment.getPunishmentId());
+            guidance.setInfractionName(punishment.getInfractionName());
+            guidanceRequest.setGuidance(guidance);
+
+            createNewGuidanceForm(guidanceRequest,formRequest);
+
+
     }
 
 
-    public GuidanceResponse createNewGuidanceForm(GuidanceRequest request) throws MessagingException, IOException, InterruptedException {
+    public void createNewGuidanceForm(GuidanceRequest request, PunishmentFormRequest punishmentRequest) throws MessagingException, IOException, InterruptedException {
 //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 
-        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
+        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(punishmentRequest.getStudentEmail());
         School ourSchool = schoolRepository.findSchoolBySchoolName(studentRecord.getSchool());
 
-        Guidance guidanceObj = new Guidance();
-        guidanceObj.setStudentEmail(request.getGuidance().getStudentEmail());
+        Guidance guidanceObj = request.getGuidance();
+        guidanceObj.setStudentEmail(studentRecord.getStudentEmail());
         guidanceObj.setGuidanceId(UUID.randomUUID().toString());
         guidanceObj.setTimeCreated(now);
-        guidanceObj.setTeacherEmail(request.getGuidance().getTeacherEmail());
-        guidanceObj.setReferralDescription(request.getGuidance().getReferralDescription());
+        guidanceObj.setTeacherEmail(punishmentRequest.getTeacherEmail());
+        ArrayList<String> description = new ArrayList<>();
+        description.add(punishmentRequest.getGuidanceDescription());
+        guidanceObj.setReferralDescription(description);
         guidanceObj.setSchoolName(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
-        guidanceObj.setLinkToPunishment(request.getLinkToPunishment());
+        guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
         guidanceRepository.save(guidanceObj);
 
         GuidanceResponse response  = new GuidanceResponse();
@@ -342,17 +373,40 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         response.setGuidance(guidances);
         response.setMessage("Successfully Created Guidance Referral");
 
-        return  response;
+
+    }
+
+    public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) throws MessagingException, IOException, InterruptedException {
+//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
+        LocalDate now = LocalDate.now();
+
+        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
+        School ourSchool = schoolRepository.findSchoolBySchoolName(studentRecord.getSchool());
+
+        Guidance guidanceObj = request.getGuidance();
+        guidanceObj.setStudentEmail(studentRecord.getStudentEmail());
+        guidanceObj.setGuidanceId(UUID.randomUUID().toString());
+        guidanceObj.setTimeCreated(now);
+        guidanceObj.setTeacherEmail(request.getGuidance().getTeacherEmail());
+        guidanceObj.setReferralDescription(request.getGuidance().getReferralDescription());
+        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setStatus("OPEN");
+        guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
+        guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
+        guidanceRepository.save(guidanceObj);
+
+        GuidanceResponse response  = new GuidanceResponse();
+        ArrayList<Guidance> guidances = new ArrayList<>();
+        guidances.add(guidanceObj);
+        response.setGuidance(guidances);
+        response.setMessage("Successfully Created Guidance Referral");
+        return response;
 
 
     }
 
-    public List<GuidanceResponse> createGuidance(List<GuidanceRequest> guidanceList) throws MessagingException, IOException, InterruptedException {
-        List<GuidanceResponse> response = new ArrayList<>();
-        for(GuidanceRequest request : guidanceList) {
-            response.add(createNewGuidanceForm(request));
-        } return  response;
-    }
+
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
@@ -1635,7 +1689,9 @@ if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
         String finalMessage = resourceMessage.toString();
 
         String subject = "Burke High School Guidance's Resources";
-        String[] ccList = {guidance.getTeacherEmail(), student.getGuidanceEmail()};
+        ArrayList<String> ccList = new ArrayList<>();
+        ccList.add(student.getGuidanceEmail());
+        ccList.add(guidance.getTeacherEmail());
 
 
         emailService.sendEmailGeneric(

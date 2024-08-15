@@ -34,7 +34,9 @@ import java.util.*;
 
 @CrossOrigin(
         origins = {
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 
@@ -138,17 +140,6 @@ public class AuthControllers {
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
 
-        HttpClient client = HttpClient.newHttpClient();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/generate-token"))
-                .GET()
-                .build();
-
-        HttpResponse<String> responseToken = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println(responseToken.body() + "          THIS IS THE DAVID RESPONSE TOKEN!!!!!!!!!!!!!");
-        System.out.println(generatedToken);
         return ResponseEntity.ok(response);
     }
 

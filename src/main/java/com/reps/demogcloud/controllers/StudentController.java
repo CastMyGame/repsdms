@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,8 @@ import java.util.List;
 
 @CrossOrigin(origins = {
 "http//localhost:3000",
-"http://localhost:3000/"})
+        "https://repsdiscipline.vercel.app",
+        "https://repsdev.vercel.app"})
 
 @RestController
 @RequiredArgsConstructor
@@ -115,6 +117,16 @@ public class StudentController {
                 .body(response);
     }
 
+    @GetMapping("/findBySpotter/{spotterEmail}")
+    public ResponseEntity<List<Student>> getBySpotter(@PathVariable String spotterEmail) {
+        List<Student> response = studentService.findBySpotter(spotterEmail);
+
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     //-----------------------------POST Controllers-----------------------------------
     @PostMapping("/newStudent")
     public ResponseEntity<StudentResponse> createStudent (@RequestBody Student studentRequest) {
@@ -187,6 +199,20 @@ public class StudentController {
                 .body(message);
     }
 
+    @PutMapping("/addAsSpotter")
+    public ResponseEntity<List<Student>> addAsSpotter(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.addAsSpotter(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
+    @PutMapping("/removeAsSpotter")
+    public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.deleteSpotters(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
 
 
     //---------------------------DELETE Controllers--------------------------
@@ -197,5 +223,15 @@ public class StudentController {
                 .accepted()
                 .body(delete);
     }
+
+
+
+    @PutMapping("/remove-spotter/{email}")
+    public ResponseEntity<Student> removeSpotterByEmail(@PathVariable String email,@RequestBody Student student) {
+        Student response = studentService.removeSpotterByEmail(email,student);
+
+        return ResponseEntity.accepted().body(response);
+    }
+
 
 }
