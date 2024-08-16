@@ -6,13 +6,10 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
-import com.reps.demogcloud.models.punishment.StudentAnswer;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.services.AuthService;
@@ -42,12 +39,10 @@ public class OfficeReferralService {
     private final SchoolRepository schoolRepository;
     private final OfficeReferralRepository officeReferralRepository;
     private final EmailService emailService;
-    private final AuthService authService;
-    private final InfractionRepository infractionRepository;
     private final CustomFilters customFilters;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) throws MessagingException, IOException, InterruptedException {
+    public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
         for(OfficeReferralRequest officeReferralRequest : officeReferralRequests) {
             punishmentResponse.add(createNewOfficeReferral(officeReferralRequest));
@@ -243,12 +238,21 @@ public class OfficeReferralService {
 //            return punishmentResponse;
 //        }}
 
-    public OfficeReferralResponse closeByReferralId(String referralId) throws ResourceNotFoundException, MessagingException {
+    public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException, MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(referralId);
+        OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
 
         findMe.setStatus("CLOSED");
         findMe.setTimeClosed(LocalDate.now());
+
+        // Add comment if one is there
+        if (!request.getComment().isEmpty()) {
+            ArrayList<String> description = new ArrayList<>();
+            description.addAll(findMe.getReferralDescription());
+            description.add(request.getComment());
+            findMe.setReferralDescription(description);
+        }
+
         officeReferralRepository.save(findMe);
         if (findMe != null) {
             OfficeReferralResponse referralResponse = new OfficeReferralResponse();

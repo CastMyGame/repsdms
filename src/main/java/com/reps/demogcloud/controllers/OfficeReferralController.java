@@ -2,6 +2,7 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
@@ -68,8 +69,8 @@ public class OfficeReferralController {
     }
 
     @PostMapping("/closeId")
-    public ResponseEntity<OfficeReferralResponse> closeByReferralId(@RequestBody String id) throws ResourceNotFoundException, MessagingException {
-        var message = officeReferralService.closeByReferralId(id);
+    public ResponseEntity<OfficeReferralResponse> closeByReferralId(@RequestBody OfficeReferralCloseRequest request) throws ResourceNotFoundException, MessagingException {
+        var message = officeReferralService.closeByReferralId(request);
 
         return ResponseEntity
                 .accepted()
