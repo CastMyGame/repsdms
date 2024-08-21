@@ -18,8 +18,8 @@ public class OfficeReferral implements Comparable<OfficeReferral>{
     @Id
     private String officeReferralId;
     private OfficeReferralCode referralCode;
-    private String infractionName;
-    private String infractionLevel;
+//    private String infractionName;
+private String infractionLevel;
     private String studentEmail;
     private String adminEmail;
     private String teacherEmail;
@@ -39,7 +39,7 @@ public class OfficeReferral implements Comparable<OfficeReferral>{
     private LocalDate archivedOn;
     private int mapIndex = 0;
     private Map<Date, List<String>> answerHistory;
-    private ArrayList<String> infractionDescription;
+    private ArrayList<String> referralDescription;
 
 
 

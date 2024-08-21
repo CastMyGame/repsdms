@@ -2,8 +2,10 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.services.OfficeReferralService;
 import lombok.RequiredArgsConstructor;
@@ -68,8 +70,8 @@ public class OfficeReferralController {
     }
 
     @PostMapping("/closeId")
-    public ResponseEntity<OfficeReferralResponse> closeByReferralId(@RequestBody String id) throws ResourceNotFoundException, MessagingException {
-        var message = officeReferralService.closeByReferralId(id);
+    public ResponseEntity<OfficeReferralResponse> closeByReferralId(@RequestBody OfficeReferralCloseRequest request) throws ResourceNotFoundException, MessagingException {
+        var message = officeReferralService.closeByReferralId(request);
 
         return ResponseEntity
                 .accepted()
@@ -98,6 +100,15 @@ public class OfficeReferralController {
     public ResponseEntity<OfficeReferral> rejectAnswers(@PathVariable String punishmentId,
                                                        @RequestBody String description) throws MessagingException {
         OfficeReferral response = officeReferralService.rejectAnswers(punishmentId, description);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/descriptions")
+    public ResponseEntity<List<OfficeReferral>> updateAllDescriptions() {
+        List<OfficeReferral> response = officeReferralService.updateDescriptions();
+
         return ResponseEntity
                 .accepted()
                 .body(response);
