@@ -10,6 +10,7 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.services.AuthService;
@@ -69,6 +70,7 @@ public class OfficeReferralService {
         request.setStatus("OPEN");
         request.setTimeCreated(now);
         request.setReferralDescription(description);
+        request.setInfractionLevel("4");
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
         return officeReferralRepository.save(request);
@@ -277,6 +279,19 @@ public class OfficeReferralService {
         } else {
             throw new ResourceNotFoundException("That referral does not exist");
         }
+    }
+
+    public List<OfficeReferral> updateDescriptions() {
+        List<OfficeReferral> all = officeReferralRepository.findAll();
+        List<OfficeReferral> saved = new ArrayList<>();
+        for (OfficeReferral referral : all) {
+            if (referral.getReferralDescription().size() > 1) {
+                referral.getReferralDescription().remove(0);
+                officeReferralRepository.save(referral);
+                saved.add(referral);
+            }
+        }
+        return saved;
     }
 
     public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException, MessagingException {

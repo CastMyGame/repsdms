@@ -5,6 +5,7 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
+import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.services.OfficeReferralService;
 import lombok.RequiredArgsConstructor;
@@ -99,6 +100,15 @@ public class OfficeReferralController {
     public ResponseEntity<OfficeReferral> rejectAnswers(@PathVariable String punishmentId,
                                                        @RequestBody String description) throws MessagingException {
         OfficeReferral response = officeReferralService.rejectAnswers(punishmentId, description);
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @PutMapping("/descriptions")
+    public ResponseEntity<List<OfficeReferral>> updateAllDescriptions() {
+        List<OfficeReferral> response = officeReferralService.updateDescriptions();
+
         return ResponseEntity
                 .accepted()
                 .body(response);
