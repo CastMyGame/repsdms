@@ -50,16 +50,13 @@ public class OfficeReferralService {
         } return  punishmentResponse;
     }
 
-    private OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
+    public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
         System.out.println(officeReferralRequest + " THE REQUEST ");
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
         School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-
-        ArrayList<String> description = new ArrayList<>();
-        description.add(officeReferralRequest.getInfractionDescription());
 
         OfficeReferral request = new OfficeReferral();
         request.setAdminEmail(findMe.getAdminEmail());
@@ -69,7 +66,7 @@ public class OfficeReferralService {
         request.setSchoolName(ourSchool.getSchoolName());
         request.setStatus("OPEN");
         request.setTimeCreated(now);
-        request.setReferralDescription(description);
+        request.setReferralDescription(officeReferralRequest.getReferralDescription());
         request.setInfractionLevel("4");
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
@@ -97,11 +94,10 @@ public class OfficeReferralService {
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
         Student studentReject = studentRepository.findByStudentEmailIgnoreCase(referral.getStudentEmail());
         ArrayList<String> infractionContext = referral.getReferralDescription();
-        String resetContext = infractionContext.get(1);
+        String resetContext = infractionContext.get(0);
         List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
 
         ArrayList<String> studentAnswer = new ArrayList<>();
-        studentAnswer.add("");
         studentAnswer.add(resetContext);
         Date currentDate = new Date();
         if(referral.getAnswerHistory() !=null){

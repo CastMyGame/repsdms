@@ -14,6 +14,9 @@ import com.reps.demogcloud.models.guidance.Guidance;
 import com.reps.demogcloud.models.guidance.GuidanceRequest;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.infraction.Infraction;
+import com.reps.demogcloud.models.officeReferral.OfficeReferral;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
+import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
@@ -70,6 +73,7 @@ public class PunishmentService {
     private final EmployeeRepository employeeRepository;
     private final StudentService studentService;
     private final GuidanceRepository guidanceRepository;
+    private final OfficeReferralService officeReferralService;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -190,6 +194,7 @@ public class PunishmentService {
         }
 
         String level = levelCheck(closedTimes, maxLevel);
+
         System.out.println(level);
         Infraction infraction = new Infraction();
         if (!formRequest.getInfractionName().equals("Positive Behavior Shout Out!")
@@ -216,6 +221,27 @@ public class PunishmentService {
         punishment.setSchoolName(ourSchool.getSchoolName());
         punishment.setInfractionLevel(infraction.getInfractionLevel());
         punishment.setInfractionName(infraction.getInfractionName());
+
+        if (level.equals("4")) {
+            OfficeReferralCode code = new OfficeReferralCode();
+            code.setCodeKey(42);
+            code.setCodeName("Failure to Comply with Disciplinary Actions");
+
+            ArrayList<String> referralDescription = new ArrayList<>();
+            referralDescription.add(formRequest.getInfractionDescription());
+
+            OfficeReferralRequest referralRequest = new OfficeReferralRequest();
+            referralRequest.setTeacherEmail(formRequest.getTeacherEmail());
+            referralRequest.setStudentEmail(formRequest.getStudentEmail());
+            referralRequest.setCurrency(0);
+            referralRequest.setClassPeriod(formRequest.getInfractionPeriod());
+            referralRequest.setReferralDescription(referralDescription);
+            referralRequest.setReferralCode(code);
+            officeReferralService.createNewOfficeReferral(referralRequest);
+
+            punishment.setStatus("CLOSED");
+            punishment.setClosedTimes(punishment.getClosedTimes() + 1);
+        }
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "OPEN");
         List<Punishment> pendingPunishmentData = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(formRequest.getStudentEmail(), formRequest.getInfractionName(), "PENDING");
@@ -244,7 +270,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
         }
         if (infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
             //save Points if more then zero
@@ -262,7 +288,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 //            filePositiveWithState(formRequest);
-            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
         }
         if (infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
@@ -277,7 +303,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
         }
         if (infraction.getInfractionName().equals("Failure to Complete Work")) {
             punishment.setStatus("PENDING");
@@ -292,10 +318,10 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
         }
 
-        if (findOpen.isEmpty()) {
+        if (findOpen.isEmpty() && !level.equals("4")) {
             punishment.setStatus("OPEN");
             Punishment punishmentRecord = punishRepository.save(punishment);
             System.out.println(punishmentRecord);
@@ -307,7 +333,7 @@ public class PunishmentService {
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
-            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
 
 
         } else {
@@ -723,6 +749,7 @@ public class PunishmentService {
                                                            StudentRepository studentRepository,
                                                            InfractionRepository infractionRepository,
                                                            EmailService emailService,
+                                                           OfficeReferralService officeReferralService,
                                                            SchoolRepository schoolRepository) throws MessagingException {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
