@@ -19,8 +19,7 @@ public class PunishmentFormRequest {
     private String teacherEmail;
     private int currency;
     private String guidanceDescription;
+    private String phoneLogDescription;
     private boolean isAdminReferral;
     private boolean isGuidanceReferral;
-
-
 }

@@ -14,7 +14,6 @@ import com.reps.demogcloud.models.guidance.Guidance;
 import com.reps.demogcloud.models.guidance.GuidanceRequest;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.infraction.Infraction;
-import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
@@ -209,6 +208,19 @@ public class PunishmentService {
         }
         Punishment punishment = new Punishment();
         ArrayList<String> description = new ArrayList<>();
+        if(!formRequest.getPhoneLogDescription().isEmpty()) {
+            List<ThreadEvent> phoneCalls = findMe.getNotesArray();
+            ThreadEvent phoneLog = new ThreadEvent();
+            phoneLog.setCreatedBy(formRequest.getTeacherEmail());
+            phoneLog.setDate(now);
+            phoneLog.setContent(formRequest.getPhoneLogDescription());
+            phoneLog.setEvent("Phone");
+
+            phoneCalls.add(phoneLog);
+
+            findMe.setNotesArray(phoneCalls);
+            studentRepository.save(findMe);
+        }
         description.add(formRequest.getInfractionDescription());
         punishment.setStudentEmail(formRequest.getStudentEmail());
         punishment.setInfractionId(infraction.getInfractionId());
@@ -1495,6 +1507,7 @@ public class PunishmentService {
         List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
 
         ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setCreatedBy(event.getCreatedBy());
         newEvent.setEvent(event.getEvent());
         newEvent.setDate(timePosted);
         newEvent.setContent(event.getContent());

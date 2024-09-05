@@ -8,6 +8,7 @@ import java.util.Date;
 @Data
 public class ThreadEvent {
     private LocalDate date;
+    private String createdBy;
     private String event;
     private String content;
 }
