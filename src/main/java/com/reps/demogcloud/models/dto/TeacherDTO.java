@@ -16,6 +16,6 @@ public class TeacherDTO {
     private String classPeriod;
     private String teacherEmail;
     private String status;
-    private String level;
+    private String infractionLevel;
 
 }

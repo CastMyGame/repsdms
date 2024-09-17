@@ -1392,7 +1392,7 @@ public class PunishmentService {
                         .and("classPeriod").as("classPeriod")
                         .and("teacherEmail").as("teacherEmail")
                         .and("status").as("status")
-                        .and("level").as("level")
+                        .and("infractionLevel").as("infractionLevel")
                         .andExclude("_id")
         );
 
