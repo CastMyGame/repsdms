@@ -1389,6 +1389,7 @@ public class PunishmentService {
                         .and("infractionName").as("infractionName")
                         .and("timeCreated").as("timeCreated")
                         .and("infractionDescription").as("infractionDescription")
+                        .and("classPeriod").as("classPeriod")
                         .and("teacherEmail").as("teacherEmail")
                         .and("status").as("status")
                         .and("level").as("level")

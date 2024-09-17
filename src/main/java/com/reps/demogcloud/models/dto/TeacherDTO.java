@@ -13,6 +13,7 @@ public class TeacherDTO {
     private String infractionName;
     private LocalDate timeCreated;
     private ArrayList<String> infractionDescription;
+    private String classPeriod;
     private String teacherEmail;
     private String status;
     private String level;
