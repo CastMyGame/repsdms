@@ -72,6 +72,7 @@ public class DTOService {
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
+        List<OfficeReferral> allSchoolReferrals = officeReferralService.findAllSchool();
 
         //From this list created teacher response with student names included
         List<TeacherDTO> allSchoolPunishmentsWithDisplayInformation = punishmentService.getTeacherResponse(allSchoolPunishments);
@@ -98,7 +99,7 @@ public class DTOService {
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts, teacher, school);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts,allSchoolReferrals, teacher, school);
     }
 
     public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {
