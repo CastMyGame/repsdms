@@ -1,23 +1,26 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.InfractionRepository;
 import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
-import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.security.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 @Service
 @Slf4j
@@ -42,6 +48,9 @@ public class OfficeReferralService {
     private final EmailService emailService;
     private final CustomFilters customFilters;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
@@ -320,5 +329,36 @@ public class OfficeReferralService {
         } else {
             throw new ResourceNotFoundException("That referral does not exist");
         }
+    }
+
+    public List<TeacherDTO> getTeacherResponse(List<OfficeReferral> referralList) {
+        // Extract student emails from the given punishmentList
+        List<String> studentEmails = referralList.stream()
+                .map(OfficeReferral::getStudentEmail)
+                .collect(Collectors.toList());
+
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where("studentEmail").in(studentEmails)), // Match only the specified student emails
+                lookup("students", "studentEmail", "studentEmail", "studentInfo"), // Join with the students collection
+                unwind("studentInfo"),
+                project()
+                        .and("studentInfo.studentEmail").as("studentEmail")
+                        .and("studentInfo.firstName").as("studentFirstName")
+                        .and("studentInfo.lastName").as("studentLastName")
+                        .and("infractionName").as("infractionName")
+                        .and("timeCreated").as("timeCreated")
+                        .and("timeClosed").as("timeClosed")
+                        .and("referralDescription").as("infractionDescription")
+                        .and("classPeriod").as("classPeriod")
+                        .and("teacherEmail").as("teacherEmail")
+                        .and("status").as("status")
+                        .and("infractionLevel").as("infractionLevel")
+                        .andExclude("_id")
+        );
+
+        AggregationResults<TeacherDTO> results =
+                mongoTemplate.aggregate(aggregation, "OfficeReferrals", TeacherDTO.class);
+
+        return results.getMappedResults();
     }
 }

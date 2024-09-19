@@ -77,6 +77,9 @@ public class DTOService {
         //From this list created teacher response with student names included
         List<TeacherDTO> allSchoolPunishmentsWithDisplayInformation = punishmentService.getTeacherResponse(allSchoolPunishments);
 
+        //From this list created teacher response with student names included
+        List<TeacherDTO> allSchoolReferralsWithDisplayInformation = officeReferralService.getTeacherResponse(allSchoolReferrals);
+
         //Method filter punishments by teachers
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<TeacherDTO> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getTeacherEmail().equalsIgnoreCase(authentication.getName()) ).toList();
@@ -99,7 +102,7 @@ public class DTOService {
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts,allSchoolReferrals, teacher, school);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts,allSchoolReferralsWithDisplayInformation, teacher, school);
     }
 
     public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {
