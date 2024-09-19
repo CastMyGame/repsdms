@@ -14,7 +14,7 @@ public class TeacherOverviewDTO {
    private List<TeacherDTO> punishmentResponse;
    private List<TeacherDTO> writeUpResponse;
    private List<TeacherDTO> shoutOutsResponse;
-   private List<OfficeReferral> officeReferrals;
+   private List<TeacherDTO> officeReferrals;
    private Employee teacher;
    private School school;
 }
