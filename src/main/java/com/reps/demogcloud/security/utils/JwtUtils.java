@@ -50,6 +50,21 @@ public class JwtUtils {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
     }
 
+    public String renewTokenWithBlacklist(String oldToken) {
+        if (!isTokenExpired(oldToken) && !isTokenBlacklisted(oldToken)) {
+            String username = extractUserName(oldToken);
+            // Blacklist the old token to prevent reuse
+            blacklistToken(oldToken);
+
+            Map<String, Object> claims = new HashMap<>();
+            return createToken(claims, username);
+        } else {
+            throw new RuntimeException("Token is either expired or blacklisted");
+        }
+    }
+
+
+
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -76,4 +91,14 @@ public class JwtUtils {
 
         return isBlacklisted;
     }
+
+
+    public TokenStatus getTokenStatus(String token) {
+        Date expirationDate = extractExpiration(token);
+        long timeUntilExpiration = expirationDate.getTime() - new Date().getTime();
+        boolean isExpired = timeUntilExpiration <= 0;
+
+        return new TokenStatus(isExpired, isExpired ? 0 : timeUntilExpiration);
+    }
 }
+

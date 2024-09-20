@@ -11,8 +11,11 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
+import com.reps.demogcloud.security.utils.TokenStatus;
 import com.reps.demogcloud.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -149,6 +152,55 @@ public class AuthControllers {
         return ResponseEntity.ok(createdUsers);
     }
 
+    @GetMapping("/v1/token-status")
+    public ResponseEntity<?> getTokenStatus(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7); // Extract token after "Bearer "
+
+            try {
+                TokenStatus tokenStatus = jwtUtils.getTokenStatus(token);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("isExpired", tokenStatus.isExpired());
+                response.put("timeUntilExpiration", tokenStatus.getTimeUntilExpiration());
+
+                return ResponseEntity.ok(response);
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body("Invalid token or error parsing token");
+            }
+        } else {
+            return ResponseEntity.badRequest().body("Token not found in Authorization header");
+        }
+    }
+
+    @PostMapping("/v1/renew-token")
+    public ResponseEntity<Map<String, String>> renewToken(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7); // Extract token after "Bearer "
+
+            try {
+                String newToken = jwtUtils.renewTokenWithBlacklist(token);
+
+                Map<String, String> response = new HashMap<>();
+                response.put("newToken", newToken);
+
+                // Make sure to return JSON and set the content type explicitly if needed
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Token renewal failed"));
+            }
+        } else {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Token not found in Authorization header"));
+        }
+    }
+
+
+
+
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) throws MessagingException {
         String email = forgotPasswordRequest.getEmail();
@@ -207,4 +259,18 @@ public class AuthControllers {
         return ResponseEntity.ok(response);
     }
 
+}
+
+ class AuthenticationResponseRenewal {
+    private String message;
+    private String token;
+    private UserModel userModel;
+
+    public AuthenticationResponseRenewal(String message, String token, UserModel userModel) {
+        this.message = message;
+        this.token = token;
+        this.userModel = userModel;
+    }
+
+    // Getters and setters for message, token, and userModel...
 }
