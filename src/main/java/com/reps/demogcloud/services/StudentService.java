@@ -253,6 +253,7 @@ public class StudentService {
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
                     dto.setStudentLastName(student.getLastName());
+                    dto.setStudentEmail(studentEmail);
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);
@@ -269,7 +270,6 @@ public class StudentService {
 
     public List<PunishmentDTO> getIssList(String school){
         List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
-        System.out.println(punishments.size() + "Size of array");
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -285,6 +285,7 @@ public class StudentService {
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
                     dto.setStudentLastName(student.getLastName());
+                    dto.setStudentEmail(studentEmail);
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);
@@ -400,6 +401,37 @@ public class StudentService {
     public List<Student> findBySpotter(String spotterEmail) {
         List<Student> studentsSpotted = new ArrayList<>();
         return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
+    }
+
+    public Student addTimeToStudent(String studentEmail, int additionalHours, int additionalMinutes) {
+        // Fetch the student by ID
+        Student bankStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if (bankStudent != null) {
+            Student.TimeBank currentTimeBank = bankStudent.getTimeBank();
+
+            if (currentTimeBank == null) {
+                currentTimeBank = new Student.TimeBank(0, 0);
+            }
+
+            // Add the additional time to the current timeBank
+            int newMinutes = currentTimeBank.getMinutes() + additionalMinutes;
+            int newHours = currentTimeBank.getHours() + additionalHours;
+
+            // If newMinutes >= 60, convert excess minutes to hours
+            if (newMinutes >= 60) {
+                newHours += newMinutes / 60;
+                newMinutes = newMinutes % 60;
+            }
+
+            // Set the updated time bank back to the student
+            bankStudent.setTimeBank(new Student.TimeBank(newHours, newMinutes));
+
+            // Save the updated student object
+            return studentRepository.save(bankStudent);
+
+        } else {
+            throw new RuntimeException("Student not found");
+        }
     }
 
 }
