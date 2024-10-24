@@ -173,6 +173,19 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
+    // Endpoint to add time to a student's time bank
+    @PostMapping("/{studentEmail}/add-time")
+    public ResponseEntity<Student> addTimeToStudent(
+            @PathVariable String studentEmail,
+            @RequestParam int hours,
+            @RequestParam int minutes) {
+
+        // Call the service to add time to the student's timeBank
+        Student updatedStudent = studentService.addTimeToStudent(studentEmail, hours, minutes);
+
+        return ResponseEntity.ok(updatedStudent);
+    }
     //----------------------------PUT Controllers--------------------------------
     @PutMapping("/assignSchool")
     public ResponseEntity<List<Student>> massAssignSchool() {
