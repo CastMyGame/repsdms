@@ -269,6 +269,7 @@ public class StudentService {
 
 
     public List<PunishmentDTO> getIssList(String school){
+        
         List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();

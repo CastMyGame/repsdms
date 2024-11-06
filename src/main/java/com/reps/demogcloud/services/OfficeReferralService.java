@@ -124,7 +124,7 @@ public class OfficeReferralService {
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
                 contextToStore + " \n" +
-                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment. You can also call the school directly at (843) 579-4815.";
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
 
         String subject = "Level Three Answers not accepted for " + studentReject.getFirstName() + " " + studentReject.getLastName();
 
