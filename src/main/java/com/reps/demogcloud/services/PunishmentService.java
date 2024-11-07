@@ -177,8 +177,13 @@ public class PunishmentService {
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
-    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException {
-//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+    public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException, IOException, InterruptedException, IllegalArgumentException {
+// Ensure the description is provided
+        if (formRequest.getInfractionDescription() == null || formRequest.getInfractionDescription().isEmpty()) {
+            throw new IllegalArgumentException("Infraction description is required.");
+        }
+
+        //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 
