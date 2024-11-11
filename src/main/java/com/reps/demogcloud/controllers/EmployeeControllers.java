@@ -1,5 +1,6 @@
 package com.reps.demogcloud.controllers;
 
+import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
@@ -120,6 +121,14 @@ public class EmployeeControllers {
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
+    @PutMapping("/updateClass/{teacherEmail}")
+    public ResponseEntity<Employee> updateClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+        Employee updated = employeeService.addOrUpdateClassToEmployee(teacherEmail, request);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+
     //----------------------------DELETE Controllers----------------------------------
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
@@ -132,5 +141,13 @@ public class EmployeeControllers {
             // If an exception occurred, handle it and return a 404 Not Found response
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Employee with ID " + id + " not found.");
         }
+    }
+
+    @DeleteMapping("/deleteClass/{teacherEmail}")
+    public ResponseEntity<Employee> deleteClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+        Employee updated = employeeService.removeClassFromEmployee(teacherEmail, request);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 }

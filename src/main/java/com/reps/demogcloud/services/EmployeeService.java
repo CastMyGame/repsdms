@@ -5,6 +5,7 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
@@ -23,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -148,6 +150,10 @@ public class EmployeeService {
                         return userRoles != null && userRoles.stream()
                                 .anyMatch(roleModel -> roleModel.getRole().equals(role));
                     }).sorted(Comparator.comparing(Employee::getLastName)).collect(Collectors.toList());
+
+            // Update weekly punishments for each employee
+            employeesWithRole.forEach(this::updateWeeklyPunishments);
+
             return Optional.of(employeesWithRole);
         } else {
             return Optional.empty();
@@ -213,6 +219,85 @@ public class EmployeeService {
 
         }
         return employee;
+    }
+
+    public Employee addOrUpdateClassToEmployee(String teacherEmail, ClassRequest newClass) throws NullPointerException{
+        // Fetch the employee by ID
+        Employee teacher = employeeRepository.findByEmailIgnoreCase(teacherEmail);
+
+        if (teacher != null) {
+            // Initialize the classes list if it's null
+            if (teacher.getClasses() == null) {
+                teacher.setClasses(new ArrayList<>());
+            }
+
+            // Check if the class already exists based on class name
+            Optional<Employee.ClassRoster> existingClassOpt = teacher.getClasses().stream()
+                    .filter(classRoster -> classRoster.getClassName().equalsIgnoreCase(newClass.getClassToUpdate().getClassName()))
+                    .findFirst();
+
+            if (existingClassOpt.isPresent()) {
+                // Update existing class details
+                Employee.ClassRoster existingClass = existingClassOpt.get();
+                existingClass.setClassRoster(newClass.getClassToUpdate().getClassRoster());
+                existingClass.setPunishmentsThisWeek(newClass.getClassToUpdate().getPunishmentsThisWeek());
+            } else {
+                // Add new class to the list
+                teacher.getClasses().add(newClass.getClassToUpdate());
+            }
+
+            // Save the updated employee back to the database
+            return employeeRepository.save(teacher);
+        } else {
+            // Throw a custom exception if the employee does not exist
+            throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found");
+        }
+    }
+
+    public Employee removeClassFromEmployee(String teacherEmail, ClassRequest classToDelete) throws ResourceNotFoundException {
+        // Fetch the employee by email
+        Employee teacher = employeeRepository.findByEmailIgnoreCase(teacherEmail);
+
+        if (teacher != null) {
+            // Check if the classes list is initialized and contains the specified class
+            if (teacher.getClasses() != null) {
+                boolean classRemoved = teacher.getClasses().removeIf(classRoster ->
+                        classRoster.getClassName().equalsIgnoreCase(classRoster.getClassName())
+                );
+
+                if (classRemoved) {
+                    // Save the updated employee object back to the database if the class was removed
+                    return employeeRepository.save(teacher);
+                } else {
+                    throw new ResourceNotFoundException("Class with name " + classToDelete.getClassToUpdate().getClassName() + " not found for teacher " + teacherEmail);
+                }
+            } else {
+                throw new ResourceNotFoundException("Teacher " + teacherEmail + " has no classes to remove.");
+            }
+        } else {
+            throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found.");
+        }
+    }
+
+    // Method to update weekly punishment counts for each class in the employee
+    private void updateWeeklyPunishments(Employee employee) {
+        LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
+
+        for (Employee.ClassRoster schoolClass : employee.getClasses()) {
+            int weeklyPunishmentCount = 0;
+
+            for (Student student : schoolClass.getClassRoster()) {
+                if (student.getNotesArray() != null) {
+                    // Count punishments (or events) from the past week
+                    weeklyPunishmentCount += student.getNotesArray().stream()
+                            .filter(event -> event.getDate().isAfter(oneWeekAgo))
+                            .count();
+                }
+            }
+
+            // Set the calculated count
+            schoolClass.setPunishmentsThisWeek(weeklyPunishmentCount);
+        }
     }
 }
 

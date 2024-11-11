@@ -1,5 +1,6 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -11,10 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -28,6 +28,8 @@ public class DTOService {
     private final OfficeReferralService officeReferralService;
 
     private final SchoolService schoolService;
+
+    private final EmployeeRepository employeeRepository;
 
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
@@ -102,6 +104,9 @@ public class DTOService {
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
+        // Update weekly punishment counts for each class in the teacher's roster
+        updateWeeklyPunishmentsForTeacherClasses(teacher, punishmentsFilteredByTeacher);
+
         return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts,allSchoolReferralsWithDisplayInformation, teacher, school);
     }
 
@@ -144,5 +149,22 @@ public List<PunishmentDTO> getDTOPunishments() throws Exception {
 
 }
 
+    private void updateWeeklyPunishmentsForTeacherClasses(Employee teacher, List<TeacherDTO> punishmentsFilteredByTeacher) {
+        LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
 
+        // Count punishments within the last week, grouped by class period
+        Map<String, Long> weeklyPunishmentCountsByClass = punishmentsFilteredByTeacher.stream()
+                .filter(dto -> dto.getTimeCreated() != null && dto.getTimeCreated().isAfter(oneWeekAgo))
+                .collect(Collectors.groupingBy(TeacherDTO::getClassPeriod, Collectors.counting()));
+
+        // Update each class in the teacher's roster with the weekly punishment count
+        for (Employee.ClassRoster classRoster : teacher.getClasses()) {
+            String classPeriod = classRoster.getClassName();
+            int writeupCount = weeklyPunishmentCountsByClass.getOrDefault(classPeriod, 0L).intValue();
+            classRoster.setPunishmentsThisWeek(writeupCount);
+        }
+
+        // Save the updated teacher object back to the repository if needed
+        employeeRepository.save(teacher);
+    }
 }
