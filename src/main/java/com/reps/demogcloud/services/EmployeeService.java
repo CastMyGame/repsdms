@@ -282,19 +282,16 @@ public class EmployeeService {
     // Method to update weekly punishment counts for each class in the employee
     private void updateWeeklyPunishments(Employee employee) {
         LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
-
         for (Employee.ClassRoster schoolClass : employee.getClasses()) {
             int weeklyPunishmentCount = 0;
-
             for (Student student : schoolClass.getClassRoster()) {
                 if (student.getNotesArray() != null) {
                     // Count punishments (or events) from the past week
-                    weeklyPunishmentCount += student.getNotesArray().stream()
+                    weeklyPunishmentCount += (int) student.getNotesArray().stream()
                             .filter(event -> event.getDate().isAfter(oneWeekAgo))
                             .count();
                 }
             }
-
             // Set the calculated count
             schoolClass.setPunishmentsThisWeek(weeklyPunishmentCount);
         }

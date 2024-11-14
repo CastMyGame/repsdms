@@ -1,6 +1,7 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -31,11 +32,17 @@ public class DTOService {
 
     private final EmployeeRepository employeeRepository;
 
+    private final StudentRepository studentRepository;
+
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments as well as the call to get referrals
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
+
+        System.out.println(allSchoolPunishments + " All School Punishments ");
+
+
         List<OfficeReferral> allSchoolReferrals = officeReferralService.findAllSchool();
 
         //From this list created teacher response with student names included
@@ -74,6 +81,8 @@ public class DTOService {
         //Reduce Time by Making Fewer Calls Add Filter Methods
         // -> this is global call to get all school related punishments
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
+
+        System.out.println(allSchoolPunishments + " All School Punishments ");
         List<OfficeReferral> allSchoolReferrals = officeReferralService.findAllSchool();
 
         //From this list created teacher response with student names included
@@ -84,10 +93,6 @@ public class DTOService {
 
         //Method filter punishments by teachers
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        List<TeacherDTO> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getTeacherEmail().equalsIgnoreCase(authentication.getName()) ).toList();
-
-        //Get Write Up List only - excludes Shout-Outs, BxConcerns,
-        List<TeacherDTO> punishmentsFilteredByTeacherAndReferralsOnly = punishmentsFilteredByTeacher.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern")).toList();
 
         //Get Shout-Outs Only, School Wide
         List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
@@ -104,10 +109,38 @@ public class DTOService {
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
+        // Step 1: Collect all student emails from the teacher's class rosters
+        List<String> classRosterStudentEmails = teacher.getClasses().stream()
+                .flatMap(classRoster -> classRoster.getClassRoster().stream())
+                .map(Student::getStudentEmail) // Assuming Student has a getEmail() method
+                .toList();
+
+// Step 2: Filter punishments by the teacher and the class roster student emails
+        List<TeacherDTO> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream()
+                .filter(punishment -> punishment.getTeacherEmail().equalsIgnoreCase(authentication.getName()) &&
+                        classRosterStudentEmails.contains(punishment.getStudentEmail()))
+                .collect(Collectors.toList());
+
+        // Separate write-ups, shout-outs, and behavioral concerns
+        List<TeacherDTO> writeUpResponse = punishmentsFilteredByTeacher.stream()
+                .filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") &&
+                        !punishment.getInfractionName().equalsIgnoreCase("Behavioral Concern"))
+                .collect(Collectors.toList());
+
+        List<TeacherDTO> shoutOutsResponse = punishmentsFilteredByTeacher.stream()
+                .filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!"))
+                .sorted(Comparator.comparing(TeacherDTO::getTimeCreated).reversed())
+                .collect(Collectors.toList());
+
+        // Step 3: Filter office referrals to only include students in the teacher's class roster
+        List<TeacherDTO> filteredSchoolReferrals = allSchoolReferralsWithDisplayInformation.stream()
+                .filter(referral -> classRosterStudentEmails.contains(referral.getStudentEmail()))
+                .collect(Collectors.toList());
+
         // Update weekly punishment counts for each class in the teacher's roster
         updateWeeklyPunishmentsForTeacherClasses(teacher, punishmentsFilteredByTeacher);
 
-        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, punishmentsFilteredByTeacherAndReferralsOnly, punishmentFilteredByShoutOuts,allSchoolReferralsWithDisplayInformation, teacher, school);
+        return new TeacherOverviewDTO( punishmentsFilteredByTeacher, writeUpResponse, shoutOutsResponse,filteredSchoolReferrals, teacher, school);
     }
 
     public StudentOverviewDTO getLoggedInStudentOverData() throws Exception {

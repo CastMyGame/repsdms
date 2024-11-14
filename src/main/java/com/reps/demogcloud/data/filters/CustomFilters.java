@@ -4,6 +4,7 @@ import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -130,6 +131,7 @@ public class CustomFilters {
     //Filter for Employee Endpoints
     public List<Employee> FetchEmployeeDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Employee> archivedRecords = employeeRepository.findByIsArchivedAndSchool(bool,getSchoolName());
+        System.out.println(archivedRecords + "   Archived Records ");
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -146,19 +148,34 @@ public class CustomFilters {
     }
 
     private String fetchSchoolName(Authentication authentication, UserModel userModel) {
+        System.out.println(authentication + "  Authentication");
+        System.out.println(authentication.getPrincipal() + "  Authentication Principal");
+        System.out.println(userModel + "  User Model");
+        System.out.println(userModel.getRoles() + "  User Roles");
         if (authentication != null && authentication.getPrincipal() != null) {
 
             if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
                 Student student = studentRepository.findByStudentEmailIgnoreCase(userModel.getUsername());
+                System.out.println(student + "  Student Model");
+                if (student == null) {
+                    // Handle case when student is not found, e.g., throw an exception or return a default value
+                    throw new EntityNotFoundException("Student with email " + userModel.getUsername() + " not found.");
+                }
                 return student.getSchool();
 
             } else {
                 Employee employee = employeeRepository.findByEmailIgnoreCase(userModel.getUsername());
+                System.out.println("Employee found: " + (employee != null ? employee.toString() : "No employee found"));
+                if (employee == null) {
+                    throw new EntityNotFoundException("Employee with email " + userModel.getUsername() + " not found.");
+                }
+                System.out.println(employee.getSchool() + "  GetSchool Model");
                 return employee.getSchool();
 
             }
         }
-        return null;
+        // Return a default value or throw an exception if authentication is null
+        throw new IllegalArgumentException("Authentication or principal is missing.");
     }
 
 
