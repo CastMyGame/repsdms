@@ -150,6 +150,7 @@ public class PunishmentService {
 
     // Methods that Need Global Filters Due for schools
     public List<Punishment> findAllSchool() {
+        System.out.println(customFilters.FetchPunishmentDataByIsArchivedAndSchool(false) + " Find All SCHOOL ");
         return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
 
 
