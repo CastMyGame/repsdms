@@ -40,7 +40,7 @@ public class Employee {
     public static class ClassRoster {
         private String className;
         private String classPeriod;
-        private List<Student> classRoster;
+        private List<String> classRoster;
         private int punishmentsThisWeek;
     }
 

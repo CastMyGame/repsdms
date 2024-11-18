@@ -151,9 +151,6 @@ public class EmployeeService {
                                 .anyMatch(roleModel -> roleModel.getRole().equals(role));
                     }).sorted(Comparator.comparing(Employee::getLastName)).collect(Collectors.toList());
 
-            // Update weekly punishments for each employee
-            employeesWithRole.forEach(this::updateWeeklyPunishments);
-
             return Optional.of(employeesWithRole);
         } else {
             return Optional.empty();
@@ -276,24 +273,6 @@ public class EmployeeService {
             }
         } else {
             throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found.");
-        }
-    }
-
-    // Method to update weekly punishment counts for each class in the employee
-    private void updateWeeklyPunishments(Employee employee) {
-        LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
-        for (Employee.ClassRoster schoolClass : employee.getClasses()) {
-            int weeklyPunishmentCount = 0;
-            for (Student student : schoolClass.getClassRoster()) {
-                if (student.getNotesArray() != null) {
-                    // Count punishments (or events) from the past week
-                    weeklyPunishmentCount += (int) student.getNotesArray().stream()
-                            .filter(event -> event.getDate().isAfter(oneWeekAgo))
-                            .count();
-                }
-            }
-            // Set the calculated count
-            schoolClass.setPunishmentsThisWeek(weeklyPunishmentCount);
         }
     }
 }

@@ -102,6 +102,22 @@ public class StudentService {
         return findMe;
     }
 
+    public List<Student> findByStudentEmailList(List<String> email) throws Exception {
+
+        List<Student> studentList = new ArrayList<>();
+
+        for (String emailAddress : email) {
+            var findMe = studentRepository.findByStudentEmailIgnoreCase(emailAddress);
+
+            if (findMe == null) {
+                System.out.println(email);
+                throw new Exception("No student with that email exists");
+            }
+            studentList.add(findMe);
+        }
+        return studentList;
+    }
+
     public Student findByLoggedInStudent() throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
