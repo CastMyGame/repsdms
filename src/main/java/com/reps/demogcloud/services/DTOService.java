@@ -112,7 +112,6 @@ public class DTOService {
         // Step 1: Collect all student emails from the teacher's class rosters
         List<String> classRosterStudentEmails = teacher.getClasses().stream()
                 .flatMap(classRoster -> classRoster.getClassRoster().stream())
-                .map(Student::getStudentEmail) // Assuming Student has a getEmail() method
                 .toList();
 
 // Step 2: Filter punishments by the teacher and the class roster student emails

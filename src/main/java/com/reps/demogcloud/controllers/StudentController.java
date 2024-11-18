@@ -81,7 +81,7 @@ public class StudentController {
     }
 
     @GetMapping("/email/{email}")
-    public ResponseEntity<Student> getStudentByEmail (@PathVariable  String email) throws Exception {
+    public ResponseEntity<Student> getStudentByEmail (@PathVariable String email) throws Exception {
         var message = studentService.findByStudentEmail(email);
 
         return ResponseEntity
@@ -172,6 +172,15 @@ public class StudentController {
         return ResponseEntity
                 .accepted()
                 .body(response);
+    }
+
+    @PostMapping("/getByEmailList")
+    public ResponseEntity<List<Student>> getStudentByEmail (@RequestBody List<String> email) throws Exception {
+        var message = studentService.findByStudentEmailList(email);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
     }
 
     // Endpoint to add time to a student's time bank
