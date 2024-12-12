@@ -207,6 +207,7 @@ public class PunishmentService {
                 && !formRequest.getInfractionName().equals("Failure to Complete Work")
                 && !formRequest.getInfractionName().equals("Teacher Guidance Referral")
                 && !formRequest.getInfractionName().equals("Student Guidance Referral")
+                && !formRequest.getInfractionName().equals("Academic Concern")
                 && !formRequest.isAdminReferral()) {
             infraction = infractionRepository.findByInfractionNameAndInfractionLevel(formRequest.getInfractionName(), level);
         } else {
@@ -310,6 +311,21 @@ public class PunishmentService {
         }
         if (infraction.getInfractionName().equals("Behavioral Concern")) {
             punishment.setStatus("BC");
+            punishment.setTimeClosed(now);
+            Punishment punishmentRecord = punishRepository.save(punishment);
+            System.out.println(punishmentRecord);
+
+            if (!formRequest.getGuidanceDescription().isEmpty()) {
+                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+            }
+
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            return sendEmailBasedOnType(formRequest, punishment, punishRepository, studentRepository, infractionRepository, emailService, officeReferralService, schoolRepository);
+        }
+        if (infraction.getInfractionName().equals("Academic Concern")) {
+            punishment.setStatus("AC");
             punishment.setTimeClosed(now);
             Punishment punishmentRecord = punishRepository.save(punishment);
             System.out.println(punishmentRecord);
@@ -589,7 +605,7 @@ public class PunishmentService {
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.");
-            punishmentResponse.setSubject("Burke High School assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
+            punishmentResponse.setSubject( studentClose.getSchool() + " High School assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
             punishmentResponse.setParentToEmail(studentClose.getParentEmail());
             punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
             punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
@@ -673,7 +689,7 @@ public class PunishmentService {
     public List<Punishment> getAllPunishmentsForStudents(String studentEmail) {
             List<String> messages = new ArrayList<>();
             Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-            String subject = "Burke High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
+            String subject = student.getSchool() + " High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
             String intro = "Punishment report for: " + student.getFirstName() + " " + student.getLastName();
             List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCase(studentEmail);
         var studentPunishments = fetchPunishmentData.stream()
@@ -1023,8 +1039,8 @@ public class PunishmentService {
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + "\n" +
-                    " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + student.getFirstName() + " " + student.getLastName() +
+                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + ". \n" +
+                    " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way" + student.getSchool() + " can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
             //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
@@ -1232,7 +1248,7 @@ public class PunishmentService {
                 ". They were assigned a restorative assignment which has now been removed and the referral will be removed from their record. Thank you for your patience. \n" +
                 "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.";
 
-        String subject = "Burke High School Punishment Deleted for " + student.getFirstName() + " " + student.getLastName();
+        String subject = student.getSchool() + " High School Punishment Deleted for " + student.getFirstName() + " " + student.getLastName();
         emailService.sendPtsEmail(student.getParentEmail(),
                 existingRecord.getTeacherEmail(),
                 student.getStudentEmail(),
@@ -1260,7 +1276,7 @@ public class PunishmentService {
                 " unintentionally deleted. This referral has now been restored and as a result " + student.getFirstName() + " " + student.getLastName() + " will need to complete the restorative assignment that accompanies the referral at repsdiscipline.vercel.app/student-login . \n" +
                 "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.";
 
-        String subject = "Burke High School Punishment Restored for " + student.getFirstName() + " " + student.getLastName();
+        String subject = student.getSchool() + " High School Punishment Restored for " + student.getFirstName() + " " + student.getLastName();
         emailService.sendPtsEmail(student.getParentEmail(),
                 existingRecord.getTeacherEmail(),
                 student.getStudentEmail(),
@@ -1305,7 +1321,7 @@ public class PunishmentService {
                 punishment.setArchived(true);
                 punishment.setArchivedBy("repsdiscipline@gmail.com");
                 punishment.setArchivedOn(LocalDate.now());
-                punishment.setArchivedExplanation("Burke Tardy Sweep 5/10");
+                punishment.setArchivedExplanation(" Tardy Sweep 5/10");
                 punishRepository.save(punishment);
                 saved.add(punishment);
             }
@@ -1756,7 +1772,7 @@ public class PunishmentService {
 
         String finalMessage = resourceMessage.toString();
 
-        String subject = "Burke High School Guidance's Resources";
+        String subject =  student.getSchool() + " High School Guidance's Resources";
         ArrayList<String> ccList = new ArrayList<>();
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());
