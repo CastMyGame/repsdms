@@ -143,7 +143,7 @@ public class EmployeeControllers {
         }
     }
 
-    @DeleteMapping("/deleteClass/{teacherEmail}")
+    @PostMapping("/deleteClass/{teacherEmail}")
     public ResponseEntity<Employee> deleteClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
         Employee updated = employeeService.removeClassFromEmployee(teacherEmail, request);
         return updated == null
