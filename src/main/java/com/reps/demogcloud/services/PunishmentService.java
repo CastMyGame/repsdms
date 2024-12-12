@@ -1039,7 +1039,7 @@ public class PunishmentService {
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + concern + ". \n" +
+                    ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + concern + ". \n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way" + student.getSchool() + " can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -1060,7 +1060,7 @@ public class PunishmentService {
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " We are reaching out because we have concerns about " + student.getFirstName() + " " + student.getLastName() +
-                    "’s progress in their " + punishment.getClassPeriod() + " class. " + concern + "\n" +
+                    "’s progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + concern + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way we can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -1791,6 +1791,12 @@ public class PunishmentService {
          listOfGuidance.add(guidance);
          response.setGuidance(listOfGuidance);
          return response;
+    }
+
+    private static String adjustString(String input) {
+        // Use regex to match the part before the number and the number itself
+        String regex = "(.*?)(\\d+)$";
+        return input.replaceAll(regex, "$1 $2").trim();
     }
 
 

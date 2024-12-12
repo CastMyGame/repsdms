@@ -218,7 +218,7 @@ public class EmployeeService {
         return employee;
     }
 
-    public Employee addOrUpdateClassToEmployee(String teacherEmail, ClassRequest newClass) throws NullPointerException{
+    public Employee addOrUpdateClassToEmployee(String teacherEmail, ClassRequest newClass) throws NullPointerException {
         // Fetch the employee by ID
         Employee teacher = employeeRepository.findByEmailIgnoreCase(teacherEmail);
 
@@ -227,7 +227,6 @@ public class EmployeeService {
             if (teacher.getClasses() == null) {
                 teacher.setClasses(new ArrayList<>());
             }
-
             // Check if the class already exists based on class name
             Optional<Employee.ClassRoster> existingClassOpt = teacher.getClasses().stream()
                     .filter(classRoster -> classRoster.getClassName().equalsIgnoreCase(newClass.getClassToUpdate().getClassName()))
@@ -259,7 +258,7 @@ public class EmployeeService {
             // Check if the classes list is initialized and contains the specified class
             if (teacher.getClasses() != null) {
                 boolean classRemoved = teacher.getClasses().removeIf(classRoster ->
-                        classRoster.getClassName().equalsIgnoreCase(classRoster.getClassName())
+                        classRoster.getClassName().equalsIgnoreCase(classToDelete.getClassToUpdate().getClassName())
                 );
 
                 if (classRemoved) {
