@@ -63,7 +63,7 @@ public class EmailService {
         helper.setTo(parentEmail);
         helper.addCc(teacherEmail);
         helper.addCc(studentEmail);
-        if(findMe.getSpotters() != null) {
+        if(findMe != null && findMe.getSpotters() != null) {
         for (String email: findMe.getSpotters()) {
             helper.addBcc(email);
         }}
