@@ -110,7 +110,7 @@ public class DTOService {
         School school = employeeService.getEmployeeSchool();
 
         // Step 1: Collect all student emails from the teacher's class rosters
-        List<String> classRosterStudentEmails = teacher.getClasses().stream()
+        List<String> classRosterStudentEmails = teacher.getClasses() == null ? List.of() :teacher.getClasses().stream()
                 .flatMap(classRoster -> classRoster.getClassRoster().stream())
                 .toList();
 
@@ -190,11 +190,12 @@ public List<PunishmentDTO> getDTOPunishments() throws Exception {
                 .collect(Collectors.groupingBy(TeacherDTO::getClassPeriod, Collectors.counting()));
 
         // Update each class in the teacher's roster with the weekly punishment count
-        for (Employee.ClassRoster classRoster : teacher.getClasses()) {
-            String classPeriod = classRoster.getClassName();
-            int writeupCount = weeklyPunishmentCountsByClass.getOrDefault(classPeriod, 0L).intValue();
-            classRoster.setPunishmentsThisWeek(writeupCount);
-        }
+        Optional.ofNullable(teacher.getClasses()).orElse(Collections.emptyList())
+                .forEach(classRoster -> {
+                    String classPeriod = classRoster.getClassName();
+                    int writeupCount = weeklyPunishmentCountsByClass.getOrDefault(classPeriod, 0L).intValue();
+                    classRoster.setPunishmentsThisWeek(writeupCount);
+                });
 
         // Save the updated teacher object back to the repository if needed
         employeeRepository.save(teacher);
