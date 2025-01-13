@@ -1,6 +1,9 @@
 package com.reps.demogcloud.services;
 
+import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.models.email.ClassAnnouncementRequest;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
@@ -15,30 +18,34 @@ import org.springframework.stereotype.Service;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    JavaMailSender javaMailSender;
     private final StudentRepository studentRepository;
+    private final EmployeeRepository employeeRepository;
+    JavaMailSender javaMailSender;
 
     @Autowired
-    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository) {
+    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository, EmployeeRepository employeeRepository) {
         this.javaMailSender = javaMailSender;
         this.studentRepository = studentRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @Async
-    public void sendEmail (String toEmail, String subject, String msg) throws MessagingException {
+    public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
 
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
         MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message,true);
+        helper = new MimeMessageHelper(message, true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(toEmail);
-        helper.setText(msg,true);
+        helper.setText(msg, true);
 
 //        SimpleMailMessage mailMessage = new SimpleMailMessage();
 //        mailMessage.setTo(toEmail);
@@ -47,27 +54,29 @@ public class EmailService {
 //        mailMessage.setFrom("REPS.DMS@gmail.com");
         javaMailSender.send(message);
     }
+
     @Async
-    public void sendPtsEmail (String parentEmail,
-                              String teacherEmail,
-                              String studentEmail,
-                              String subject,
-                              String msg) throws MessagingException {
+    public void sendPtsEmail(String parentEmail,
+                             String teacherEmail,
+                             String studentEmail,
+                             String subject,
+                             String msg) throws MessagingException {
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
 
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
         MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message,true);
+        helper = new MimeMessageHelper(message, true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(parentEmail);
         helper.addCc(teacherEmail);
         helper.addCc(studentEmail);
-        if(findMe != null && findMe.getSpotters() != null) {
-        for (String email: findMe.getSpotters()) {
-            helper.addBcc(email);
-        }}
-        helper.setText(msg,true);
+        if (findMe != null && findMe.getSpotters() != null) {
+            for (String email : findMe.getSpotters()) {
+                helper.addBcc(email);
+            }
+        }
+        helper.setText(msg, true);
 
 
 //        mailMessage.setTo(parentEmail);
@@ -91,11 +100,11 @@ public class EmailService {
 
     public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
         System.out.println("Sending Email Alert");
-        if(detention.equals("DETENTION")) {
+        if (detention.equals("DETENTION")) {
 
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
-                " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
+                    " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
                     " they will receive lunch detention and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
                     " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
 
@@ -108,14 +117,14 @@ public class EmailService {
 
             helper.addCc(punishment.getTeacherEmail());
             helper.addCc(findMe.getStudentEmail());
-            for(String email: findMe.getSpotters()) {
+            for (String email : findMe.getSpotters()) {
                 helper.addBcc(email);
             }
             helper.setText(msg, true);
             javaMailSender.send(message);
 
 
-        } else if(detention.equals("ISS")) {
+        } else if (detention.equals("ISS")) {
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String msg = "Hello, This message is to inform you that " + findMe.getFirstName() + " " + findMe.getLastName() +
                     " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow" +
@@ -130,7 +139,7 @@ public class EmailService {
             helper.setTo(findMe.getParentEmail());
             helper.addCc(punishment.getTeacherEmail());
             helper.addCc(findMe.getStudentEmail());
-            for(String email: findMe.getSpotters()) {
+            for (String email : findMe.getSpotters()) {
                 helper.addBcc(email);
             }
             helper.setText(msg, true);
@@ -140,22 +149,47 @@ public class EmailService {
     }
 
     @Async
-    public void sendEmailGeneric (ArrayList<String> ccEmails,
-                                  String recipientEmail,
-                                  String subject,
-                                  String msg) throws MessagingException {
+    public void sendEmailGeneric(ArrayList<String> ccEmails,
+                                 String recipientEmail,
+                                 String subject,
+                                 String msg) throws MessagingException {
 
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
         MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message,true);
+        helper = new MimeMessageHelper(message, true);
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(recipientEmail);
-        for(String email:ccEmails) {
+        for (String email : ccEmails) {
             helper.addBcc(email);
         }
-        helper.setText(msg,true);
+        helper.setText(msg, true);
 
         javaMailSender.send(message);
+    }
+
+    @Async
+    public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
+
+        Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
+        List<Employee.ClassRoster> roster = teacher.getClasses();
+
+        Optional<Employee.ClassRoster> announceClass = roster.stream().filter(name -> name.getClassName().equals(request.getClassName())).findFirst();
+
+        MimeMessage classAnnouncement = javaMailSender.createMimeMessage();
+
+        classAnnouncement.setSubject(request.getSubject());
+        MimeMessageHelper helper;
+        helper = new MimeMessageHelper(classAnnouncement, true);
+        helper.setFrom(request.getTeacherEmail());
+        if(announceClass.isPresent()) {
+            for (String email : announceClass.get().getClassRoster()) {
+                helper.addCc(email);
+            }
+        }
+        helper.setText(request.getMsg(), true);
+
+        javaMailSender.send(classAnnouncement);
+
     }
 }
