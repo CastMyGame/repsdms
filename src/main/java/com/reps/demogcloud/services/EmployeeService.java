@@ -274,6 +274,27 @@ public class EmployeeService {
             throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found.");
         }
     }
+
+    public List<Employee> updateAllEmployees() {
+        List<Employee> employees = employeeRepository.findAll();
+        List<Employee> updatedEmployees = new ArrayList<>();
+        for(Employee teacher : employees) {
+            if (teacher.getClasses().isEmpty()) {
+                Employee.ClassRoster roster = new Employee.ClassRoster();
+                List<String> classRoster = new ArrayList<>();
+                roster.setClassName("");
+                roster.setClassPeriod("");
+                roster.setPunishmentsThisWeek(0);
+                roster.setClassRoster(classRoster);
+                List<Employee.ClassRoster> emptyRoster = new ArrayList<>();
+                emptyRoster.add(roster);
+                teacher.setClasses(emptyRoster);
+                employeeRepository.save(teacher);
+                updatedEmployees.add(teacher);
+            }
+        }
+        return updatedEmployees;
+    }
 }
 
 

@@ -129,6 +129,14 @@ public class EmployeeControllers {
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
+    @PutMapping("/updateAll")
+    public ResponseEntity<List<Employee>> updateAllEmployees () {
+        List<Employee> updated = employeeService.updateAllEmployees();
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+
     //----------------------------DELETE Controllers----------------------------------
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
