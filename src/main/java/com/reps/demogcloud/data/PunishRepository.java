@@ -20,6 +20,7 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     List<Punishment> findByStudentEmail (String studentEmail);
     List<Punishment> findByInfractionId (String infractionid);
     List<Punishment> findByStatus (String status);
+    List<Punishment> findAllBySchoolNameAndIsArchived (String schoolName, Boolean archived);
     List<Punishment> findByIsArchived (boolean bool);
     List<Punishment> findByStudentEmailIgnoreCase (String email);
     List<Punishment> getAllPunishmentByStudentEmail(String studentEmail);
@@ -32,4 +33,10 @@ public interface PunishRepository extends MongoRepository<Punishment, String> {
     List<Punishment> findByInfractionIdAndIsArchivedAndSchoolName(String infractionId, boolean bool, String schoolName);
 
     List<Punishment> findByStudentEmailIgnoreCaseAndInfractionIdAndIsArchived(String studentEmail, String infractionName, boolean b);
+
+    List<Punishment> findByInfractionNameAndStatus(String infractionName, String status);
+
+//    List<Punishment> findByFollowUpDateAndGuidanceStatus(LocalDate today, String dormant);
+
+    List<Punishment> findByIsArchivedAndStatus (boolean isArchived, String status);
 }

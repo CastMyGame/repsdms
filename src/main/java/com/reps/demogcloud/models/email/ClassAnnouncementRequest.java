@@ -1,4 +1,4 @@
-package com.reps.demogcloud.models.employee;
+package com.reps.demogcloud.models.email;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,8 +9,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class PointsTransferRequest {
+public class ClassAnnouncementRequest {
     private String teacherEmail;
-    private String studentEmail;
-    private Integer currencyTransferred;
+    private String className;
+    private String subject;
+    private String msg;
 }

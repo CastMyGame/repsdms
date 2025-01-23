@@ -1,6 +1,5 @@
 package com.reps.demogcloud.models.punishment;
-import com.reps.demogcloud.models.infraction.Infraction;
-import com.reps.demogcloud.models.student.Student;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -17,7 +16,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Document(collection = "Punishments")
-public class Punishment {
+public class Punishment implements Comparable<Punishment>{
 
     @Id
     private String punishmentId;
@@ -34,14 +33,19 @@ public class Punishment {
     private LocalDate timeClosed;
     private String classPeriod;
     private String teacherEmail;
-    //Set initial value to true
+    //Set initial value to false
     private boolean isArchived = false;
+    // Set initial value to false until saved in review360 or other state discipline system
+    private boolean isStateFiled = false;
+    private String stateIncidentNumber;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;
     private int mapIndex = 0;
     private Map<Date,List<String>> answerHistory;
     private ArrayList<String> infractionDescription;
+
+
 
     public void setAnswerHistory(Date date, List<String> context) {
         if (answerHistory == null) {
@@ -50,4 +54,12 @@ public class Punishment {
 
         answerHistory.put(date, context);
     }
+
+
+
+    public int compareTo(Punishment o) {
+        return getTimeCreated().compareTo(o.getTimeCreated());
+    }
 }
+
+

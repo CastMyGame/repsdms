@@ -5,17 +5,22 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Array;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
@@ -90,10 +95,27 @@ public class StudentService {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
+            System.out.println(email);
             throw new Exception("No student with that email exists");
         }
 
         return findMe;
+    }
+
+    public List<Student> findByStudentEmailList(List<String> email) throws Exception {
+
+        List<Student> studentList = new ArrayList<>();
+
+        for (String emailAddress : email) {
+            var findMe = studentRepository.findByStudentEmailIgnoreCase(emailAddress);
+
+            if (findMe == null) {
+                System.out.println(email);
+                throw new Exception("No student with that email exists");
+            }
+            studentList.add(findMe);
+        }
+        return studentList;
     }
 
     public Student findByLoggedInStudent() throws Exception {
@@ -226,8 +248,12 @@ public class StudentService {
         return assignedStudents;
     }
 
+    public List<Student> findBySchool(String school) {
+        return studentRepository.findBySchool(school);
+    }
+
     public List<PunishmentDTO> getDetentionList(String school){
-        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
+        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -238,11 +264,12 @@ public class StudentService {
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 1 && days < 3) {
+                if (days == 1) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
                     dto.setStudentLastName(student.getLastName());
+                    dto.setStudentEmail(studentEmail);
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);
@@ -258,7 +285,8 @@ public class StudentService {
 
 
     public List<PunishmentDTO> getIssList(String school){
-        List<Punishment> punishments = punishRepository.findAllBySchoolName(school);
+        
+        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for(Punishment punishment : punishments) {
@@ -269,11 +297,12 @@ public class StudentService {
 
                 int days = getWorkDaysBetweenTwoDates(punishmentTime, today);
 
-                if (days >= 3) {
+                if (days > 1) {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
                     dto.setStudentLastName(student.getLastName());
+                    dto.setStudentEmail(studentEmail);
                     dto.setPunishment(punishment);
                     if(!uniqueStudentEmails.contains(studentEmail)){
                         punishedStudents.add(dto);
@@ -289,7 +318,7 @@ public class StudentService {
         return punishedStudents;
     }
 
-    public static int getWorkDaysBetweenTwoDates(LocalDate startTime, LocalDate endTime) {
+    public int getWorkDaysBetweenTwoDates(LocalDate startTime, LocalDate endTime) {
         final DayOfWeek startW = startTime.getDayOfWeek();
         final DayOfWeek endW = endTime.getDayOfWeek();
         final long days = ChronoUnit.DAYS.between(startTime, endTime);
@@ -309,4 +338,117 @@ public class StudentService {
 
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
+
+    public Student updateStudentNotes(String id, ThreadEvent event) {
+        Optional<Student> studentOptional = studentRepository.findById(id);
+
+        if(studentOptional.isEmpty()){
+            StudentResponse response = new StudentResponse();
+            response.setError("No Student with id " + id +" was found");
+            return null;
+
+        }
+
+        Student record = studentOptional.get();
+        LocalDate timePosted = LocalDate.now();
+
+        List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
+
+        ThreadEvent newEvent = new ThreadEvent();
+        newEvent.setEvent(event.getEvent());
+        newEvent.setDate(timePosted);
+        newEvent.setContent(event.getContent());
+        events.add(newEvent);
+//
+        record.setNotesArray(events);
+
+        return studentRepository.save(record);
+
+
+    }
+
+    public List<Student> addAsSpotter(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for(String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
+
+            spotters.addAll(request.getSpotters());
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
+        }
+        return studentsSpotted;
+    }
+
+    public List<Student> deleteSpotters(UpdateSpottersRequest request) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        for (String studentEmail : request.getStudentEmail()) {
+            Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            ArrayList<String> spotters = new ArrayList<>();
+            if (findMe.getSpotters() != null) {
+                spotters.addAll(findMe.getSpotters());
+            }
+
+            for (String email : request.getSpotters()) {
+                spotters.remove(email);
+            }
+
+            findMe.setSpotters(spotters);
+
+            studentsSpotted.add(studentRepository.save(findMe));
+        }
+        return studentsSpotted;
+    }
+
+    public Student removeSpotterByEmail(String email, Student student) {
+        Student recordToUpdate = studentRepository.findByStudentIdNumber(student.getStudentIdNumber());
+        List<String> currentSpotters = recordToUpdate.getSpotters();
+        currentSpotters.remove(email);
+        recordToUpdate.setSpotters(currentSpotters);
+        return studentRepository.save(recordToUpdate);
+
+        }
+
+
+    public List<Student> findBySpotter(String spotterEmail) {
+        List<Student> studentsSpotted = new ArrayList<>();
+        return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
+    }
+
+    public Student addTimeToStudent(String studentEmail, int additionalHours, int additionalMinutes) {
+        // Fetch the student by ID
+        Student bankStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if (bankStudent != null) {
+            Student.TimeBank currentTimeBank = bankStudent.getTimeBank();
+
+            if (currentTimeBank == null) {
+                currentTimeBank = new Student.TimeBank(0, 0);
+            }
+
+            // Add the additional time to the current timeBank
+            int newMinutes = currentTimeBank.getMinutes() + additionalMinutes;
+            int newHours = currentTimeBank.getHours() + additionalHours;
+
+            // If newMinutes >= 60, convert excess minutes to hours
+            if (newMinutes >= 60) {
+                newHours += newMinutes / 60;
+                newMinutes = newMinutes % 60;
+            }
+
+            // Set the updated time bank back to the student
+            bankStudent.setTimeBank(new Student.TimeBank(newHours, newMinutes));
+
+            // Save the updated student object
+            return studentRepository.save(bankStudent);
+
+        } else {
+            throw new RuntimeException("Student not found");
+        }
+    }
+
 }

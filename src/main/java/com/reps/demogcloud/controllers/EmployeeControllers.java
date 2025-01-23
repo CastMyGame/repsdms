@@ -1,10 +1,11 @@
 package com.reps.demogcloud.controllers;
 
+import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.employee.PointsTransferRequest;
-import com.reps.demogcloud.models.school.SchoolResponse;
+import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
+import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.services.EmployeeService;
@@ -20,7 +21,8 @@ import java.util.Set;
 @CrossOrigin(
         origins = {
                 "http://localhost:3000/",
-                "https://repsdiscipline.vercel.app"
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 @RestController
@@ -41,6 +43,12 @@ public class EmployeeControllers {
     @GetMapping("/employees")
     private ResponseEntity<List<Employee>> getAllUsers(){
         List<Employee> employees =  employeeService.findAll();
+        return ResponseEntity.ok(employees);
+    }
+
+    @GetMapping("/employees/email/{email}")
+    private ResponseEntity<Employee> getUserById(@PathVariable String email){
+        Employee employees =  employeeService.findByUserName(email);
         return ResponseEntity.ok(employees);
     }
 
@@ -73,14 +81,6 @@ public class EmployeeControllers {
         return ResponseEntity.ok(employees);
     }
 
-    @PutMapping("/currency/transfer")
-    public ResponseEntity<List<Student>> transferCurrency (@RequestBody List<PointsTransferRequest> requests) {
-        List<Student> response = employeeService.transferCurrency(requests);
-        return ResponseEntity
-                .accepted()
-                .body(response);
-    }
-
 
     //---------------------------PUT Controllers------------------------------
 
@@ -105,9 +105,9 @@ public class EmployeeControllers {
         }
     }
 
-    @PutMapping("/currency/{employeeEmail}")
-    public ResponseEntity<Employee> archivedDeleted(@PathVariable String employeeEmail, @RequestParam Integer spend) {
-        Employee response = employeeService.spendCurrency(employeeEmail, spend);
+    @PutMapping("/currency/spend")
+    public ResponseEntity<List<Student>> spendCurrency(@RequestBody List<CurrencySpendRequest> requests) {
+        List<Student> response = employeeService.spendCurrency(requests);
         return ResponseEntity
                 .accepted()
                 .body(response);
@@ -116,6 +116,22 @@ public class EmployeeControllers {
     @PutMapping("/{schoolName}")
     public ResponseEntity<List<Employee>> editSchool (@PathVariable String schoolName, @RequestParam String update) {
         List<Employee> updated = employeeService.editSchool(schoolName, update);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+
+    @PutMapping("/updateClass/{teacherEmail}")
+    public ResponseEntity<Employee> updateClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+        Employee updated = employeeService.addOrUpdateClassToEmployee(teacherEmail, request);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+
+    @PutMapping("/updateAll")
+    public ResponseEntity<List<Employee>> updateAllEmployees () {
+        List<Employee> updated = employeeService.updateAllEmployees();
         return updated == null
                 ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);
@@ -133,5 +149,13 @@ public class EmployeeControllers {
             // If an exception occurred, handle it and return a 404 Not Found response
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Employee with ID " + id + " not found.");
         }
+    }
+
+    @PostMapping("/deleteClass/{teacherEmail}")
+    public ResponseEntity<Employee> deleteClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+        Employee updated = employeeService.removeClassFromEmployee(teacherEmail, request);
+        return updated == null
+                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 }

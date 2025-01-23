@@ -1,10 +1,13 @@
 package com.reps.demogcloud.data.filters;
 
 import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.models.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
+import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
@@ -29,6 +32,8 @@ public class CustomFilters {
     private StudentRepository studentRepository;
     @Autowired
     private EmployeeRepository employeeRepository;
+    @Autowired
+    private OfficeReferralRepository officeReferralRepository;
 
 
 
@@ -47,6 +52,14 @@ public class CustomFilters {
 
     public List<Punishment> FetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+    }
+
+    public List<OfficeReferral> FetchOfficeReferralsByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<OfficeReferral> archivedRecords = officeReferralRepository.findByIsArchivedAndSchoolName(bool,getSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -118,6 +131,7 @@ public class CustomFilters {
     //Filter for Employee Endpoints
     public List<Employee> FetchEmployeeDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Employee> archivedRecords = employeeRepository.findByIsArchivedAndSchool(bool,getSchoolName());
+        System.out.println(archivedRecords + "   Archived Records ");
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -138,15 +152,23 @@ public class CustomFilters {
 
             if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
                 Student student = studentRepository.findByStudentEmailIgnoreCase(userModel.getUsername());
+                if (student == null) {
+                    // Handle case when student is not found, e.g., throw an exception or return a default value
+                    throw new EntityNotFoundException("Student with email " + userModel.getUsername() + " not found.");
+                }
                 return student.getSchool();
 
             } else {
                 Employee employee = employeeRepository.findByEmailIgnoreCase(userModel.getUsername());
+                if (employee == null) {
+                    throw new EntityNotFoundException("Employee with email " + userModel.getUsername() + " not found.");
+                }
                 return employee.getSchool();
 
             }
         }
-        return null;
+        // Return a default value or throw an exception if authentication is null
+        throw new IllegalArgumentException("Authentication or principal is missing.");
     }
 
 

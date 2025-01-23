@@ -5,10 +5,12 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.employee.PointsTransferRequest;
+import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.school.School;
+import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
@@ -22,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -147,27 +150,28 @@ public class EmployeeService {
                         return userRoles != null && userRoles.stream()
                                 .anyMatch(roleModel -> roleModel.getRole().equals(role));
                     }).sorted(Comparator.comparing(Employee::getLastName)).collect(Collectors.toList());
+
             return Optional.of(employeesWithRole);
         } else {
             return Optional.empty();
         }
     }
 
-    public Employee spendCurrency(String employeeEmail, Integer spend) {
-        Employee spender = employeeRepository.findByEmailIgnoreCase(employeeEmail);
-        Integer currency = spender.getCurrency();
-        // Make this addition so it can be used for adding or subtracting. We will pass
-        // a negative if it is being  used to spend and a positive if it is being used to add
-        Integer newCurrency = currency + spend;
-        spender.setCurrency(newCurrency);
-        return employeeRepository.save(spender);
+    public List<Student> spendCurrency(List<CurrencySpendRequest> requests) {
+        List<Student> spenders = new ArrayList<>();
+        for(CurrencySpendRequest request : requests) {
+            Student spender = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
+            spender.setCurrency(spender.getCurrency() - request.getCurrencyTransferred());
+            spenders.add(studentRepository.save(spender));
+        }
+        return spenders;
     }
 
     public List<Employee> editSchool(String schoolName, String update) {
         List<Employee> employees = employeeRepository.findBySchool(schoolName);
         List<Employee> updated = new ArrayList<>();
         for (Employee employee : employees) {
-            employee.setCurrency(50);
+            employee.setCurrency(5);
             employeeRepository.save(employee);
             updated.add(employee);
         }
@@ -193,20 +197,104 @@ public class EmployeeService {
         return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
     }
 
-    public List<Student> transferCurrency(List<PointsTransferRequest> requests) {
-        List<Student> students = new ArrayList<>();
-        for(PointsTransferRequest request: requests) {
+    public void transferCurrency(CurrencyTransferRequest request) {
             Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
             Student student = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
             if (teacher.getCurrency() < request.getCurrencyTransferred()) {
                 throw new ResourceNotFoundException("You do not have enough currency to give");
             }
-            student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
-            studentRepository.save(student);
             teacher.setCurrency(teacher.getCurrency() - request.getCurrencyTransferred());
             employeeRepository.save(teacher);
-            students.add(student);
+        student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
+        studentRepository.save(student);
+    }
+
+    public Employee findByUserName(String email) {
+        Employee employee = employeeRepository.findByEmailIgnoreCase(email);
+        if(employee == null){
+            throw new ResourceNotFoundException("No employees with that email exist");
+
         }
-        return students;
+        return employee;
+    }
+
+    public Employee addOrUpdateClassToEmployee(String teacherEmail, ClassRequest newClass) throws NullPointerException {
+        // Fetch the employee by ID
+        Employee teacher = employeeRepository.findByEmailIgnoreCase(teacherEmail);
+
+        if (teacher != null) {
+            // Initialize the classes list if it's null
+            if (teacher.getClasses() == null) {
+                teacher.setClasses(new ArrayList<>());
+            }
+            // Check if the class already exists based on class name
+            Optional<Employee.ClassRoster> existingClassOpt = teacher.getClasses().stream()
+                    .filter(classRoster -> classRoster.getClassName().equalsIgnoreCase(newClass.getClassToUpdate().getClassName()))
+                    .findFirst();
+
+            if (existingClassOpt.isPresent()) {
+                // Update existing class details
+                Employee.ClassRoster existingClass = existingClassOpt.get();
+                existingClass.setClassRoster(newClass.getClassToUpdate().getClassRoster());
+                existingClass.setPunishmentsThisWeek(newClass.getClassToUpdate().getPunishmentsThisWeek());
+            } else {
+                // Add new class to the list
+                teacher.getClasses().add(newClass.getClassToUpdate());
+            }
+
+            // Save the updated employee back to the database
+            return employeeRepository.save(teacher);
+        } else {
+            // Throw a custom exception if the employee does not exist
+            throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found");
+        }
+    }
+
+    public Employee removeClassFromEmployee(String teacherEmail, ClassRequest classToDelete) throws ResourceNotFoundException {
+        // Fetch the employee by email
+        Employee teacher = employeeRepository.findByEmailIgnoreCase(teacherEmail);
+
+        if (teacher != null) {
+            // Check if the classes list is initialized and contains the specified class
+            if (teacher.getClasses() != null) {
+                boolean classRemoved = teacher.getClasses().removeIf(classRoster ->
+                        classRoster.getClassName().equalsIgnoreCase(classToDelete.getClassToUpdate().getClassName())
+                );
+
+                if (classRemoved) {
+                    // Save the updated employee object back to the database if the class was removed
+                    return employeeRepository.save(teacher);
+                } else {
+                    throw new ResourceNotFoundException("Class with name " + classToDelete.getClassToUpdate().getClassName() + " not found for teacher " + teacherEmail);
+                }
+            } else {
+                throw new ResourceNotFoundException("Teacher " + teacherEmail + " has no classes to remove.");
+            }
+        } else {
+            throw new ResourceNotFoundException("Teacher with email " + teacherEmail + " not found.");
+        }
+    }
+
+    public List<Employee> updateAllEmployees() {
+        List<Employee> employees = employeeRepository.findAll();
+        List<Employee> updatedEmployees = new ArrayList<>();
+        for(Employee teacher : employees) {
+            if (teacher.getClasses().isEmpty()) {
+                Employee.ClassRoster roster = new Employee.ClassRoster();
+                List<String> classRoster = new ArrayList<>();
+                roster.setClassName("");
+                roster.setClassPeriod("");
+                roster.setPunishmentsThisWeek(0);
+                roster.setClassRoster(classRoster);
+                List<Employee.ClassRoster> emptyRoster = new ArrayList<>();
+                emptyRoster.add(roster);
+                teacher.setClasses(emptyRoster);
+                employeeRepository.save(teacher);
+                updatedEmployees.add(teacher);
+            }
+        }
+        return updatedEmployees;
     }
 }
+
+

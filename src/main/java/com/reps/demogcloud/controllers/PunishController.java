@@ -2,6 +2,9 @@ package com.reps.demogcloud.controllers;
 
 
 import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceRequest;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +13,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -18,7 +26,8 @@ import java.util.List;
 @CrossOrigin(
         origins = {
                 "http://localhost:3000/",
-                "https://repsdiscipline.vercel.app"
+                "https://repsdiscipline.vercel.app",
+                "https://repsdev.vercel.app"
         }
 )
 @RequestMapping("/punish/v1")
@@ -120,7 +129,7 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/form")
-    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
+    public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);
 
         return ResponseEntity
@@ -129,8 +138,68 @@ public class PunishController {
     }
 
     @PostMapping("/startPunish/formList")
-    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException {
+    public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException, IOException, InterruptedException {
         var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PostMapping("/guidance/new")
+    public ResponseEntity<GuidanceResponse> createNewGuidance(@RequestBody GuidanceRequest guidanceRequests) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.createNewGuidanceFormSimple(guidanceRequests);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
+    @PutMapping("/guidance/notes/{id}")
+    public ResponseEntity<Guidance> updateGuidance(@PathVariable String id,@RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+
+        var message = punishmentService.updateGuidance(id,event);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
+
+    @PutMapping("/guidance/followup/{id}")
+    public ResponseEntity<Guidance> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
+        String scheduleFollowUp = payload.get("followUpDate");
+        String newStatus = payload.get("status");
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        LocalDate followUpDate;
+        try {
+            followUpDate = LocalDate.parse(scheduleFollowUp, formatter);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
+        }
+        Guidance updatedGuidance = punishmentService.updateGuidanceFollowUp(id, followUpDate,newStatus);
+
+        return ResponseEntity.accepted().body(updatedGuidance);
+    }
+
+    @PutMapping("/guidance/status/{id}")
+    public ResponseEntity<Guidance> updateGuidanceStatus (@PathVariable String id, @RequestBody Map<String, String> payload) throws MessagingException, IOException, InterruptedException {
+
+        String newStatus = payload.get("status");
+        Guidance updatedPunishment = punishmentService.updateGuidanceStatus(id, newStatus);
+
+        return ResponseEntity.accepted().body(updatedPunishment);
+    }
+
+    @GetMapping("/guidance/{status}/{userFilter}")
+    public ResponseEntity<List<Guidance>> getAllGuidances(@PathVariable String status,@PathVariable  boolean userFilter) throws MessagingException, IOException, InterruptedException {
+
+        List<Guidance> message = punishmentService.getAllGuidanceReferrals(status,userFilter);
 
         return ResponseEntity
                 .accepted()
@@ -236,10 +305,29 @@ public class PunishController {
                 .body(response);
     }
 
+    @PutMapping("/guidance/resources/{id}")
+    public ResponseEntity<GuidanceResponse> updateAndSendResources(@PathVariable String id, @RequestBody ResourceUpdateRequest request) throws MessagingException, IOException, InterruptedException {
+        var message = punishmentService.sendResourcesAndMakeNotes(id, request);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+
     //----------------------------DELETE Controllers------------------------------
     @DeleteMapping("/delete")
     public ResponseEntity<String> deletePunishment (@RequestBody Punishment punishment) throws ResourceNotFoundException {
         var delete = punishmentService.deletePunishment(punishment);
+        return ResponseEntity
+                .accepted()
+                .body(delete);
+    }
+
+
+    @DeleteMapping("/guidance/delete")
+    public ResponseEntity<String> deleteGuidanceReferral (@PathVariable String id) throws ResourceNotFoundException {
+        var delete = punishmentService.deleteGuidanceReferral(id);
         return ResponseEntity
                 .accepted()
                 .body(delete);

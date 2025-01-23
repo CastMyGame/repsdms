@@ -1,5 +1,7 @@
 package com.reps.demogcloud.models.employee;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,6 +11,7 @@ import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -16,6 +19,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Document(collection = "employee")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Employee {
     @Id
     private String employeeId;
@@ -30,5 +34,14 @@ public class Employee {
     private String archivedExplanation;
     private LocalDate archivedOn;
     private Integer currency;
+    private Integer stateEmployeeId;
+    private List<ClassRoster> classes;
+    @Data
+    public static class ClassRoster {
+        private String className;
+        private String classPeriod;
+        private List<String> classRoster;
+        private int punishmentsThisWeek;
+    }
 
 }

@@ -1,9 +1,13 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
+import com.reps.demogcloud.models.guidance.Guidance;
+import com.reps.demogcloud.models.guidance.GuidanceResponse;
+import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
+import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +15,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.mail.MessagingException;
+import java.io.IOException;
 import java.util.List;
 
 @CrossOrigin(origins = {
 "http//localhost:3000",
-"http://localhost:3000/"})
+        "https://repsdiscipline.vercel.app",
+        "https://repsdev.vercel.app"})
 
 @RestController
 @RequiredArgsConstructor
@@ -23,6 +30,7 @@ import java.util.List;
 public class StudentController {
 
     private StudentService studentService;
+
 
     @Autowired
     public StudentController(StudentService studentService) {
@@ -43,6 +51,8 @@ public class StudentController {
                 .accepted()
                 .body(message);
     }
+
+
 
     @GetMapping("/allStudents")
     public ResponseEntity<List<Student>> findAllStudents () {
@@ -71,7 +81,7 @@ public class StudentController {
     }
 
     @GetMapping("/email/{email}")
-    public ResponseEntity<Student> getStudentByEmail (@PathVariable  String email) throws Exception {
+    public ResponseEntity<Student> getStudentByEmail (@PathVariable String email) throws Exception {
         var message = studentService.findByStudentEmail(email);
 
         return ResponseEntity
@@ -100,6 +110,16 @@ public class StudentController {
     @GetMapping("/issList/{school}")
     public ResponseEntity<List<PunishmentDTO>> getIssList(@PathVariable String school) {
         List<PunishmentDTO> response = studentService.getIssList(school);
+
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
+    @GetMapping("/findBySpotter/{spotterEmail}")
+    public ResponseEntity<List<Student>> getBySpotter(@PathVariable String spotterEmail) {
+        List<Student> response = studentService.findBySpotter(spotterEmail);
 
 
         return ResponseEntity
@@ -143,7 +163,7 @@ public class StudentController {
     }
 
     @PostMapping("/points/transfer")
-    public ResponseEntity<List<Student>> transferPoints (@RequestParam String givingStudentEmail,
+    public ResponseEntity<List<Student>> transferPoints (@RequestBody String givingStudentEmail,
                                                          @RequestParam String receivingStudentEmail,
                                                          @RequestParam Integer pointsTransferred) {
         List<Student> response = studentService.transferPoints(givingStudentEmail,
@@ -152,6 +172,28 @@ public class StudentController {
         return ResponseEntity
                 .accepted()
                 .body(response);
+    }
+
+    @PostMapping("/getByEmailList")
+    public ResponseEntity<List<Student>> getStudentByEmail (@RequestBody List<String> email) throws Exception {
+        var message = studentService.findByStudentEmailList(email);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    // Endpoint to add time to a student's time bank
+    @PostMapping("/{studentEmail}/add-time")
+    public ResponseEntity<Student> addTimeToStudent(
+            @PathVariable String studentEmail,
+            @RequestParam int hours,
+            @RequestParam int minutes) {
+
+        // Call the service to add time to the student's timeBank
+        Student updatedStudent = studentService.addTimeToStudent(studentEmail, hours, minutes);
+
+        return ResponseEntity.ok(updatedStudent);
     }
     //----------------------------PUT Controllers--------------------------------
     @PutMapping("/assignSchool")
@@ -170,6 +212,30 @@ public class StudentController {
                 .body(response);
     }
 
+    @PutMapping("/notes/{id}")
+    public ResponseEntity<Student> updateGuidance(@PathVariable String id, @RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+        var message = studentService.updateStudentNotes(id,event);
+
+        return ResponseEntity
+                .accepted()
+                .body(message);
+    }
+
+    @PutMapping("/addAsSpotter")
+    public ResponseEntity<List<Student>> addAsSpotter(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.addAsSpotter(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
+    @PutMapping("/removeAsSpotter")
+    public ResponseEntity<List<Student>> deleteSpotters(@RequestBody UpdateSpottersRequest request) {
+        var student = studentService.deleteSpotters(request);
+
+        return ResponseEntity.accepted().body(student);
+    }
+
+
 
     //---------------------------DELETE Controllers--------------------------
     @DeleteMapping("/delete")
@@ -179,5 +245,15 @@ public class StudentController {
                 .accepted()
                 .body(delete);
     }
+
+
+
+    @PutMapping("/remove-spotter/{email}")
+    public ResponseEntity<Student> removeSpotterByEmail(@PathVariable String email,@RequestBody Student student) {
+        Student response = studentService.removeSpotterByEmail(email,student);
+
+        return ResponseEntity.accepted().body(response);
+    }
+
 
 }

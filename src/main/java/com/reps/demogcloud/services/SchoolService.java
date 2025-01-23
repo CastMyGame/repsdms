@@ -39,4 +39,8 @@ public class SchoolService {
             return new SchoolResponse(null, "School not found");
         }
     }
+
+    public School findSchoolByName (String school) {
+        return schoolRepository.findSchoolBySchoolName(school);
+    }
 }
