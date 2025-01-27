@@ -57,19 +57,19 @@ public class EmployeeService {
 
 
     public EmployeeResponse createNewEmployee(Employee request) {
-        Set<RoleModel> roles = new HashSet<>();
-        RoleModel teacher = new RoleModel();
-        teacher.setRole("TEACHER");
-        roles.add(teacher);
+//        Set<RoleModel> roles = new HashSet<>();
+//        RoleModel teacher = new RoleModel();
+//        teacher.setRole(request.getRoles());
+//        roles.add(teacher);
         //Check it email exist in system
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(request.getEmail().toLowerCase());
-        authenticationRequest.setPassword("123abc");
+        authenticationRequest.setPassword(request.getLastName().toLowerCase() + request.getSchool().toLowerCase());
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchoolName(request.getSchool());
-        authenticationRequest.setRoles(roles);
+        authenticationRequest.setRoles(request.getRoles());
         if (doesEmployeeExist == null) {
             try {
                 authService.createEmployeeUser(authenticationRequest);
@@ -83,6 +83,16 @@ public class EmployeeService {
             return new EmployeeResponse("Error: Email Already Registered In System", null);
 
         }
+    }
+
+    public List<EmployeeResponse> createNewEmployeeList (List<Employee> request) {
+        List<EmployeeResponse> response = new ArrayList<>();
+
+        for(Employee employee : request) {
+            response.add(createNewEmployee(employee));
+        }
+
+        return response;
     }
 
     public void deleteEmployee(String id) throws Exception {
@@ -279,7 +289,7 @@ public class EmployeeService {
         List<Employee> employees = employeeRepository.findAll();
         List<Employee> updatedEmployees = new ArrayList<>();
         for(Employee teacher : employees) {
-            if (teacher.getClasses().isEmpty()) {
+            if (teacher.getClasses() == null) {
                 Employee.ClassRoster roster = new Employee.ClassRoster();
                 List<String> classRoster = new ArrayList<>();
                 roster.setClassName("");
