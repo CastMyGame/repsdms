@@ -75,9 +75,16 @@ public class EmployeeControllers {
 
     @PostMapping("/employees")
     private ResponseEntity<EmployeeResponse> createEmployee(@RequestBody Employee employee){
-        System.out.println("controller " +employee);
-
         EmployeeResponse employees =  employeeService.createNewEmployee(employee);
+        return ResponseEntity.ok(employees);
+    }
+
+    @PostMapping("/employees/list")
+    private ResponseEntity<List<EmployeeResponse>> createEmployeeList(@RequestBody List<Employee> employeeList){
+
+
+        List<EmployeeResponse> employees =  employeeService.createNewEmployeeList(employeeList);
+        System.out.println("controller " +employees);
         return ResponseEntity.ok(employees);
     }
 

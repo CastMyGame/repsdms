@@ -136,7 +136,7 @@ public class StudentService {
         roles.add(student);
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(studentRequest.getStudentEmail().toLowerCase());
-        authenticationRequest.setPassword("123abc");
+        authenticationRequest.setPassword(studentRequest.getLastName().toLowerCase() + studentRequest.getSchool().toLowerCase());
         authenticationRequest.setFirstName(studentRequest.getFirstName());
         authenticationRequest.setLastName(studentRequest.getLastName());
         authenticationRequest.setSchoolName(studentRequest.getSchool());
