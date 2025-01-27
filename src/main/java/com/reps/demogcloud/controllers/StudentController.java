@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @CrossOrigin(origins = {
@@ -137,13 +138,15 @@ public class StudentController {
     }
 
     @PostMapping("/addStudents")
-    public ResponseEntity<List<Student>> addAllStudents(@RequestBody List<Student> students) {
+    public ResponseEntity<List<StudentResponse>> addAllStudents(@RequestBody List<Student> students) {
+        List<StudentResponse> processedStudents = new ArrayList<>();
         for(Student student: students) {
-            studentService.createNewStudent(student);
+            processedStudents.add(studentService.createNewStudent(student));
         }
+        System.out.println("controller " + processedStudents);
         return ResponseEntity
                 .accepted()
-                .body(students);
+                .body(processedStudents);
     }
     // Points Controllers
     @PostMapping("/points/add")

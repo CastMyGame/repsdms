@@ -83,7 +83,7 @@ public class UserService implements UserDetailsService {
             UserModel userExists = userRepository.findByUsername(student.getStudentEmail());
             if (userExists == null) {
                 UserModel newUser = new UserModel();
-                String password = "123abc";
+                String password = student.getLastName().toLowerCase() + student.getSchool().toLowerCase();
                 newUser.setUsername(student.getStudentEmail().toLowerCase());
                 newUser.setSchoolName(school);
                 newUser.setFirstName(student.getFirstName());
