@@ -282,6 +282,31 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
+        if(infraction.getInfractionName().equals("Inappropriate Language") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0);
+            description.replace("[,", "");
+            description.replace("]", "");
+            String messageIn = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+            messageIn.replace("[,", "");
+            messageIn.replace(",]","");
+            punishmentResponse.setMessage(messageIn);
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
+                    punishmentResponse.getTeacherToEmail(),
+                    punishmentResponse.getStudentToEmail(),
+                    punishmentResponse.getSubject(),
+                    punishmentResponse.getMessage());
+        }
         if(infraction.getInfractionName().equals("Failure to Complete Work")) {
             String description = punishment.getInfractionDescription().get(0);
             description.replace("[,", "");
