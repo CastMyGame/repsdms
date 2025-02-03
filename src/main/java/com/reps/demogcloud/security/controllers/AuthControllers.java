@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.awt.desktop.SystemEventListener;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -127,7 +128,6 @@ public class AuthControllers {
     @PostMapping("/auth")
     private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest) throws IOException, InterruptedException {
         String username = authenticationRequest.getUsername().toLowerCase();
-
         String password = authenticationRequest.getPassword();
         try{
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username,password));
@@ -142,8 +142,33 @@ public class AuthControllers {
 
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
+        // Login to 360 Review
+        Review360InstantiateSession();
 
         return ResponseEntity.ok(response);
+    }
+
+    private void Review360InstantiateSession() {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder().uri(new URI("http://calendar-service-mygto2ljcq-wl.a.run.app/api/generate-token"))
+//                    .header("user", "justin_iverson")  // Replace with actual username
+//                    .header("password", "SmackDown+27")  // Replace with actual passwordEncoder
+                    .GET().build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            // Print the response code and body
+            System.out.println("Response Code: " + response.statusCode());
+            System.out.println("Response Body: " + response.body());
+
+
+        }
+         catch (URISyntaxException | IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        {
+
+        }
     }
 
     @PostMapping("/users/create/{school}")

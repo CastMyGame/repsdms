@@ -1,5 +1,6 @@
 package com.reps.demogcloud.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
@@ -29,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -761,6 +763,8 @@ public class PunishmentService {
             punishment.setTimeClosed(now);
             Punishment punishmentRecord = punishRepository.save(punishment);
             System.out.println(punishmentRecord);
+            //Send Incident to 360
+            IncidentSubmission360();
             if (!formRequest.getGuidanceDescription().isEmpty()) {
                 LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
             }
@@ -849,6 +853,124 @@ public class PunishmentService {
         }
 
 
+    }
+
+    private void IncidentSubmission360() {
+        try {
+            // Step 1: Make the initial request to /api/poll-session
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https://calendar-service-mygto2ljcq-wm.a.run.app/api/poll-session"))
+                    .GET()
+                    .build();
+
+            // Step 2: Get the response from /api/poll-session
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Step 3: Parse the response body and extract IsAuthenticated value
+            String responseBody = response.body();
+            System.out.println("Poll Session Response: " + responseBody);
+
+            // Parse the JSON response
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
+            boolean isAuthenticated = jsonResponse.path("data").get(0).path("IsAuthenticated").asBoolean();
+
+            // Step 4: Decide what to do based on the IsAuthenticated value
+            if (isAuthenticated) {
+                // If authenticated, continue to another function
+                System.out.println("User is authenticated. Proceeding to another function.");
+                SendIncident();
+            } else {
+                // If not authenticated, generate the token
+                System.out.println("User is not authenticated. Proceeding to generate token.");
+                generateToken(); // Call your token generation function here
+            }
+
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            // Handle exceptions
+            e.printStackTrace();
+        }
+    }
+
+    private void generateToken() {
+        try {
+            // Step 1: Send a request to the /api/generate-token endpoint
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("http://calendar-service-mygto2ljcq-wl.a.run.app/api/generate-token" +
+                            ""))
+//                    .header("user", "justin_iverson")  // Replace with actual username
+//                    .header("password", "SmackDown+27")  // Replace with actual password
+                    .GET()
+                    .build();
+
+            // Step 2: Get the response for token generation
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Step 3: Print the response
+            System.out.println("Token Generation Response Code: " + response.statusCode());
+            System.out.println("Token Generation Response Body: " + response.body());
+
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            // Handle exceptions
+            e.printStackTrace();
+        }
+    }
+
+
+
+    private void SendIncident() {
+        try {
+            String jsonPayload = "{\n" +
+                    "    \"Parties\": [],\n" +
+                    "    \"Incident_IncidentTypeId\": {\"value\": 40, \"text\": \"Positive Behavior Achievement\"},\n" +
+                    "    \"Incident_IncidentConfigurationGroupId\": 207,\n" +
+                    "    \"Incident_VersionDate\": {\"date\": \"02/02/2025\", \"time\": null},\n" +
+                    "    \"Incident_IncidentDate\": {\"date\": \"02/02/2025\", \"time\": \"7:00 AM\"},\n" +
+                    "    \"Incident_ReportedById\": {\"value\": 2509677, \"text\": \"Iverson, Justin\"},\n" +
+                    "    \"Incident_OccurredAtOrganizationId\": {\"value\": 6597, \"text\": \"Simmons Pinckney Middle\"},\n" +
+                    "    \"IncidentParty_IncidentPartyId\": -1,\n" +
+                    "    \"CurrentUser\": {\"value\": 2509677, \"text\": \"Iverson, Justin\"},\n" +
+                    "    \"IncidentParty_IncidentPartyTypeId\": {\"value\": 1, \"text\": \"\"},\n" +
+                    "    \"IncidentParty_StudentId\": {\"value\": 4596508, \"text\": \"Amous, Sharon (17443)\"},\n" +
+                    "    \"Incident_LocationId\": {\"value\": 48, \"text\": \"Arrival\"},\n" +
+                    "    \"IncidentBehavior_LayoutFieldOptionId\": [{\"value\": 322688, \"text\": \" Being Respectful\", \"isPrimary\": null, \"isRemoved\": false}],\n" +
+                    "    \"IncidentParty_Description\": \"Great Energy Coming To School, Complimented Others\",\n" +
+                    "    \"IncidentStaffResponse_LayoutFieldOptionId\": [{\"value\": 322703, \"text\": \" Recognition\"}],\n" +
+                    "    \"IncidentTypeRole_IncidentRoleId\": 1,\n" +
+                    "    \"IsReadyToAssignActions\": false,\n" +
+                    "    \"BehaviorRequiredForActions\": true,\n" +
+                    "    \"IncidentParty_StudentNumber\": \"17443\",\n" +
+                    "    \"IncidentParty_StudentGradeId\": {\"text\": \"7th Grade\", \"value\": 7},\n" +
+                    "    \"IncidentParty_StudentOrganizationId\": {\"text\": \"Simmons Pinckney Middle\", \"value\": 6597},\n" +
+                    "    \"IncidentParty_StudentIsSpecialEducation\": {\"text\": \"Yes\", \"value\": true},\n" +
+                    "    \"IncidentParty_StudentIs504\": {\"text\": \"No\", \"value\": false},\n" +
+                    "    \"IncidentParty_StudentHomelessTypeId\": {\"text\": \"Not Homeless\", \"value\": 1},\n" +
+                    "    \"RuleInstanceToken\": null\n" +
+                    "}";
+
+            // Step 1: Create an HTTP client
+            HttpClient client = HttpClient.newHttpClient();
+
+            // Step 2: Build the POST request with the JSON payload
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https://calendar-service-mygto2ljcq-wm.a.run.app/api/send-incident"))
+                    .header("Content-Type", "application/json")  // Set the content type to JSON
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload)) // Set the request body
+                    .build();
+
+            // Step 3: Send the request and capture the response
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Step 4: Print the response code and body
+            System.out.println("Incident Submission Response Code: " + response.statusCode());
+            System.out.println("Incident Submission Response Body: " + response.body());
+
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            // Handle exceptions
+            e.printStackTrace();
+        }
     }
 
     public  void LinkAssignmentToGuidance(Student student,PunishmentFormRequest formRequest,Punishment punishment) throws MessagingException, IOException, InterruptedException {
