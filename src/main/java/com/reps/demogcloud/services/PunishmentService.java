@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
-//import com.twilio.Twilio;
-//import com.twilio.rest.api.v2010.account.Message;
-//import com.twilio.type.PhoneNumber;
+import com.twilio.Twilio;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.employee.Employee;
@@ -170,9 +170,20 @@ public class PunishmentService {
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
             punishmentResponse.setMessage(messageIn);
 
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
 
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -198,8 +209,18 @@ public class PunishmentService {
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
 
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -223,8 +244,19 @@ public class PunishmentService {
             messageIn.replace("[,", "");
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -248,8 +280,19 @@ public class PunishmentService {
             messageIn.replace("[,", "");
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -273,8 +316,19 @@ public class PunishmentService {
             messageIn.replace("[,", "");
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -298,8 +352,19 @@ public class PunishmentService {
             messageIn.replace("[,", "");
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -323,8 +388,19 @@ public class PunishmentService {
             messageIn.replace("[,", "");
             messageIn.replace(",]","");
             punishmentResponse.setMessage(messageIn);
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                            new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -370,6 +446,19 @@ public class PunishmentService {
                     "</body>\n" +
                     "</html>";
 
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + shoutOut +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
+
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
                     punishmentResponse.getStudentToEmail(),
@@ -388,8 +477,19 @@ public class PunishmentService {
                     ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + concern + ". \n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way" + student.getSchool() + " can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + concern +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getStudentToEmail(),
@@ -409,8 +509,19 @@ public class PunishmentService {
                     "’s progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + concern + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way we can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+
+            String textMessage = " Hello, \n" +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + concern +
+                    ".\n " +
+                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
+                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by emailing them at " + punishmentResponse.getTeacherToEmail() + " . You have also been emailed this information. Please do not reply to this text message as the teacher will not receive it.";
+
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getStudentToEmail(),
@@ -645,7 +756,7 @@ public class PunishmentService {
             throw new IllegalArgumentException("Infraction description is required.");
         }
 
-        //        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
+        Twilio.init("AC31fd459d82bd5d3ff135db0968b011d7", "cbc1ce27504972b97bf15f0bc74d1dbc");
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 

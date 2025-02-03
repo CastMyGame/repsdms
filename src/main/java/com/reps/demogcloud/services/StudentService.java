@@ -241,9 +241,16 @@ public class StudentService {
         List<Student> students = studentRepository.findAll();
         List<Student> assignedStudents = new ArrayList<>();
         for(Student student : students) {
-            student.setCurrency(0);
-            studentRepository.save(student);
-            assignedStudents.add(student);
+            String parentPhone = student.getParentPhoneNumber();
+
+            // Check if parentPhone is not null and contains a hyphen
+            if (parentPhone != null && parentPhone.contains("-")) {
+                // Remove hyphens and add +1 at the beginning
+                String formattedPhone = "+1" + parentPhone.replace("-", "");
+                student.setParentPhoneNumber(formattedPhone);
+                studentRepository.save(student);
+                assignedStudents.add(student);
+            }
         }
         return assignedStudents;
     }
