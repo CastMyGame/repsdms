@@ -22,6 +22,7 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import lombok.RequiredArgsConstructor;
@@ -73,7 +74,10 @@ public class PunishmentService {
     private final StudentService studentService;
     private final GuidanceRepository guidanceRepository;
     private final OfficeReferralService officeReferralService;
-
+    @Value("${sm://RepsDiscipline-twilio_username}")
+    private String twilioUsername;
+    @Value("${sm://RepsDiscipline-twilio_password}")
+    private String twilioPassword;
     @Autowired
     private MongoTemplate mongoTemplate;
 
@@ -99,7 +103,130 @@ public class PunishmentService {
         return String.valueOf(level);
     }
 
-    private static PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
+    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository, SchoolRepository schoolRepository) {
+        PunishmentResponse punishmentResponse = new PunishmentResponse();
+        Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+        Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
+        punishmentResponse.setParentToEmail(student.getParentEmail());
+        punishmentResponse.setStudentToEmail(student.getStudentEmail());
+        punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
+        punishmentResponse.setPunishment(punishment);
+        punishment.setTimeClosed(LocalDate.now());
+
+
+        // Grab school info and populate into punishment
+        School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
+
+
+        punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + student.getFirstName() + " " + student.getLastName());
+        if (infraction.getInfractionName().equals("Tardy")) {
+
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for being " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if (infraction.getInfractionName().equals("Unauthorized Device/Cell Phone")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for having an " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if (infraction.getInfractionName().equals("Disruptive Behavior")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if (infraction.getInfractionName().equals("Horseplay")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if (infraction.getInfractionName().equals("Dress Code")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+        if (infraction.getInfractionName().equals("Failure to Complete Work")) {
+            punishmentResponse.setMessage(" Hello," +
+                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+                    " has been written up for " + infraction.getInfractionName() + ". \n" +
+                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
+            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            return punishmentResponse;
+        }
+//        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
+//            punishmentResponse.setMessage(" Hello," +
+//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+//                    " has received a shout out from their teacher for the following: " + infraction.getInfractionDescription());
+//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+//
+//
+//    }
+//        if(infraction.getInfractionName().equals("Behavioral Concern")) {
+//            punishmentResponse.setMessage(" Hello," +
+//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
+//                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + infraction.getInfractionDescription() +
+//                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + student.getFirstName() + " " + student.getLastName() +
+//                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
+//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
+//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+//
+//        }
+        return punishmentResponse;
+    }
+
+    private static String adjustString(String input) {
+        // Use regex to match the part before the number and the number itself
+        String regex = "(.*?)(\\d+)$";
+        return input.replaceAll(regex, "$1 $2").trim();
+    }
+
+    private PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
                                                            PunishRepository punishRepository,
                                                            StudentRepository studentRepository,
                                                            InfractionRepository infractionRepository,
@@ -113,6 +240,8 @@ public class PunishmentService {
         punishmentResponse.setStudentToEmail(student.getStudentEmail());
         punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
         punishmentResponse.setPunishment(punishment);
+
+        Twilio.init(twilioUsername, twilioPassword);
 
 
         // Grab school info and populate into punishment
@@ -532,129 +661,6 @@ public class PunishmentService {
         return punishmentResponse;
     }
 
-    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository, SchoolRepository schoolRepository) {
-        PunishmentResponse punishmentResponse = new PunishmentResponse();
-        Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-        Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
-        punishmentResponse.setParentToEmail(student.getParentEmail());
-        punishmentResponse.setStudentToEmail(student.getStudentEmail());
-        punishmentResponse.setTeacherToEmail(punishment.getTeacherEmail());
-        punishmentResponse.setPunishment(punishment);
-        punishment.setTimeClosed(LocalDate.now());
-
-
-        // Grab school info and populate into punishment
-        School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
-
-
-        punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + student.getFirstName() + " " + student.getLastName());
-        if (infraction.getInfractionName().equals("Tardy")) {
-
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for being " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-        if (infraction.getInfractionName().equals("Unauthorized Device/Cell Phone")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for having an " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-        if (infraction.getInfractionName().equals("Disruptive Behavior")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-        if (infraction.getInfractionName().equals("Horseplay")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-        if (infraction.getInfractionName().equals("Dress Code")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-        if (infraction.getInfractionName().equals("Failure to Complete Work")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getLastName().toLowerCase() + student.getSchool().toLowerCase() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-            return punishmentResponse;
-        }
-//        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
-//            punishmentResponse.setMessage(" Hello," +
-//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-//                    " has received a shout out from their teacher for the following: " + infraction.getInfractionDescription());
-//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-//
-//
-//    }
-//        if(infraction.getInfractionName().equals("Behavioral Concern")) {
-//            punishmentResponse.setMessage(" Hello," +
-//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-//                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + infraction.getInfractionDescription() +
-//                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + student.getFirstName() + " " + student.getLastName() +
-//                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
-//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-//
-//        }
-        return punishmentResponse;
-    }
-
-    private static String adjustString(String input) {
-        // Use regex to match the part before the number and the number itself
-        String regex = "(.*?)(\\d+)$";
-        return input.replaceAll(regex, "$1 $2").trim();
-    }
-
     public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionId) throws ResourceNotFoundException {
         var fetchData = punishRepository.findByStudentEmailAndInfractionId(email,infractionId);
         var punishmentRecord = fetchData.stream()
@@ -756,7 +762,7 @@ public class PunishmentService {
             throw new IllegalArgumentException("Infraction description is required.");
         }
 
-        Twilio.init("AC31fd459d82bd5d3ff135db0968b011d7", "cbc1ce27504972b97bf15f0bc74d1dbc");
+        Twilio.init(twilioUsername, twilioPassword);
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 
