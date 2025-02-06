@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title th:text="${emailSubject}">emailSubject</title>
+</head>
+<body>
+<div style="background-color: #06402B; padding: 10px;">
+    <h2 style="margin: 0; text-align: center; color: white;">Action Required: <span th:text="${appName}"></span> Draft Requires your Input</h2>
+</div>
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <p><span th:text="${assignerName}"></span> <span th:text="${assignerEmail}"></span> assigned a profile question for <span th:text="${appName}"></span>. Please answer the questions with the assigned badges next to them in the Inventory Release & Change Orchestrator <a th:href="${ircoUrl}">IRCO</a> portal. Once you have submitted your responses, please communicate with <span th:text="${assignerName}"></span> to ensure timely and accurate submission of the <span th:text="${appName}"></span> record.</p>
+</div>
+</body>
+</html>

@@ -8,32 +8,52 @@ import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
+
+    private final SpringTemplateEngine springTemplateEngine;
     JavaMailSender javaMailSender;
 
     @Autowired
-    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository, EmployeeRepository employeeRepository) {
+    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository, EmployeeRepository employeeRepository, SpringTemplateEngine springTemplateEngine) {
         this.javaMailSender = javaMailSender;
         this.studentRepository = studentRepository;
         this.employeeRepository = employeeRepository;
+        this.springTemplateEngine = springTemplateEngine;
+    }
+
+    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
+        Context context = new Context();
+        context.setVariables(templateModel);
+
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+        helper.setSubject(subject);
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(toEmail);
+        String htmlContent = springTemplateEngine.process(templateName, context);
+        helper.setText(htmlContent, true);
+        javaMailSender.send(mimeMessage);
     }
 
     @Async
@@ -191,5 +211,16 @@ public class EmailService {
 
         javaMailSender.send(classAnnouncement);
 
+    }
+    @Async
+    public void sendPositiveShoutOut(String toEmail, String studentName) {
+        Map<String, Object> positiveTemplateData = new HashMap<>();
+        positiveTemplateData.put("studentName", studentName);
+
+        try {
+            sendHtmlEmail("positive-shout-out", toEmail, "Positive Shout out for " + studentName, positiveTemplateData);
+        } catch (MailException | MessagingException e) {
+            log.error("Exception occurred while sending email: {}", e.getMessage());
+        }
     }
 }

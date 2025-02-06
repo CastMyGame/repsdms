@@ -118,7 +118,7 @@ public class PunishmentService {
         School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
 
 
-        punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School referral for " + student.getFirstName() + " " + student.getLastName());
+        punishmentResponse.setSubject(ourSchool.getSchoolName() + " referral for " + student.getFirstName() + " " + student.getLastName());
         if (infraction.getInfractionName().equals("Tardy")) {
 
             punishmentResponse.setMessage(" Hello," +
@@ -246,7 +246,7 @@ public class PunishmentService {
 
         // Grab school info and populate into punishment
         School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
-        punishmentResponse.setSubject(ourSchool.getSchoolName() +" High School Referral for " + student.getFirstName() + " " + student.getLastName());
+        punishmentResponse.setSubject(ourSchool.getSchoolName() +" Referral for " + student.getFirstName() + " " + student.getLastName());
         if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
             ////               CHANGE THIS WHEN YOU GET UPDATED EMAIL FOR ADMIN REFERRAL   /////////////////////////
 
@@ -273,7 +273,7 @@ public class PunishmentService {
             punishment.setStatus("REFERRAL");
             punishRepository.save(punishment);
 
-            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Office Referral for " + student.getFirstName() + " " + student.getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " Office Referral for " + student.getFirstName() + " " + student.getLastName());
             punishmentResponse.setMessage(
                     " Thank you for using the teacher managed referral. Because " + student.getFirstName() + " " + student.getLastName() +
                             " has received their fourth or greater offense for " + infraction.getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. " +
@@ -525,7 +525,7 @@ public class PunishmentService {
             shoutOut.replace("[,", "");
             shoutOut.replace(",]","");
 
-            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
             String pointsStatement = "";
             if(formRequest.getCurrency() > 0){
                 pointsStatement = "The teacher has added " + formRequest.getCurrency() + " " + ourSchool.getCurrency() + " to the student's Account. New Total Balance is " + student.getCurrency() + " " + ourSchool.getCurrency() + ".";
@@ -577,7 +577,7 @@ public class PunishmentService {
             concern.replace("[,", "");
             concern.replace(",]","");
 
-            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
@@ -606,7 +606,7 @@ public class PunishmentService {
             concern.replace("[,", "");
             concern.replace(",]","");
 
-            punishmentResponse.setSubject(ourSchool.getSchoolName() + " High School Academic Concern for " + student.getFirstName() + " " + student.getLastName());
+            punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " We are reaching out because we have concerns about " + student.getFirstName() + " " + student.getLastName() +
@@ -1076,7 +1076,7 @@ public class PunishmentService {
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
                     "You may email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
-            punishmentResponse.setSubject("High School referral for " + studentClose.getFirstName() + " " + studentClose.getLastName());
+            punishmentResponse.setSubject(" referral for " + studentClose.getFirstName() + " " + studentClose.getLastName());
             punishmentResponse.setParentToEmail(studentClose.getParentEmail());
             punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
             punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
@@ -1180,7 +1180,7 @@ public class PunishmentService {
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.");
-            punishmentResponse.setSubject( studentClose.getSchool() + " High School assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
+            punishmentResponse.setSubject( studentClose.getSchool() + " assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
             punishmentResponse.setParentToEmail(studentClose.getParentEmail());
             punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
             punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
