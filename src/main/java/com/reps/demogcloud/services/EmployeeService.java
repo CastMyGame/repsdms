@@ -62,10 +62,13 @@ public class EmployeeService {
 //        teacher.setRole(request.getRoles());
 //        roles.add(teacher);
         //Check it email exist in system
+
+        String emailPrefix = request.getEmail().split("@")[0];
+
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(request.getEmail().toLowerCase());
-        authenticationRequest.setPassword(request.getLastName().toLowerCase() + request.getSchool().toLowerCase());
+        authenticationRequest.setPassword(emailPrefix);
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchoolName(request.getSchool());
