@@ -83,12 +83,7 @@ public class JwtUtils {
 
     public boolean isTokenBlacklisted(String token) {
         boolean isBlacklisted = blacklistedTokens.contains(token);
-        System.out.println(isBlacklisted);
-        System.out.println("list: " +blacklistedTokens);
         System.out.println("incoming: " +token);
-
-
-
         return isBlacklisted;
     }
 

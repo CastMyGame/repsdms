@@ -40,9 +40,6 @@ public class DTOService {
         // -> this is global call to get all school related punishments as well as the call to get referrals
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
 
-        System.out.println(allSchoolPunishments + " All School Punishments ");
-
-
         List<OfficeReferral> allSchoolReferrals = officeReferralService.findAllSchool();
 
         //From this list created teacher response with student names included
@@ -82,7 +79,6 @@ public class DTOService {
         // -> this is global call to get all school related punishments
         List<Punishment> allSchoolPunishments = punishmentService.findAllSchool();
 
-        System.out.println(allSchoolPunishments + " All School Punishments ");
         List<OfficeReferral> allSchoolReferrals = officeReferralService.findAllSchool();
 
         //From this list created teacher response with student names included
