@@ -60,7 +60,6 @@ public class OfficeReferralService {
     }
 
     public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
-        System.out.println(officeReferralRequest + " THE REQUEST ");
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 

@@ -84,7 +84,6 @@ public class EmployeeControllers {
 
 
         List<EmployeeResponse> employees =  employeeService.createNewEmployeeList(employeeList);
-        System.out.println("controller " +employees);
         return ResponseEntity.ok(employees);
     }
 

@@ -52,9 +52,6 @@ public class DTOController {
             // Call the service method to fetch teacher overview data
             TeacherOverviewDTO message = dtoService.getTeacherOverData();
 
-            // Log the fetched message
-            System.out.println(message + " Teacher Overview DTO ");
-
             // If the method succeeds, return the response
             return ResponseEntity
                     .accepted()

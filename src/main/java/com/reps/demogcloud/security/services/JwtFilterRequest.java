@@ -30,7 +30,6 @@ public class JwtFilterRequest extends OncePerRequestFilter {
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwtToken = authorizationHeader.substring(7); // Extract token from Authorization header
-            System.out.println("THE TOKEN IN HEADER IS " + jwtToken);
         }
 
         if (jwtToken != null && !jwtToken.isEmpty()) {

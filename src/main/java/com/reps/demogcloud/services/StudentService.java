@@ -75,7 +75,6 @@ public class StudentService {
             throw new ResourceNotFoundException("That student does not exist");
         }
         logger.debug(String.valueOf(studentRecord));
-        System.out.println(studentRecord);
         return studentRecord;
     }
     public List<Student> findByStudentLastName(String lastName) throws ResourceNotFoundException {
@@ -87,7 +86,6 @@ public class StudentService {
             throw new ResourceNotFoundException("That student does not exist");
         }
         logger.debug(String.valueOf(studentRecord));
-        System.out.println(studentRecord);
         return studentRecord;
     }
 
@@ -95,7 +93,6 @@ public class StudentService {
         var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
 
         if (findMe == null) {
-            System.out.println(email);
             throw new Exception("No student with that email exists");
         }
 
@@ -110,7 +107,6 @@ public class StudentService {
             var findMe = studentRepository.findByStudentEmailIgnoreCase(emailAddress);
 
             if (findMe == null) {
-                System.out.println(email);
                 throw new Exception("No student with that email exists");
             }
             studentList.add(findMe);
@@ -153,7 +149,6 @@ public class StudentService {
 
     public String deleteStudent ( StudentRequest studentRequest ) throws Exception {
         try{
-            System.out.println(studentRequest.getStudent());
             studentRepository.delete(studentRequest.getStudent());}
         catch (Exception e) {
             throw new Exception("That student does not exist");
