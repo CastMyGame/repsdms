@@ -143,7 +143,6 @@ public class StudentController {
         for(Student student: students) {
             processedStudents.add(studentService.createNewStudent(student));
         }
-        System.out.println("controller " + processedStudents);
         return ResponseEntity
                 .accepted()
                 .body(processedStudents);

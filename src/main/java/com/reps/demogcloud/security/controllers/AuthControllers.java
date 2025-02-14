@@ -48,14 +48,12 @@ public class AuthControllers {
 
     @Autowired
     EmailService emailService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtils jwtUtils;
     @Autowired
     UserService userService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtils jwtUtils;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -73,12 +71,10 @@ public class AuthControllers {
     public ResponseEntity<String> logout(HttpServletRequest request) {
         // Get the current authentication object
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication + " : " + "Find");
 
         // Check if authentication object is not null and contains a token
         if (authentication != null && authentication.getDetails() != null ) {
             String authorizationHeader = request.getHeader("Authorization");
-            System.out.println(authorizationHeader);
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
                 String token = authorizationHeader.substring(7); // Extract token after "Bearer "
                 jwtUtils.blacklistToken(token); // Assuming jwtUtils has a blacklistToken method
@@ -204,7 +200,6 @@ public class AuthControllers {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) throws MessagingException {
         String email = forgotPasswordRequest.getEmail();
-    System.out.println(forgotPasswordRequest.getEmail());
         //check if email is in userRepository
         UserModel user = userRepository.findByUsername(email);
         if (user==null){
@@ -262,9 +257,9 @@ public class AuthControllers {
 }
 
  class AuthenticationResponseRenewal {
-    private String message;
-    private String token;
-    private UserModel userModel;
+     private final String message;
+     private final String token;
+     private final UserModel userModel;
 
     public AuthenticationResponseRenewal(String message, String token, UserModel userModel) {
         this.message = message;

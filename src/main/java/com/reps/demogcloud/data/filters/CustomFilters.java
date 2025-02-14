@@ -131,7 +131,6 @@ public class CustomFilters {
     //Filter for Employee Endpoints
     public List<Employee> FetchEmployeeDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Employee> archivedRecords = employeeRepository.findByIsArchivedAndSchool(bool,getSchoolName());
-        System.out.println(archivedRecords + "   Archived Records ");
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }

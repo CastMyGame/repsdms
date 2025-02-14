@@ -39,7 +39,6 @@ public class assignmentController {
     //------------------------POST Controllers-----------------------------
     @PostMapping("/")
     public ResponseEntity<Assignment> createNewAssignment(@RequestBody Assignment assignment) throws Exception {
-        System.out.println(assignment);
         var message = assignmentService.createNewAssignment(assignment);
         return ResponseEntity
                 .accepted()
@@ -49,7 +48,6 @@ public class assignmentController {
     //----------------------------PUT Controllers----------------------------------
     @PutMapping("/{id}")
     public ResponseEntity<Assignment> updateAssignment(@RequestBody Assignment assignment,@PathVariable String id) throws Exception {
-        System.out.println(assignment);
         var message = assignmentService.updateNewAssignment(assignment,id);
         return ResponseEntity
                 .accepted()

@@ -119,7 +119,6 @@ public class EmailService {
     }
 
     public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
-        System.out.println("Sending Email Alert");
         if (detention.equals("DETENTION")) {
 
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
