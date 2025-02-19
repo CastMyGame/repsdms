@@ -1758,7 +1758,7 @@ public class PunishmentService {
         String textMessage = " Your child, " + studentFirstName + " " + studentLastName +
                 " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
                 ".\n " +
-                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral." +
+                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral. " +
                 "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
 
         return textMessage.replace("[,", "").replace(",]", "");
