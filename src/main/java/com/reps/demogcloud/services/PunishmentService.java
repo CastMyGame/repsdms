@@ -55,7 +55,6 @@ import javax.mail.MessagingException;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -227,12 +226,12 @@ public class PunishmentService {
     }
 
     private PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
-                                                           PunishRepository punishRepository,
-                                                           StudentRepository studentRepository,
-                                                           InfractionRepository infractionRepository,
-                                                           EmailService emailService,
-                                                           OfficeReferralService officeReferralService,
-                                                           SchoolRepository schoolRepository) throws MessagingException {
+                                                    PunishRepository punishRepository,
+                                                    StudentRepository studentRepository,
+                                                    InfractionRepository infractionRepository,
+                                                    EmailService emailService,
+                                                    OfficeReferralService officeReferralService,
+                                                    SchoolRepository schoolRepository) throws MessagingException {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -246,26 +245,26 @@ public class PunishmentService {
 
         // Grab school info and populate into punishment
         School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
-        punishmentResponse.setSubject(ourSchool.getSchoolName() +" Referral for " + student.getFirstName() + " " + student.getLastName());
-        if(punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
+        punishmentResponse.setSubject(ourSchool.getSchoolName() + " Referral for " + student.getFirstName() + " " + student.getLastName());
+        if (punishment.getClosedTimes() == ourSchool.getMaxPunishLevel()) {
             ////               CHANGE THIS WHEN YOU GET UPDATED EMAIL FOR ADMIN REFERRAL   /////////////////////////
 
             List<Punishment> punishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
-                    student.getStudentEmail(), infraction.getInfractionName(), "CLOSED",false
+                    student.getStudentEmail(), infraction.getInfractionName(), "CLOSED", false
             );
             List<Punishment> referrals = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
-                    student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL",false
+                    student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false
             );
             List<Punishment> cfr = punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(
-                    student.getStudentEmail(), infraction.getInfractionName(), "CFR",false
+                    student.getStudentEmail(), infraction.getInfractionName(), "CFR", false
             );
             punishments.addAll(referrals);
             punishments.addAll(cfr);
             List<String> message = new ArrayList<>();
-            for(Punishment closed : punishments) {
-                String messageIn ="Infraction took place on" + closed.getTimeCreated() + " the description of the event is as follows: " + closed.getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed() + ". ";
+            for (Punishment closed : punishments) {
+                String messageIn = "Infraction took place on" + closed.getTimeCreated() + " the description of the event is as follows: " + closed.getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed() + ". ";
                 messageIn.replace("[,", "");
-                messageIn.replace(",]","");
+                messageIn.replace(",]", "");
                 message.add(messageIn);
             }
 
@@ -277,39 +276,20 @@ public class PunishmentService {
             punishmentResponse.setMessage(
                     " Thank you for using the teacher managed referral. Because " + student.getFirstName() + " " + student.getLastName() +
                             " has received their fourth or greater offense for " + infraction.getInfractionName() + " they will need to receive an office referral. Please Complete an office managed referral for Failure to Comply with Disciplinary Action. Copy and paste the following into “behavior description”. " +
-                            student.getFirstName() + " " + student.getLastName() +  " received their 4th offense for " + infraction.getInfractionName() + " on " + punishment.getTimeCreated() +
+                            student.getFirstName() + " " + student.getLastName() + " received their 4th offense for " + infraction.getInfractionName() + " on " + punishment.getTimeCreated() +
                             "A description of the event is as follows: " + punishment.getInfractionDescription() + " . A summary of their previous infractions is listed below." +
                             message);
 
             emailService.sendEmail(punishmentResponse.getTeacherToEmail(), punishmentResponse.getSubject(), punishmentResponse.getMessage());
 
         }
-        if(infraction.getInfractionName().equals("Tardy") && !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Tardy") && !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-                    textMessage.replace("[,", "");
-                    textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -318,33 +298,13 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
 
         }
-        if(infraction.getInfractionName().equals("Unauthorized Device/Cell Phone") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Unauthorized Device/Cell Phone") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-            textMessage.replace("[,", "");
-            textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -352,33 +312,13 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Disruptive Behavior") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Disruptive Behavior") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-            textMessage.replace("[,", "");
-            textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -386,33 +326,13 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Horseplay") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Horseplay") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-            textMessage.replace("[,", "");
-            textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -420,33 +340,13 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Dress Code") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Dress Code") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-            textMessage.replace("[,", "");
-            textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -454,33 +354,13 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Inappropriate Language") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "As a result they have received an assignment and lunch detention for tomorrow. The goal of the assignment is to provide " + student.getFirstName() + " " + student.getLastName() +
-                    " with information about the infraction and ways to make beneficial decisions in the future. If " + student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Inappropriate Language") & !(punishment.getClosedTimes() == 4)) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-            textMessage.replace("[,", "");
-            textMessage.replace("],", "");
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -488,31 +368,13 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Failure to Complete Work")) {
-            String description = punishment.getInfractionDescription().get(0);
-            description.replace("[,", "");
-            description.replace("]", "");
-            String messageIn = " Hello, \n" +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received an infraction for " + infraction.getInfractionName() +
-                    " \n" +
-                    "As a result they have been assigned lunch detention for tomorrow to complete the following assignment: " + description + ". If " +
-                    student.getFirstName() + " " + student.getLastName() + " completes the assignment prior to lunch tomorrow they will no longer be required to attend lunch detention. We will send out an email confirming the completion of the assignment when we receive the assignment. We believe that consistency in completing assignments will have a profound impact on their grade and understanding. Please continue to encourage them to finish the assignment. \n"
-                    + "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-            messageIn.replace("[,", "");
-            messageIn.replace(",]","");
-            punishmentResponse.setMessage(messageIn);
+        if (infraction.getInfractionName().equals("Failure to Complete Work")) {
+            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
 
-            String textMessage = " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has received offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() + ". " + description +
-                    ".\n " +
-                    "They have an assignment and lunch detention tomorrow. If the assignment is completed prior to lunch they will no longer have lunch detention." +
-                    "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
 
-                    Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                            new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -520,14 +382,14 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
+        if (infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
             String shoutOut = punishment.getInfractionDescription().get(0);
             shoutOut.replace("[,", "");
-            shoutOut.replace(",]","");
+            shoutOut.replace(",]", "");
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
             String pointsStatement = "";
-            if(formRequest.getCurrency() > 0){
+            if (formRequest.getCurrency() > 0) {
                 pointsStatement = "The teacher has added " + formRequest.getCurrency() + " " + ourSchool.getCurrency() + " to the student's Account. New Total Balance is " + student.getCurrency() + " " + ourSchool.getCurrency() + ".";
             }
 //            punishmentResponse.setMessage(" Hello," +
@@ -570,12 +432,12 @@ public class PunishmentService {
                     punishmentResponse.getTeacherToEmail(),
                     punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getSubject(),
-                  message);
+                    message);
         }
-        if(infraction.getInfractionName().equals("Behavioral Concern")) {
+        if (infraction.getInfractionName().equals("Behavioral Concern")) {
             String concern = punishment.getInfractionDescription().get(0);
             concern.replace("[,", "");
-            concern.replace(",]","");
+            concern.replace(",]", "");
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
 
@@ -601,10 +463,10 @@ public class PunishmentService {
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
-        if(infraction.getInfractionName().equals("Academic Concern")) {
+        if (infraction.getInfractionName().equals("Academic Concern")) {
             String concern = punishment.getInfractionDescription().get(0);
             concern.replace("[,", "");
-            concern.replace(",]","");
+            concern.replace(",]", "");
 
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
@@ -633,10 +495,10 @@ public class PunishmentService {
         return punishmentResponse;
     }
 
-    public List<Punishment> findByStudentEmailAndInfraction(String email,String infractionId) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByStudentEmailAndInfractionId(email,infractionId);
+    public List<Punishment> findByStudentEmailAndInfraction(String email, String infractionId) throws ResourceNotFoundException {
+        var fetchData = punishRepository.findByStudentEmailAndInfractionId(email, infractionId);
         var punishmentRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
         if (punishmentRecord.isEmpty()) {
@@ -649,10 +511,10 @@ public class PunishmentService {
     }
 
     public List<Punishment> findAll() {
-       return punishRepository.findByIsArchived(false);
+        return punishRepository.findByIsArchived(false);
     }
 
-    public List<Punishment> findAllPunishmentsByTeacherEmail(String email){
+    public List<Punishment> findAllPunishmentsByTeacherEmail(String email) {
         List<Punishment> preProcessedPunishments = punishRepository.findByIsArchived(false);
 
         return preProcessedPunishments.stream().filter(record -> record.getTeacherEmail().equalsIgnoreCase(email)).toList();
@@ -661,7 +523,7 @@ public class PunishmentService {
     public List<Punishment> findByInfractionId(String infractionName) throws ResourceNotFoundException {
         List<Punishment> fetchData = punishRepository.findByInfractionId(infractionName);
         var punishmentRecord = fetchData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
 
@@ -673,7 +535,7 @@ public class PunishmentService {
     }
 
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var fetchData = customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false,status);
+        var fetchData = customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
 
 
         if (fetchData.isEmpty()) {
@@ -689,7 +551,7 @@ public class PunishmentService {
             throw new ResourceNotFoundException("No punishments with that ID exist");
         }
 
-        if(fetchData.isArchived()){
+        if (fetchData.isArchived()) {
             throw new ResourceNotFoundException("No punishments with that ID exist");
 
         }
@@ -699,24 +561,24 @@ public class PunishmentService {
     }
 
 
-
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
     // Methods that Need Global Filters Due for schools
     public List<Punishment> findAllSchool() {
-        return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);    }
-
-    // Uses Logged In User as Teacher Email
-    public List<Punishment> findAllPunishmentsByTeacherEmail(){
-       return customFilters.LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(false);
+        return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
     }
 
-    public List<Punishment> findAllPunishmentsByStudentEmail(){
+    // Uses Logged In User as Teacher Email
+    public List<Punishment> findAllPunishmentsByTeacherEmail() {
+        return customFilters.LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(false);
+    }
+
+    public List<Punishment> findAllPunishmentsByStudentEmail() {
         return customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
     }
 
     public List<Punishment> findByInfractionName(String infractionName) throws ResourceNotFoundException {
-        List<Punishment> fetchData = customFilters.FetchPunishmentDataByInfractionNameAndIsArchived(infractionName,false);
+        List<Punishment> fetchData = customFilters.FetchPunishmentDataByInfractionNameAndIsArchived(infractionName, false);
 
 
         if (fetchData.isEmpty()) {
@@ -762,7 +624,7 @@ public class PunishmentService {
         }
         Punishment punishment = new Punishment();
         ArrayList<String> description = new ArrayList<>();
-        if(!formRequest.getPhoneLogDescription().isEmpty()) {
+        if (!formRequest.getPhoneLogDescription().isEmpty()) {
             List<ThreadEvent> phoneCalls = findMe.getNotesArray();
             ThreadEvent phoneLog = new ThreadEvent();
             phoneLog.setCreatedBy(formRequest.getTeacherEmail());
@@ -827,7 +689,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -844,7 +706,7 @@ public class PunishmentService {
             punishment.setTimeClosed(now);
             Punishment punishmentRecord = punishRepository.save(punishment);
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -858,7 +720,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -872,7 +734,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -886,7 +748,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -900,7 +762,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -915,7 +777,7 @@ public class PunishmentService {
             Punishment punishmentRecord = punishRepository.save(punishment);
 
             if (!formRequest.getGuidanceDescription().isEmpty()) {
-                LinkAssignmentToGuidance(findMe,formRequest,punishmentRecord);
+                LinkAssignmentToGuidance(findMe, formRequest, punishmentRecord);
             }
 
             //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
@@ -928,16 +790,16 @@ public class PunishmentService {
 
     }
 
-    public  void LinkAssignmentToGuidance(Student student,PunishmentFormRequest formRequest,Punishment punishment) throws MessagingException, IOException, InterruptedException {
-            GuidanceRequest guidanceRequest = new GuidanceRequest();
-            Guidance guidance = new Guidance();
-            guidance.setGuidanceEmail(student.getGuidanceEmail());
-            guidance.setStudentEmail(student.getStudentEmail());
-            guidance.setLinkToPunishment(punishment.getPunishmentId());
-            guidance.setInfractionName(punishment.getInfractionName());
-            guidanceRequest.setGuidance(guidance);
+    public void LinkAssignmentToGuidance(Student student, PunishmentFormRequest formRequest, Punishment punishment) throws MessagingException, IOException, InterruptedException {
+        GuidanceRequest guidanceRequest = new GuidanceRequest();
+        Guidance guidance = new Guidance();
+        guidance.setGuidanceEmail(student.getGuidanceEmail());
+        guidance.setStudentEmail(student.getStudentEmail());
+        guidance.setLinkToPunishment(punishment.getPunishmentId());
+        guidance.setInfractionName(punishment.getInfractionName());
+        guidanceRequest.setGuidance(guidance);
 
-            createNewGuidanceForm(guidanceRequest,formRequest);
+        createNewGuidanceForm(guidanceRequest, formRequest);
 
 
     }
@@ -964,7 +826,7 @@ public class PunishmentService {
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
         guidanceRepository.save(guidanceObj);
 
-        GuidanceResponse response  = new GuidanceResponse();
+        GuidanceResponse response = new GuidanceResponse();
         ArrayList<Guidance> guidances = new ArrayList<>();
         guidances.add(guidanceObj);
         response.setGuidance(guidances);
@@ -993,7 +855,7 @@ public class PunishmentService {
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
         guidanceRepository.save(guidanceObj);
 
-        GuidanceResponse response  = new GuidanceResponse();
+        GuidanceResponse response = new GuidanceResponse();
         ArrayList<Guidance> guidances = new ArrayList<>();
         guidances.add(guidanceObj);
         response.setGuidance(guidances);
@@ -1005,9 +867,10 @@ public class PunishmentService {
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException, IOException, InterruptedException {
         List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-        for(PunishmentFormRequest punishmentFormRequest : listRequest) {
+        for (PunishmentFormRequest punishmentFormRequest : listRequest) {
             punishmentResponse.add(createNewPunishForm(punishmentFormRequest));
-        } return  punishmentResponse;
+        }
+        return punishmentResponse;
     }
 
     //  --------------------------------------DURATION METHODS AND CRON JOBS----------------------------------------------------------
@@ -1019,9 +882,8 @@ public class PunishmentService {
                 infractionName, "OPEN");
 
         var findOpen = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
-
 
 
         Punishment findMe = null;
@@ -1036,10 +898,10 @@ public class PunishmentService {
         Student studentClose = studentRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
         Infraction infractionClose = infractionRepository.findByInfractionId(findMe.getInfractionId());
 
-        if(!studentAnswers.isEmpty()) {
+        if (!studentAnswers.isEmpty()) {
             ArrayList<String> answers = findMe.getInfractionDescription();
-            for (StudentAnswer answer:studentAnswers
-                 ) {
+            for (StudentAnswer answer : studentAnswers
+            ) {
                 answers.add(answer.toString());
             }
 
@@ -1052,10 +914,10 @@ public class PunishmentService {
             response.setPunishment(findMe);
             return response;
         } else {
-        findMe.setStatus("CLOSED");
-        findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-        findMe.setTimeClosed(LocalDate.now());
-        punishRepository.save(findMe);
+            findMe.setStatus("CLOSED");
+            findMe.setClosedTimes(findMe.getClosedTimes() + 1);
+            findMe.setTimeClosed(LocalDate.now());
+            punishRepository.save(findMe);
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
             punishmentResponse.setMessage(" Hello, \n" +
@@ -1078,7 +940,8 @@ public class PunishmentService {
 //                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             return punishmentResponse;
-        }}
+        }
+    }
 
 //    public List<Punishment> getAllOpenForADay() {
 //        String subject = "Burke High School Open Referrals";
@@ -1119,10 +982,10 @@ public class PunishmentService {
         studentAnswer.add("");
         studentAnswer.add(resetContext);
         Date currentDate = new Date();
-        if(punishment.getAnswerHistory() !=null){
-            Map<Date,List<String>> answers = punishment.getAnswerHistory();
-            answers.put(currentDate,new ArrayList<>(contextToStore));
-        }else {
+        if (punishment.getAnswerHistory() != null) {
+            Map<Date, List<String>> answers = punishment.getAnswerHistory();
+            answers.put(currentDate, new ArrayList<>(contextToStore));
+        } else {
             punishment.setAnswerHistory(currentDate, new ArrayList<>(contextToStore));
 
         }
@@ -1130,7 +993,7 @@ public class PunishmentService {
 
         punishment.setStatus("OPEN");
 
-        String message =  "Hello, \n" +
+        String message = "Hello, \n" +
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
                 contextToStore + " \n" +
@@ -1167,7 +1030,7 @@ public class PunishmentService {
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
                     "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.");
-            punishmentResponse.setSubject( studentClose.getSchool() + " assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
+            punishmentResponse.setSubject(studentClose.getSchool() + " assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
             punishmentResponse.setParentToEmail(studentClose.getParentEmail());
             punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
             punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
@@ -1204,12 +1067,12 @@ public class PunishmentService {
 
         List<Punishment> fetchPunishmentData = punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now);
         var open = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
         List<String> names = new ArrayList<>();
 
-        for(Punishment punishment: open) {
+        for (Punishment punishment : open) {
             Student studentAdd = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             Infraction infractionAdd = infractionRepository.findByInfractionId(punishment.getInfractionId());
             names.add(studentAdd.getFirstName() + " " + studentAdd.getLastName() + " " + infractionAdd.getInfractionName());
@@ -1221,21 +1084,21 @@ public class PunishmentService {
     }
 
     public List<Punishment> getAllPunishmentsForStudents(String studentEmail) {
-            List<String> messages = new ArrayList<>();
-            Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-            String subject = student.getSchool() + " High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
-            String intro = "Punishment report for: " + student.getFirstName() + " " + student.getLastName();
-            List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCase(studentEmail);
+        List<String> messages = new ArrayList<>();
+        Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        String subject = student.getSchool() + " High School Student Report for " + student.getFirstName() + " " + student.getLastName() + "\n";
+        String intro = "Punishment report for: " + student.getFirstName() + " " + student.getLastName();
+        List<Punishment> fetchPunishmentData = punishRepository.findByStudentEmailIgnoreCase(studentEmail);
         var studentPunishments = fetchPunishmentData.stream()
-                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
-            for(Punishment punishment : studentPunishments) {
-                Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
-                String punishmentMessage = punishment.getTimeCreated() + " " + infraction.getInfractionName()
-                        + " " + punishment.getInfractionDescription() + "\n";
-                messages.add(punishmentMessage);
-            }
+        for (Punishment punishment : studentPunishments) {
+            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
+            String punishmentMessage = punishment.getTimeCreated() + " " + infraction.getInfractionName()
+                    + " " + punishment.getInfractionDescription() + "\n";
+            messages.add(punishmentMessage);
+        }
 
         return studentPunishments;
     }
@@ -1259,11 +1122,11 @@ public class PunishmentService {
 
             // Switch Filter Depending On Role
             if (userModel.getRoles().stream().anyMatch(role -> "TEACHER".equals(role.getRole()))) {
-                data = customFilters.filterPunishmentsByTeacherEmail(data,userModel.getUsername());
+                data = customFilters.filterPunishmentsByTeacherEmail(data, userModel.getUsername());
             }
 
             if (userModel.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()))) {
-                data = customFilters.filterPunishmentObjByStudent(data,userModel.getUsername());
+                data = customFilters.filterPunishmentObjByStudent(data, userModel.getUsername());
             }
 
             //If Admin, defaults to no additional filter
@@ -1290,7 +1153,7 @@ public class PunishmentService {
 
     }
 
-//    private static PunishmentResponse sendDisciplineEmail(Punishment punishment, PunishRepository punishRepostory) {
+    //    private static PunishmentResponse sendDisciplineEmail(Punishment punishment, PunishRepository punishRepostory) {
 //        PunishmentResponse punishmentResponse = new PunishmentResponse();
 //        Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
 //        Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -1318,13 +1181,13 @@ public class PunishmentService {
 //        return punishmentResponse;
 //    }
 //
-        public List<Punishment> findAllPunishmentIsArchived(boolean bool) throws ResourceNotFoundException {
-            List<Punishment> archivedRecords = punishRepository.findByIsArchived(bool);
-            if (archivedRecords.isEmpty()) {
-                throw new ResourceNotFoundException("No Archived Records exist in punihsment table");
-            }
-            return archivedRecords;
+    public List<Punishment> findAllPunishmentIsArchived(boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByIsArchived(bool);
+        if (archivedRecords.isEmpty()) {
+            throw new ResourceNotFoundException("No Archived Records exist in punihsment table");
         }
+        return archivedRecords;
+    }
 
     public Punishment archiveRecord(String punishmentId, String userId, String explanation) throws MessagingException {
         //Check for existing record
@@ -1357,7 +1220,7 @@ public class PunishmentService {
 
     public Punishment restoreRecord(String punishmentId) throws MessagingException {
         //Check for existing record
-        Punishment existingRecord = punishRepository.findByPunishmentIdAndIsArchived(punishmentId,true);
+        Punishment existingRecord = punishRepository.findByPunishmentIdAndIsArchived(punishmentId, true);
         Student student = studentRepository.findByStudentEmailIgnoreCase(existingRecord.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(existingRecord.getInfractionId());
         //Updated Record
@@ -1380,7 +1243,6 @@ public class PunishmentService {
                 restoreMessage);
 
 
-
         return punishRepository.save(existingRecord);
 
 
@@ -1392,13 +1254,13 @@ public class PunishmentService {
 
     public Punishment updateMapIndex(String id, int index) {
         Punishment punishment = punishRepository.findByPunishmentId(id);
-        if(punishment !=null){
-                punishment.setMapIndex(index);
-                punishRepository.save(punishment);
+        if (punishment != null) {
+            punishment.setMapIndex(index);
+            punishRepository.save(punishment);
             return punishment;
 
-        }else{
-            throw new ResourceNotFoundException("No Punishment with Id " +id +" number exist");
+        } else {
+            throw new ResourceNotFoundException("No Punishment with Id " + id + " number exist");
 
         }
 
@@ -1408,7 +1270,7 @@ public class PunishmentService {
     public List<Punishment> updateTimeCreated() {
         List<Punishment> all = punishRepository.findByIsArchived(false);
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
+        for (Punishment punishment : all) {
             if (punishment.getInfractionName().equals("Tardy") ||
                     punishment.getInfractionName().equals("Horseplay") ||
                     punishment.getInfractionName().equals("Disruptive Behavior") ||
@@ -1448,8 +1310,8 @@ public class PunishmentService {
     public List<Punishment> updateDescriptions() {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
-            if(punishment.getInfractionDescription().size() > 1) {
+        for (Punishment punishment : all) {
+            if (punishment.getInfractionDescription().size() > 1) {
                 punishment.getInfractionDescription().remove(0);
                 punishRepository.save(punishment);
                 saved.add(punishment);
@@ -1461,7 +1323,7 @@ public class PunishmentService {
     public List<Punishment> updateStudentEmails() {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
+        for (Punishment punishment : all) {
             String studentEmail = punishment.getStudentEmail();
             punishment.setStudentEmail(studentEmail);
             punishRepository.save(punishment);
@@ -1473,7 +1335,7 @@ public class PunishmentService {
     public List<Punishment> updateInfractionName() {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
+        for (Punishment punishment : all) {
             Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
             punishment.setInfractionName(infractionName.getInfractionName());
             punishRepository.save(punishment);
@@ -1485,7 +1347,7 @@ public class PunishmentService {
     public List<Punishment> updateInfractionLevel() {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
+        for (Punishment punishment : all) {
             Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
             punishment.setInfractionLevel(infractionName.getInfractionLevel());
             punishRepository.save(punishment);
@@ -1497,7 +1359,7 @@ public class PunishmentService {
     public List<Punishment> updateSchools() {
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
-        for(Punishment punishment : all) {
+        for (Punishment punishment : all) {
             Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
             String studentEmail = punishment.getStudentEmail();
             punishment.setSchoolName(student.getSchool());
@@ -1605,7 +1467,7 @@ public class PunishmentService {
         stateRequest.setIsSpecialEd(notTrue);
         stateRequest.setIs504(notTrue);
 
-        StateFormIntElement grade = new StateFormIntElement(9,"9th Grade");
+        StateFormIntElement grade = new StateFormIntElement(9, "9th Grade");
         stateRequest.setStudentGrade(grade);
 
         StateFormIntElement homeless = new StateFormIntElement(1, "Not Homeless");
@@ -1625,14 +1487,14 @@ public class PunishmentService {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        }
+    }
 
     public Guidance updateGuidance(String id, ThreadEvent event) {
         Optional<Guidance> guidance = guidanceRepository.findById(id);
 
-        if(guidance.isEmpty()){
+        if (guidance.isEmpty()) {
             GuidanceResponse response = new GuidanceResponse();
-            response.setError("No Guidance with id " + id +" was found");
+            response.setError("No Guidance with id " + id + " was found");
             return null;
 
         }
@@ -1699,11 +1561,11 @@ public class PunishmentService {
                 .collect(Collectors.toList());
     }
 
-    public Guidance updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp,String statusChange) {
+    public Guidance updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp, String statusChange) {
         Optional<Guidance> record = guidanceRepository.findById(id);
-        if(record.isEmpty()){
+        if (record.isEmpty()) {
             GuidanceResponse response = new GuidanceResponse();
-            response.setError("No Guidance with id "+ id+ " was found");
+            response.setError("No Guidance with id " + id + " was found");
             return null;
         }
 
@@ -1752,14 +1614,14 @@ public class PunishmentService {
     public Guidance updateGuidanceStatus(String id, String newStatus) {
         Optional<Guidance> getReferral = guidanceRepository.findById(id);
 
-        if(getReferral.isEmpty()){
+        if (getReferral.isEmpty()) {
             GuidanceResponse response = new GuidanceResponse();
-            response.setError("Guidance Referral with id "+ " was not found");
+            response.setError("Guidance Referral with id " + " was not found");
             return null;
         }
-       Guidance record = getReferral.get();
+        Guidance record = getReferral.get();
         record.setStatus(newStatus);
-       List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
+        List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
 
         LocalDate timePosted = LocalDate.now();
         ThreadEvent newEvent = new ThreadEvent();
@@ -1771,14 +1633,14 @@ public class PunishmentService {
         return guidanceRepository.save(record);
     }
 
-//    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
+    //    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
 //    @Bean
 //    @Transactional
-    public void alertIssAndDetention () throws MessagingException {
+    public void alertIssAndDetention() throws MessagingException {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
         List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
-        for(Punishment punishment : punishments) {
+        for (Punishment punishment : punishments) {
             // Get the student and school from the punishment
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
 
@@ -1804,9 +1666,9 @@ public class PunishmentService {
 
     public GuidanceResponse sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
         Optional<Guidance> guidanceOptional = guidanceRepository.findById(id);
-        if(guidanceOptional.isEmpty()){
+        if (guidanceOptional.isEmpty()) {
             GuidanceResponse response = new GuidanceResponse();
-            response.setMessage("No Guidance Found by Id: "+ id);
+            response.setMessage("No Guidance Found by Id: " + id);
             return response;
         }
 
@@ -1843,7 +1705,7 @@ public class PunishmentService {
                 .append(", Guidance has sent you the following resources for your consideration:</p>")
                 .append("<ul>");
 
-        for (ResourceOption item : request.getResourceOptionList() ) {
+        for (ResourceOption item : request.getResourceOptionList()) {
             resourceMessage.append("<li><a href=\"")
                     .append(item.getUrl())
                     .append("\">")
@@ -1857,7 +1719,7 @@ public class PunishmentService {
 
         String finalMessage = resourceMessage.toString();
 
-        String subject =  student.getSchool() + " High School Guidance's Resources";
+        String subject = student.getSchool() + " High School Guidance's Resources";
         ArrayList<String> ccList = new ArrayList<>();
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());
@@ -1870,14 +1732,37 @@ public class PunishmentService {
                 finalMessage// Use HTML message
         );
 
-         guidanceRepository.save(guidance);
-         GuidanceResponse response = new GuidanceResponse();
-         List<Guidance> listOfGuidance = new ArrayList<>();
-         listOfGuidance.add(guidance);
-         response.setGuidance(listOfGuidance);
-         return response;
+        guidanceRepository.save(guidance);
+        GuidanceResponse response = new GuidanceResponse();
+        List<Guidance> listOfGuidance = new ArrayList<>();
+        listOfGuidance.add(guidance);
+        response.setGuidance(listOfGuidance);
+        return response;
     }
 
+    private String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail) {
+        String emailText = " Hello, \n" +
+                " Your child, " + studentFirstName + " " + studentLastName +
+                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
+                ".\n " +
+                "As a result they have received an assignment. The goal of the assignment is to provide " + studentFirstName + " " + studentLastName +
+                " with information about the infraction and ways to make beneficial decisions in the future. If " + studentFirstName + " " + studentLastName + " does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:\n" +
+                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+
+        return emailText.replace("[,", "").replace(",]", "");
+    }
+
+    private String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description) {
+        String textMessage = " Your child, " + studentFirstName + " " + studentLastName +
+                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
+                ".\n " +
+                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral." +
+                "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
+
+        return textMessage.replace("[,", "").replace(",]", "");
+    }
 
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
