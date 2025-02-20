@@ -102,7 +102,54 @@ public class PunishmentService {
         return String.valueOf(level);
     }
 
-    private static PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository, SchoolRepository schoolRepository) {
+    private static String adjustString(String input) {
+        // Use regex to match the part before the number and the number itself
+        String regex = "(.*?)(\\d+)$";
+        return input.replaceAll(regex, "$1 $2").trim();
+    }
+
+    private String replaceString(String description) {
+        return description.replace("[,", "").replace(",]", "");
+    }
+
+    private String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail) {
+        String emailText = " Hello, \n" +
+                " Your child, " + studentFirstName + " " + studentLastName +
+                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
+                ".\n " +
+                "As a result they have received an assignment. The goal of the assignment is to provide " + studentFirstName + " " + studentLastName +
+                " with information about the infraction and ways to make beneficial decisions in the future. If " + studentFirstName + " " + studentLastName + " does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:\n" +
+                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+
+        return replaceString(emailText);
+    }
+
+    private String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description) {
+        String textMessage = " Your child, " + studentFirstName + " " + studentLastName +
+                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
+                ".\n " +
+                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral." +
+                "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
+
+        return replaceString(textMessage);
+    }
+
+    private String createCFRMessage(String studentFirstName, String studentLastName, String infractionName, String teacherEmail, String studentEmail) {
+        String cfrMessage = " Hello," +
+                " Your child, " + studentFirstName + " " + studentLastName +
+                " has received another offense for " + infractionName + ". \n" +
+                " They currently have an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
+                "You may email the teacher directly at " + teacherEmail + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
+                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
+                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+
+        return replaceString(cfrMessage);
+    }
+
+    private PunishmentResponse sendCFREmailBasedOnType(Punishment punishment, StudentRepository studentRepository, InfractionRepository infractionRepository, SchoolRepository schoolRepository) {
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
@@ -120,109 +167,31 @@ public class PunishmentService {
         punishmentResponse.setSubject(ourSchool.getSchoolName() + " referral for " + student.getFirstName() + " " + student.getLastName());
         if (infraction.getInfractionName().equals("Tardy")) {
 
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for being " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
         if (infraction.getInfractionName().equals("Unauthorized Device/Cell Phone")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for having an " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
         if (infraction.getInfractionName().equals("Disruptive Behavior")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
         if (infraction.getInfractionName().equals("Horseplay")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
         if (infraction.getInfractionName().equals("Dress Code")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
         if (infraction.getInfractionName().equals("Failure to Complete Work")) {
-            punishmentResponse.setMessage(" Hello," +
-                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    " has been written up for " + infraction.getInfractionName() + ". \n" +
-                    " " + "They currently have this an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. \n" +
-                    "You may email the teacher directly at " + punishment.getTeacherEmail() + " if there are any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment or if you have any questions or concerns." +
-                    "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :\n" +
-                    "The username is their school email and their password is " + student.getStudentEmail() + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.");
-            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
+            punishmentResponse.setMessage(createCFRMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionName(), punishmentResponse.getTeacherToEmail(), student.getStudentEmail()));
             return punishmentResponse;
         }
-//        if(infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
-//            punishmentResponse.setMessage(" Hello," +
-//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-//                    " has received a shout out from their teacher for the following: " + infraction.getInfractionDescription());
-//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-//
-//
-//    }
-//        if(infraction.getInfractionName().equals("Behavioral Concern")) {
-//            punishmentResponse.setMessage(" Hello," +
-//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-//                    ", demonstrated some concerning behavior during " + punishment.getClassPeriod() + ". " + infraction.getInfractionDescription() +
-//                    "At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way Burke can help better support " + student.getFirstName() + " " + student.getLastName() +
-//                    ". We appreciate your assistance and will continue to work to help your child reach their full potential. Do not respond to this message. Please contact the school at (843) 579-4815 or email the teacher directly at" + punishment.getTeacherEmail());
-//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-//
-//        }
-        return punishmentResponse;
-    }
 
-    private static String adjustString(String input) {
-        // Use regex to match the part before the number and the number itself
-        String regex = "(.*?)(\\d+)$";
-        return input.replaceAll(regex, "$1 $2").trim();
+        return punishmentResponse;
     }
 
     private PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment,
@@ -263,9 +232,7 @@ public class PunishmentService {
             List<String> message = new ArrayList<>();
             for (Punishment closed : punishments) {
                 String messageIn = "Infraction took place on" + closed.getTimeCreated() + " the description of the event is as follows: " + closed.getInfractionDescription() + ". The student received a restorative assignment to complete. The restorative assignment was completed on " + closed.getTimeClosed() + ". ";
-                messageIn.replace("[,", "");
-                messageIn.replace(",]", "");
-                message.add(messageIn);
+                message.add(replaceString(messageIn));
             }
 
             punishment.setTimeClosed(LocalDate.now());
@@ -284,12 +251,10 @@ public class PunishmentService {
 
         }
         if (infraction.getInfractionName().equals("Tardy") && !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -299,12 +264,10 @@ public class PunishmentService {
 
         }
         if (infraction.getInfractionName().equals("Unauthorized Device/Cell Phone") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -313,12 +276,10 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Disruptive Behavior") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -327,12 +288,10 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Horseplay") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -341,12 +300,10 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Dress Code") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -355,12 +312,10 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Inappropriate Language") & !(punishment.getClosedTimes() == 4)) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -369,12 +324,10 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Failure to Complete Work")) {
-            String description = punishment.getInfractionDescription().get(0).replace("[,", "").replace("]", "");
-
-            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description, student.getStudentEmail()));
+            punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
             Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), description)).create();
+                    new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -383,21 +336,11 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Positive Behavior Shout Out!")) {
-            String shoutOut = punishment.getInfractionDescription().get(0);
-            shoutOut.replace("[,", "");
-            shoutOut.replace(",]", "");
-
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Positive Shout Out for " + student.getFirstName() + " " + student.getLastName());
             String pointsStatement = "";
             if (formRequest.getCurrency() > 0) {
                 pointsStatement = "The teacher has added " + formRequest.getCurrency() + " " + ourSchool.getCurrency() + " to the student's Account. New Total Balance is " + student.getCurrency() + " " + ourSchool.getCurrency() + ".";
             }
-//            punishmentResponse.setMessage(" Hello," +
-//                    " Your child, " + student.getFirstName() + " " + student.getLastName() +
-//                    " has received a shout out from their teacher for the following: " + shoutOut + "\n" + pointsStatement + "\n" +
-//                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
-//            //        Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//            //                new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
 
             String message = "<!DOCTYPE html>\n" +
                     "<html lang=\"en\">\n" +
@@ -413,7 +356,7 @@ public class PunishmentService {
                     "    <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
                     "        <h1>Hello,</h1>\n" +
                     "        <p>Your child, <strong>" + student.getFirstName() + " " + student.getLastName() + "</strong>, has received a shout out from their teacher for the following:</p>\n" +
-                    "        <p>" + shoutOut + "</p>\n" +
+                    "        <p>" + replaceString(punishment.getInfractionDescription().get(0)) + "</p>\n" +
                     "        <p>" + pointsStatement + "</p>\n" +
                     "        <p>If you have any questions or concerns, you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.</p>\n" +
                     "    </div>\n" +
@@ -421,7 +364,7 @@ public class PunishmentService {
                     "</html>";
 
             String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " has received a positive shout out from their teacher for the following: " + shoutOut +
+                    " has received a positive shout out from their teacher for the following: " + replaceString(punishment.getInfractionDescription().get(0)) +
                     ".\n " +
                     "Please check your email for additional details and respond to the teacher directly with any comments, as this is an automated text.";
 
@@ -435,20 +378,16 @@ public class PunishmentService {
                     message);
         }
         if (infraction.getInfractionName().equals("Behavioral Concern")) {
-            String concern = punishment.getInfractionDescription().get(0);
-            concern.replace("[,", "");
-            concern.replace(",]", "");
-
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + concern + ". \n" +
+                    ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + replaceString(punishment.getInfractionDescription().get(0)) + ". \n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way" + student.getSchool() + " can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
 
             String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " exhibited concerning behavior." + concern +
+                    " exhibited concerning behavior." + replaceString(punishment.getInfractionDescription().get(0)) +
                     ".\n " +
                     "No disciplinary action is being taken at this time.\n" +
                     "\n" +
@@ -464,20 +403,16 @@ public class PunishmentService {
                     punishmentResponse.getMessage());
         }
         if (infraction.getInfractionName().equals("Academic Concern")) {
-            String concern = punishment.getInfractionDescription().get(0);
-            concern.replace("[,", "");
-            concern.replace(",]", "");
-
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
             punishmentResponse.setMessage(" Hello, \n" +
                     " We are reaching out because we have concerns about " + student.getFirstName() + " " + student.getLastName() +
-                    "’s progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + concern + "\n" +
+                    "’s progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + replaceString(punishment.getInfractionDescription().get(0)) + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way we can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
 
             String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " is displaying concerning academic behavior." + concern +
+                    " is displaying concerning academic behavior." + replaceString(punishment.getInfractionDescription().get(0)) +
                     ".\n " +
                     "No disciplinary action is being taken at this time.\n" +
                     "\n" +
@@ -1738,30 +1673,6 @@ public class PunishmentService {
         listOfGuidance.add(guidance);
         response.setGuidance(listOfGuidance);
         return response;
-    }
-
-    private String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail) {
-        String emailText = " Hello, \n" +
-                " Your child, " + studentFirstName + " " + studentLastName +
-                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
-                ".\n " +
-                "As a result they have received an assignment. The goal of the assignment is to provide " + studentFirstName + " " + studentLastName +
-                " with information about the infraction and ways to make beneficial decisions in the future. If " + studentFirstName + " " + studentLastName + " does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
-                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:\n" +
-                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.\n" +
-                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-
-        return emailText.replace("[,", "").replace(",]", "");
-    }
-
-    private String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description) {
-        String textMessage = " Your child, " + studentFirstName + " " + studentLastName +
-                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
-                ".\n " +
-                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral." +
-                "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
-
-        return textMessage.replace("[,", "").replace(",]", "");
     }
 
 
