@@ -7,6 +7,9 @@ import com.reps.demogcloud.models.dto.StudentOverviewDTO;
 import com.reps.demogcloud.models.dto.TeacherOverviewDTO;
 import com.reps.demogcloud.services.DTOService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin(
@@ -28,6 +31,7 @@ import java.util.List;
 )
 @RequestMapping("/DTO/v1")
 public class DTOController {
+    private static final Logger logger = LoggerFactory.getLogger(DTOController.class);
     DTOService dtoService;
 
     @Autowired
@@ -48,6 +52,8 @@ public class DTOController {
     //Uses Logged In User
     @GetMapping("/TeacherOverviewData")
     public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
+        String currentUserEmail = getCurrentUserEmail(); // Fetch the logged-in user
+
         try {
             // Call the service method to fetch teacher overview data
             TeacherOverviewDTO message = dtoService.getTeacherOverData();
@@ -58,10 +64,9 @@ public class DTOController {
                     .body(message);
 
         } catch (Exception e) {
-            // Log the exception
-            String currentUserEmail = getCurrentUserEmail();
-            System.err.println("Error occurred while fetching teacher overview for: " + currentUserEmail);
-            e.printStackTrace();  // Log the full stack trace for debugging
+            // Log the exception with context
+            logger.error("Error occurred while fetching teacher overview for: {}", currentUserEmail, e);
+
 
             // Return a detailed error message in the response
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -88,7 +93,7 @@ public class DTOController {
     }
 
     @GetMapping("/StudentOverviewData/{studentEmail}")
-    public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(String studentEmail) throws Exception {
+    public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(@PathVariable String studentEmail) throws Exception {
         var message = dtoService.getStudentOverData(studentEmail);
         return ResponseEntity
                 .accepted()

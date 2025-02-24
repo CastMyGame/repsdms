@@ -23,8 +23,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,12 +55,7 @@ public class EmployeeService {
 
 
     public EmployeeResponse createNewEmployee(Employee request) {
-//        Set<RoleModel> roles = new HashSet<>();
-//        RoleModel teacher = new RoleModel();
-//        teacher.setRole(request.getRoles());
-//        roles.add(teacher);
         //Check it email exist in system
-
         String emailPrefix = request.getEmail().split("@")[0];
 
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
@@ -113,44 +106,6 @@ public class EmployeeService {
         }
     }
 
-    public List<Employee> getAllEmployees() {
-        return customFilters.FetchEmployeeDataByIsArchivedAndSchool(false);
-    }
-
-    private Employee ensureEmployeeExists(Employee employee) {
-        return null;
-    }
-
-    public Employee findByEmployeeId(String employeeId) throws ResourceNotFoundException {
-        var findMe = employeeRepository.findByEmployeeId(employeeId);
-
-        if (findMe == null) {
-            throw new ResourceNotFoundException("No employees with that ID exist");
-        }
-        logger.debug(String.valueOf(findMe));
-        return findMe;
-    }
-
-    public List<Employee> findAllEmployeeIsArchived(boolean bool) throws ResourceNotFoundException {
-        List<Employee> archivedRecords = employeeRepository.findByIsArchived(bool);
-        if (archivedRecords.isEmpty()) {
-            throw new ResourceNotFoundException("No Archived Records exist in employees table");
-        }
-        return archivedRecords;
-    }
-
-
-    public Employee archiveRecord(String employeeId) {
-        //Check for existing record
-        Employee existingRecord = findByEmployeeId(employeeId);
-        //Updated Record
-        existingRecord.setArchived(true);
-        LocalDate createdOn = LocalDate.now();
-        existingRecord.setArchivedOn(createdOn);
-        existingRecord.setArchivedBy(employeeId);
-        return employeeRepository.save(existingRecord);
-    }
-
     public Optional<List<Employee>> findAllByRole(String role) {
 
         //Fetch Data
@@ -180,7 +135,7 @@ public class EmployeeService {
         return spenders;
     }
 
-    public List<Employee> editSchool(String schoolName, String update) {
+    public List<Employee> editSchool(String schoolName) {
         List<Employee> employees = employeeRepository.findBySchool(schoolName);
         List<Employee> updated = new ArrayList<>();
         for (Employee employee : employees) {

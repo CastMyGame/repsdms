@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
@@ -26,9 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
-import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -49,8 +46,7 @@ public class OfficeReferralService {
     private final CustomFilters customFilters;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    private MongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
@@ -60,7 +56,6 @@ public class OfficeReferralService {
     }
 
     public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
@@ -96,7 +91,7 @@ public class OfficeReferralService {
 
     }
 
-    public OfficeReferral rejectAnswers(String referralId, String description) throws MessagingException {
+    public OfficeReferral rejectAnswers(String referralId) throws MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         //get punishment
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
@@ -244,7 +239,7 @@ public class OfficeReferralService {
 //            return punishmentResponse;
 //        }}
 
-    public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException, MessagingException {
+    public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
 
@@ -253,36 +248,16 @@ public class OfficeReferralService {
 
         // Add comment if one is there
         if (!request.getComment().isEmpty()) {
-            ArrayList<String> description = new ArrayList<>();
-            description.addAll(findMe.getReferralDescription());
+            ArrayList<String> description = new ArrayList<>(findMe.getReferralDescription());
             description.add(request.getComment());
             findMe.setReferralDescription(description);
         }
 
         officeReferralRepository.save(findMe);
-        if (findMe != null) {
-            OfficeReferralResponse referralResponse = new OfficeReferralResponse();
-            referralResponse.setOfficeReferral(findMe);
-//            var message = " Hello," +
-//                    " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
-//                    " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-//                    studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
-//                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
-//            var subject =  studentClose.getSchool() + " High School assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
-//
-//            emailService.sendPtsEmail(studentClose.getParentEmail(),
-//                    findMe.getTeacherEmail(),
-//                    studentClose.getStudentEmail(),
-//                    subject,
-//                    message);
+        OfficeReferralResponse referralResponse = new OfficeReferralResponse();
+        referralResponse.setOfficeReferral(findMe);
 
-//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-            return referralResponse;
-        } else {
-            throw new ResourceNotFoundException("That referral does not exist");
-        }
+        return referralResponse;
     }
 
     public List<OfficeReferral> updateDescriptions() {
@@ -298,36 +273,17 @@ public class OfficeReferralService {
         return saved;
     }
 
-    public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException, MessagingException {
+    public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(referralId);
 
         findMe.setStatus("PENDING");
         findMe.setTimeClosed(LocalDate.now());
         officeReferralRepository.save(findMe);
-        if (findMe != null) {
-            OfficeReferralResponse referralResponse = new OfficeReferralResponse();
-            referralResponse.setOfficeReferral(findMe);
-//            var message = " Hello," +
-//                    " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
-//                    " has successfully completed the assignment given to them in response to their office referral for " + findMe.getInfractionDescription() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-//                    studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
-//                    "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. You can also call the school directly at (843) 579-4815.");
-//            var subject =  studentClose.getSchool() + " High School assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
-//
-//            emailService.sendPtsEmail(studentClose.getParentEmail(),
-//                    findMe.getTeacherEmail(),
-//                    studentClose.getStudentEmail(),
-//                    subject,
-//                    message);
+        OfficeReferralResponse referralResponse = new OfficeReferralResponse();
+        referralResponse.setOfficeReferral(findMe);
 
-//            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-
-            return referralResponse;
-        } else {
-            throw new ResourceNotFoundException("That referral does not exist");
-        }
+        return referralResponse;
     }
 
     public List<TeacherDTO> getTeacherResponse(List<OfficeReferral> referralList) {

@@ -4,7 +4,6 @@ import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
-import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
@@ -120,10 +119,10 @@ public class EmployeeControllers {
     }
 
     @PutMapping("/{schoolName}")
-    public ResponseEntity<List<Employee>> editSchool (@PathVariable String schoolName, @RequestParam String update) {
-        List<Employee> updated = employeeService.editSchool(schoolName, update);
+    public ResponseEntity<List<Employee>> editSchool(@PathVariable String schoolName) {
+        List<Employee> updated = employeeService.editSchool(schoolName);
         return updated == null
-                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
@@ -131,7 +130,7 @@ public class EmployeeControllers {
     public ResponseEntity<Employee> updateClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
         Employee updated = employeeService.addOrUpdateClassToEmployee(teacherEmail, request);
         return updated == null
-                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
@@ -139,7 +138,7 @@ public class EmployeeControllers {
     public ResponseEntity<List<Employee>> updateAllEmployees () {
         List<Employee> updated = employeeService.updateAllEmployees();
         return updated == null
-                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
@@ -161,7 +160,7 @@ public class EmployeeControllers {
     public ResponseEntity<Employee> deleteClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
         Employee updated = employeeService.removeClassFromEmployee(teacherEmail, request);
         return updated == null
-                ? new ResponseEntity<>(updated, HttpStatus.BAD_REQUEST)
+                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);
     }
 }
