@@ -1675,6 +1675,19 @@ public class PunishmentService {
         return response;
     }
 
+    private String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail) {
+        String emailText = " Hello, \n" +
+                " Your child, " + studentFirstName + " " + studentLastName +
+                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
+                ".\n " +
+                "As a result they have received an assignment. The goal of the assignment is to provide " + studentFirstName + " " + studentLastName +
+                " with information about the infraction and ways to make beneficial decisions in the future. If " + studentFirstName + " " + studentLastName + " does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. \n" +
+                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:\n" +
+                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.\n" +
+                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+
+        return emailText.replace("[,", "").replace(",]", "");
+    }
 
 //    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
 //        List<PunishmentResponse> punishmentResponse = new ArrayList<>();

@@ -106,9 +106,14 @@ public class DTOService {
         School school = employeeService.getEmployeeSchool();
 
         // Step 1: Collect all student emails from the teacher's class rosters
-        List<String> classRosterStudentEmails = teacher.getClasses().stream()
-                .flatMap(classRoster -> classRoster.getClassRoster().stream())
-                .toList();
+        List<String> classRosterStudentEmails;
+        if (teacher != null && teacher.getClasses() != null) {
+            classRosterStudentEmails = teacher.getClasses().stream()
+                    .flatMap(classRoster -> classRoster.getClassRoster().stream())
+                    .toList();
+        } else {
+            classRosterStudentEmails = new ArrayList<>();
+        }
 
 // Step 2: Filter punishments by the teacher and the class roster student emails
         List<TeacherDTO> punishmentsFilteredByTeacher = allSchoolPunishmentsWithDisplayInformation.stream()
@@ -133,6 +138,7 @@ public class DTOService {
                 .collect(Collectors.toList());
 
         // Update weekly punishment counts for each class in the teacher's roster
+        assert teacher != null;
         updateWeeklyPunishmentsForTeacherClasses(teacher, punishmentsFilteredByTeacher);
 
         return new TeacherOverviewDTO( punishmentsFilteredByTeacher, writeUpResponse, shoutOutsResponse,filteredSchoolReferrals, teacher, school);
@@ -178,6 +184,9 @@ public List<PunishmentDTO> getDTOPunishments() throws Exception {
 }
 
     private void updateWeeklyPunishmentsForTeacherClasses(Employee teacher, List<TeacherDTO> punishmentsFilteredByTeacher) {
+        if (teacher == null || teacher.getClasses() == null) {
+            return; // No classes to update
+        }
         LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
 
         // Count punishments within the last week, grouped by class period
