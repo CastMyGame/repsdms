@@ -42,6 +42,23 @@ public class EmailService {
         this.springTemplateEngine = springTemplateEngine;
     }
 
+    public void createEmailAndSend(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        message.setSubject(subject);
+        MimeMessageHelper helper;
+        helper = new MimeMessageHelper(message, true);
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(parentEmail);
+
+        helper.addCc(teacherEmail);
+        helper.addCc(studentEmail);
+        for (String email : spotters) {
+            helper.addBcc(email);
+        }
+        helper.setText(msg, true);
+        javaMailSender.send(message);
+    }
+
     public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
         Context context = new Context();
         context.setVariables(templateModel);
@@ -67,11 +84,6 @@ public class EmailService {
         helper.setTo(toEmail);
         helper.setText(msg, true);
 
-//        SimpleMailMessage mailMessage = new SimpleMailMessage();
-//        mailMessage.setTo(toEmail);
-//        mailMessage.setSubject(subject);
-//        mailMessage.setText(message);
-//        mailMessage.setFrom("REPS.DMS@gmail.com");
         javaMailSender.send(message);
     }
 
@@ -83,28 +95,7 @@ public class EmailService {
                              String msg) throws MessagingException {
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
 
-        MimeMessage message = javaMailSender.createMimeMessage();
-        message.setSubject(subject);
-        MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message, true);
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(parentEmail);
-        helper.addCc(teacherEmail);
-        helper.addCc(studentEmail);
-        if (findMe != null && findMe.getSpotters() != null) {
-            for (String email : findMe.getSpotters()) {
-                helper.addBcc(email);
-            }
-        }
-        helper.setText(msg, true);
-
-
-//        mailMessage.setTo(parentEmail);
-//        mailMessage.setCc(teacherEmail, studentEmail);
-//        mailMessage.setSubject(subject);
-//        mailMessage.setText(message);
-//        mailMessage.setFrom("REPS.DMS@gmail.com");
-        javaMailSender.send(message);
+        createEmailAndSend(parentEmail, teacherEmail, studentEmail, findMe.getSpotters(), msg, subject);
     }
 
     @Async
@@ -127,20 +118,7 @@ public class EmailService {
                     " they will receive lunch detention and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
                     " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
 
-            MimeMessage message = javaMailSender.createMimeMessage();
-            message.setSubject("DETENTION REMINDER");
-            MimeMessageHelper helper;
-            helper = new MimeMessageHelper(message, true);
-            helper.setFrom("REPS.DMS@gmail.com");
-            helper.setTo(findMe.getParentEmail());
-
-            helper.addCc(punishment.getTeacherEmail());
-            helper.addCc(findMe.getStudentEmail());
-            for (String email : findMe.getSpotters()) {
-                helper.addBcc(email);
-            }
-            helper.setText(msg, true);
-            javaMailSender.send(message);
+            createEmailAndSend(findMe.getParentEmail(), punishment.getTeacherEmail(), findMe.getStudentEmail(), findMe.getSpotters(), msg, "DETENTION REMINDER");
 
 
         } else if (detention.equals("ISS")) {
@@ -150,20 +128,7 @@ public class EmailService {
                     " they will receive ISS and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
                     " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
 
-            MimeMessage message = javaMailSender.createMimeMessage();
-            message.setSubject("DETENTION REMINDER");
-            MimeMessageHelper helper;
-            helper = new MimeMessageHelper(message, true);
-            helper.setFrom("REPS.DMS@gmail.com");
-            helper.setTo(findMe.getParentEmail());
-            helper.addCc(punishment.getTeacherEmail());
-            helper.addCc(findMe.getStudentEmail());
-            for (String email : findMe.getSpotters()) {
-                helper.addBcc(email);
-            }
-            helper.setText(msg, true);
-            javaMailSender.send(message);
-
+            createEmailAndSend(findMe.getParentEmail(), punishment.getTeacherEmail(), findMe.getStudentEmail(), findMe.getSpotters(), msg, "ISS REMINDER");
         }
     }
 
