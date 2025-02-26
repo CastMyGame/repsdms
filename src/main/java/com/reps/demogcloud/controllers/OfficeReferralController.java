@@ -5,8 +5,6 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCloseRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.services.OfficeReferralService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -61,7 +58,7 @@ public class OfficeReferralController {
                 .body(message);
     }
     @PostMapping("/startPunish/adminReferral")
-    public ResponseEntity<List<OfficeReferral>> createNewAdminReferralBulk(@RequestBody List<OfficeReferralRequest> officeReferralListRequest) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<List<OfficeReferral>> createNewAdminReferralBulk(@RequestBody List<OfficeReferralRequest> officeReferralListRequest) {
         var message = officeReferralService.createNewAdminReferralBulk(officeReferralListRequest);
 
         return ResponseEntity
@@ -97,9 +94,8 @@ public class OfficeReferralController {
     }
 
     @PutMapping("/rejected/{punishmentId}")
-    public ResponseEntity<OfficeReferral> rejectAnswers(@PathVariable String punishmentId,
-                                                       @RequestBody String description) throws MessagingException {
-        OfficeReferral response = officeReferralService.rejectAnswers(punishmentId, description);
+    public ResponseEntity<OfficeReferral> rejectAnswers(@PathVariable String punishmentId) throws MessagingException {
+        OfficeReferral response = officeReferralService.rejectAnswers(punishmentId);
         return ResponseEntity
                 .accepted()
                 .body(response);

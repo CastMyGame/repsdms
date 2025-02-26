@@ -1,7 +1,6 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
-import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.dto.*;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
@@ -32,8 +31,6 @@ public class DTOService {
 
     private final EmployeeRepository employeeRepository;
 
-    private final StudentRepository studentRepository;
-
 
     public AdminOverviewDTO getAdminOverData() throws Exception {
         //Reduce Time by Making Fewer Calls Add Filter Methods
@@ -49,16 +46,7 @@ public class DTOService {
         List<TeacherDTO> punishmentsFilteredByReferralsOnly = allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> !punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!") && !punishment.getInfractionName().equalsIgnoreCase("Academic Concern")).toList();
 
         //Get Shout-Outs Only, School Wide
-        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
-
-        punishmentFilteredByShoutOuts.sort(new Comparator<TeacherDTO>() {
-            @Override
-            public int compare(TeacherDTO o1, TeacherDTO o2) {
-                if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
-                    return 0;
-                return o2.getTimeCreated().compareTo(o1.getTimeCreated());
-            }
-        });
+        List<TeacherDTO> punishmentFilteredByShoutOuts = listOfShoutOuts(allSchoolPunishmentsWithDisplayInformation);
 
         Optional<List<Employee>> teachersListOpt = employeeService.findAllByRole("TEACHER");
         List<Employee> teachersList = new ArrayList<>();
@@ -66,11 +54,22 @@ public class DTOService {
             teachersList = teachersListOpt.get();
         }
 
-        //Get Employee and School Information based on who is the logged in user
+        //Get Employee and School Information based on who is the logged-in user
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
         return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation,punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts, teachersList, allSchoolReferrals, teacher, school);
+    }
+
+    public List<TeacherDTO> listOfShoutOuts(List<TeacherDTO> allSchoolPunishmentsWithDisplayInformation) {
+        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
+
+        punishmentFilteredByShoutOuts.sort((o1, o2) -> {
+            if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
+                return 0;
+            return o2.getTimeCreated().compareTo(o1.getTimeCreated());
+        });
+        return punishmentFilteredByShoutOuts;
     }
 
     public TeacherOverviewDTO getTeacherOverData() throws Exception {
@@ -91,17 +90,9 @@ public class DTOService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         //Get Shout-Outs Only, School Wide
-        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
-        punishmentFilteredByShoutOuts.sort(new Comparator<TeacherDTO>() {
-            @Override
-            public int compare(TeacherDTO o1, TeacherDTO o2) {
-                if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
-                    return 0;
-                return o2.getTimeCreated().compareTo(o1.getTimeCreated());
-            }
-        });
+        listOfShoutOuts(allSchoolPunishmentsWithDisplayInformation);
 
-        //Get Employee and School Information based on who is the logged in user
+        //Get Employee and School Information based on who is the logged-in user
         Employee teacher = employeeService.findByLoggedInEmployee();
         School school = employeeService.getEmployeeSchool();
 
@@ -196,7 +187,7 @@ public List<PunishmentDTO> getDTOPunishments() throws Exception {
 
         // Update each class in the teacher's roster with the weekly punishment count
         for (Employee.ClassRoster classRoster : teacher.getClasses()) {
-            String classPeriod = classRoster.getClassName();
+            String classPeriod = classRoster.getClassPeriod();
             int writeupCount = weeklyPunishmentCountsByClass.getOrDefault(classPeriod, 0L).intValue();
             classRoster.setPunishmentsThisWeek(writeupCount);
         }
