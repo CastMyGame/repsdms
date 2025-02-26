@@ -46,7 +46,7 @@ public class EmailService {
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
         MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message, true);
+        helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom("REPS.DMS@gmail.com");
         helper.setTo(parentEmail);
 
