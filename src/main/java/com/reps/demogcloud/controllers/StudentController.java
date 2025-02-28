@@ -206,6 +206,16 @@ public class StudentController {
                 .accepted()
                 .body(response);
     }
+
+    @PutMapping("/updateStudents")
+    public ResponseEntity<List<Student>> updateStudents(@RequestBody List<Student> students) {
+        List<Student> response = studentService.updateStudents(students);
+
+        return ResponseEntity
+                .accepted()
+                .body(response);
+    }
+
     @PutMapping("/archived/{studentId}")
     public ResponseEntity<Student> archivedDeleted(@PathVariable String studentId) {
         Student response = studentService.archiveRecord(studentId);
