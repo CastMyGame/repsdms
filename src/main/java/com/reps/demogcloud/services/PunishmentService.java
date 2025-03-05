@@ -19,7 +19,6 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.security.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -311,8 +310,8 @@ public class PunishmentService {
                     ".\n " +
                     "Please check your email for additional details and respond to the teacher directly with any comments, as this is an automated text.";
 
-//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -336,8 +335,8 @@ public class PunishmentService {
                     "\n" +
                     "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
 
-//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -361,8 +360,8 @@ public class PunishmentService {
                     "\n" +
                     "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
 
-//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-//                    new PhoneNumber("+18437900073"), textMessage).create();
+            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -376,8 +375,8 @@ public class PunishmentService {
     private void sendTextAndEmail(Punishment punishment, EmailService emailService, Student student, Infraction infraction, PunishmentResponse punishmentResponse) throws MessagingException {
         punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
-//        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-//                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
+        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
         emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                 punishmentResponse.getTeacherToEmail(),
