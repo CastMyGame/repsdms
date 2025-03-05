@@ -95,7 +95,16 @@ public class EmailService {
                              String msg) throws MessagingException {
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
 
-        createEmailAndSend(parentEmail, teacherEmail, studentEmail, findMe.getSpotters(), msg, subject);
+        // Check if getSpotters() is null
+        List<String> spotters = new ArrayList<>();
+        if (findMe == null) {
+            spotters = new ArrayList<>(); // Substitute with an empty array
+            throw new IllegalArgumentException("Student not found for given email");
+        } else {
+            spotters = findMe.getSpotters();
+        }
+
+        createEmailAndSend(parentEmail, teacherEmail, studentEmail, spotters, msg, subject);
     }
 
     @Async

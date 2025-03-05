@@ -132,7 +132,7 @@ public class StudentService {
         roles.add(student);
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(studentRequest.getStudentEmail().toLowerCase());
-        authenticationRequest.setPassword(studentRequest.getLastName().toLowerCase() + studentRequest.getSchool().toLowerCase());
+        authenticationRequest.setPassword(studentRequest.getStudentEmail().toLowerCase());
         authenticationRequest.setFirstName(studentRequest.getFirstName());
         authenticationRequest.setLastName(studentRequest.getLastName());
         authenticationRequest.setSchoolName(studentRequest.getSchool());
@@ -453,4 +453,109 @@ public class StudentService {
         }
     }
 
+    public List<Student> updateStudents(List<Student> students) {
+        List<Student> updatedStudents = new ArrayList<>();
+
+        for (Student updatedData : students) {
+            Optional<Student> existingStudentOpt = studentRepository.findById(updatedData.getStudentIdNumber());
+
+            if (existingStudentOpt.isPresent()) {
+                Student existingStudent = existingStudentOpt.get();
+                boolean isUpdated = false;
+
+                // Check each field and update only if the new value is different
+                if (isDifferent(existingStudent.getFirstName(), updatedData.getFirstName())) {
+                    existingStudent.setFirstName(updatedData.getFirstName());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getLastName(), updatedData.getLastName())) {
+                    existingStudent.setLastName(updatedData.getLastName());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getParentEmail(), updatedData.getParentEmail())) {
+                    existingStudent.setParentEmail(updatedData.getParentEmail());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getStudentEmail(), updatedData.getStudentEmail())) {
+                    existingStudent.setStudentEmail(updatedData.getStudentEmail());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getGuidanceEmail(), updatedData.getGuidanceEmail())) {
+                    existingStudent.setGuidanceEmail(updatedData.getGuidanceEmail());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getAdminEmail(), updatedData.getAdminEmail())) {
+                    existingStudent.setAdminEmail(updatedData.getAdminEmail());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getAddress(), updatedData.getAddress())) {
+                    existingStudent.setAddress(updatedData.getAddress());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getGrade(), updatedData.getGrade())) {
+                    existingStudent.setGrade(updatedData.getGrade());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getParentPhoneNumber(), updatedData.getParentPhoneNumber())) {
+                    existingStudent.setParentPhoneNumber(updatedData.getParentPhoneNumber());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getStudentPhoneNumber(), updatedData.getStudentPhoneNumber())) {
+                    existingStudent.setStudentPhoneNumber(updatedData.getStudentPhoneNumber());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getArchivedBy(), updatedData.getArchivedBy())) {
+                    existingStudent.setArchivedBy(updatedData.getArchivedBy());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getArchivedExplanation(), updatedData.getArchivedExplanation())) {
+                    existingStudent.setArchivedExplanation(updatedData.getArchivedExplanation());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getArchivedOn(), updatedData.getArchivedOn())) {
+                    existingStudent.setArchivedOn(updatedData.getArchivedOn());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getPoints(), updatedData.getPoints())) {
+                    existingStudent.setPoints(updatedData.getPoints());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getSchool(), updatedData.getSchool())) {
+                    existingStudent.setSchool(updatedData.getSchool());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getCurrency(), updatedData.getCurrency())) {
+                    existingStudent.setCurrency(updatedData.getCurrency());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getStateStudentId(), updatedData.getStateStudentId())) {
+                    existingStudent.setStateStudentId(updatedData.getStateStudentId());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getNotesArray(), updatedData.getNotesArray())) {
+                    existingStudent.setNotesArray(updatedData.getNotesArray());
+                    isUpdated = true;
+                }
+                if (isDifferent(existingStudent.getSpotters(), updatedData.getSpotters())) {
+                    existingStudent.setSpotters(updatedData.getSpotters());
+                    isUpdated = true;
+                }
+                if (updatedData.getTimeBank() != null && !Objects.equals(existingStudent.getTimeBank(), updatedData.getTimeBank())) {
+                    existingStudent.setTimeBank(updatedData.getTimeBank());
+                    isUpdated = true;
+                }
+
+                if (isUpdated) {
+                    studentRepository.save(existingStudent);
+                    updatedStudents.add(existingStudent);
+                }
+            }
+        }
+
+        return updatedStudents;
+    }
+
+    private boolean isDifferent(Object existingValue, Object newValue) {
+        return newValue != null && !Objects.equals(existingValue, newValue);
+    }
 }
