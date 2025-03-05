@@ -311,8 +311,8 @@ public class PunishmentService {
                     ".\n " +
                     "Please check your email for additional details and respond to the teacher directly with any comments, as this is an automated text.";
 
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -336,12 +336,12 @@ public class PunishmentService {
                     "\n" +
                     "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
 
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-                    punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
+                    punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
@@ -349,24 +349,24 @@ public class PunishmentService {
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
             punishmentResponse.setMessage(" Hello, \n" +
-                    " We are reaching out because we have concerns about " + student.getFirstName() + " " + student.getLastName() +
-                    "’s progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + replaceString(punishment.getInfractionDescription().get(0)) + "\n" +
+                    " There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
+                    "’s academic progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + replaceString(punishment.getInfractionDescription().get(0)) + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way we can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
 
-            String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " is displaying concerning academic behavior." + replaceString(punishment.getInfractionDescription().get(0)) +
+            String textMessage = "There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
+                    "'s academic progress." + replaceString(punishment.getInfractionDescription().get(0)) +
                     ".\n " +
                     "No disciplinary action is being taken at this time.\n" +
                     "\n" +
                     "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
 
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-                    punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
+                    punishmentResponse.getStudentToEmail(),
                     punishmentResponse.getSubject(),
                     punishmentResponse.getMessage());
         }
@@ -376,8 +376,8 @@ public class PunishmentService {
     private void sendTextAndEmail(Punishment punishment, EmailService emailService, Student student, Infraction infraction, PunishmentResponse punishmentResponse) throws MessagingException {
         punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
-        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
+//        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
         emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                 punishmentResponse.getTeacherToEmail(),
