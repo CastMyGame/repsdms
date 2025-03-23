@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 public class GuidanceRequest {
-    private Guidance guidance;
+    private GuidanceReferral guidance;
 
 
 }

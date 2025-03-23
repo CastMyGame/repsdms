@@ -5,7 +5,6 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.guidance.Guidance;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
