@@ -119,8 +119,8 @@ public class PunishController {
     }
 
     @PostMapping("/close/{id}")
-    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException, MessagingException {
-        var message = punishmentService.closeByPunishmentId(id);
+    public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id, @RequestBody String closureReason) throws ResourceNotFoundException, MessagingException {
+        var message = punishmentService.closeByPunishmentId(id, closureReason);
 
         return ResponseEntity
                 .accepted()

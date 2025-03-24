@@ -859,11 +859,18 @@ public class PunishmentService {
         return punishment;
     }
 
-    public PunishmentResponse closeByPunishmentId(String punishmentId) throws ResourceNotFoundException, MessagingException {
+    public PunishmentResponse closeByPunishmentId(String punishmentId, String closureReason) throws ResourceNotFoundException, MessagingException {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         Punishment findMe = punishRepository.findByPunishmentId(punishmentId);
         Student studentClose = studentRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
         Infraction infractionClose = infractionRepository.findByInfractionId(findMe.getInfractionId());
+
+        // Ensure closureReason is a clean string without brackets/quotes
+        if (closureReason.startsWith("[") && closureReason.endsWith("]")) {
+            closureReason = closureReason.substring(1, closureReason.length() - 1); // Remove brackets
+        }
+
+        closureReason = closureReason.replace("\"", ""); // Remove double quotes if present
 
         findMe.setStatus("CLOSED");
         findMe.setClosedTimes(findMe.getClosedTimes() + 1);
@@ -873,10 +880,10 @@ public class PunishmentService {
         punishmentResponse.setPunishment(findMe);
         punishmentResponse.setMessage(" Hello," +
                 " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
-                " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-                studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
-                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response.");
-        punishmentResponse.setSubject(studentClose.getSchool() + " assignment completion for " + studentClose.getFirstName() + " " + studentClose.getLastName());
+                " has had their assignment removed for the infraction: " + infractionClose.getInfractionName() + ". " +
+                "The assignment has been removed for the following reason: \n" + closureReason + " " +
+                "If you have any questions or concerns feel free to respond to this email by clicking reply all or contact the school directly");
+        punishmentResponse.setSubject(studentClose.getSchool() + " assignment removed for " + studentClose.getFirstName() + " " + studentClose.getLastName());
         punishmentResponse.setParentToEmail(studentClose.getParentEmail());
         punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
         punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
