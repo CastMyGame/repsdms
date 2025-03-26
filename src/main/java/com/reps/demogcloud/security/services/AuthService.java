@@ -19,6 +19,9 @@ public class AuthService {
     }
 
     public UserModel createEmployeeUser(AuthenticationRequest authenticationRequest) {
+        if (userRepository.existsByUsername(authenticationRequest.getUsername().toLowerCase())) {
+            throw new IllegalArgumentException("User with this email already exists.");
+        }
         String username = authenticationRequest.getUsername();
         String password = authenticationRequest.getPassword();
         String firstName = authenticationRequest.getFirstName();
@@ -36,7 +39,6 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(password);
         userModel.setPassword(encodedPassword);
 
-        userRepository.save(userModel);
-        return userModel;
+        return userRepository.save(userModel);
     }
 }

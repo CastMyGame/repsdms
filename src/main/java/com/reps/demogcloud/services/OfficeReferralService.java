@@ -243,8 +243,18 @@ public class OfficeReferralService {
 //        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
 
+        if (findMe == null) {
+            throw new ResourceNotFoundException("Office Referral not found for ID: " + request.getId());
+        }
+
         findMe.setStatus("CLOSED");
         findMe.setTimeClosed(LocalDate.now());
+
+        // Ensure referralDescription is initialized before modifying it
+        if (findMe.getReferralDescription() == null) {
+            System.out.println("Referral Description is Null for referral " + findMe.getOfficeReferralId());
+            findMe.setReferralDescription(new ArrayList<>()); // Initialize if null
+        }
 
         // Add comment if one is there
         if (!request.getComment().isEmpty()) {
