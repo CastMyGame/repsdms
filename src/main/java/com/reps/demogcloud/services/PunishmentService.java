@@ -297,7 +297,7 @@ public class PunishmentService {
                     "    </div>\n" +
                     "    <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
                     "        <h1>Hello,</h1>\n" +
-                    "       <p> Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+                    "       <p>" + student.getParentEmail() + ", " + student.getStudentEmail() +
                     "        <p>Your child, <strong>" + student.getFirstName() + " " + student.getLastName() + "</strong>, has received a shout out from their teacher for the following:</p>\n" +
                     "        <p>" + replaceString(punishment.getInfractionDescription().get(0)) + "</p>\n" +
                     "        <p>" + pointsStatement + "</p>\n" +
@@ -323,7 +323,7 @@ public class PunishmentService {
         if (infraction.getInfractionName().equals("Behavioral Concern")) {
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
 
-            punishmentResponse.setMessage("Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+            punishmentResponse.setMessage(student.getParentEmail() + ", " + student.getStudentEmail() +
                     " Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
                     ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + replaceString(punishment.getInfractionDescription().get(0)) + ". \n" +
@@ -349,7 +349,7 @@ public class PunishmentService {
         if (infraction.getInfractionName().equals("Academic Concern")) {
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
-            punishmentResponse.setMessage("Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+            punishmentResponse.setMessage(student.getParentEmail() + ", " + student.getStudentEmail() +
                     " Hello, \n" +
                     " There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
                     "’s academic progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + replaceString(punishment.getInfractionDescription().get(0)) + "\n" +
@@ -770,7 +770,7 @@ public class PunishmentService {
             punishRepository.save(findMe);
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
-            punishmentResponse.setMessage("Parent Email: " + studentClose.getParentEmail() + " Student Email: " + studentClose.getStudentEmail() +
+            punishmentResponse.setMessage(studentClose.getParentEmail() + ", " + studentClose.getStudentEmail() +
                     " Hello, \n" +
                     " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
@@ -844,7 +844,7 @@ public class PunishmentService {
 
         punishment.setStatus("OPEN");
 
-        String message = "Parent Email: " + studentReject.getParentEmail() + " Student Email: " + studentReject.getStudentEmail() +
+        String message = studentReject.getParentEmail() + ", " + studentReject.getStudentEmail() +
                 "Hello, \n" +
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
@@ -883,7 +883,7 @@ public class PunishmentService {
         punishRepository.save(findMe);
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setPunishment(findMe);
-        punishmentResponse.setMessage(" Student Email: " + findMe.getStudentEmail() +
+        punishmentResponse.setMessage(studentClose.getParentEmail() + ", " + studentClose.getStudentEmail() +
                 " Hello," +
                 " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
                 " has had their assignment removed for the infraction: " + infractionClose.getInfractionName() + ". " +
@@ -953,7 +953,7 @@ public class PunishmentService {
         existingRecord.setArchivedBy(userId);
         existingRecord.setArchivedExplanation(explanation);
 
-        String deleteMessage = "Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+        String deleteMessage = student.getParentEmail() + ", " + student.getStudentEmail() +
                 "Hello,\n" +
                 "Your child, " + student.getFirstName() + " " + student.getLastName() +
                 " received a referral in error. The referral that was written was for offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() +
@@ -982,7 +982,7 @@ public class PunishmentService {
         existingRecord.setArchivedBy(null);
         existingRecord.setArchivedExplanation(null);
 
-        String restoreMessage = "Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+        String restoreMessage = student.getParentEmail() + ", " + student.getStudentEmail() +
                 "Hello,\n" +
                 "Your child, " + student.getFirstName() + " " + student.getLastName() +
                 ", had their referral for offense " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() +
