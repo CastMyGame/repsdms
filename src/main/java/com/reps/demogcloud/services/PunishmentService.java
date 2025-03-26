@@ -297,6 +297,7 @@ public class PunishmentService {
                     "    </div>\n" +
                     "    <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n" +
                     "        <h1>Hello,</h1>\n" +
+                    "       <p> Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
                     "        <p>Your child, <strong>" + student.getFirstName() + " " + student.getLastName() + "</strong>, has received a shout out from their teacher for the following:</p>\n" +
                     "        <p>" + replaceString(punishment.getInfractionDescription().get(0)) + "</p>\n" +
                     "        <p>" + pointsStatement + "</p>\n" +
@@ -305,13 +306,13 @@ public class PunishmentService {
                     "</body>\n" +
                     "</html>";
 
-            String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " has received a positive shout out from their teacher for the following: " + replaceString(punishment.getInfractionDescription().get(0)) +
-                    ".\n " +
-                    "Please check your email for additional details and respond to the teacher directly with any comments, as this is an automated text.";
+//            String textMessage = student.getFirstName() + " " + student.getLastName() +
+//                    " has received a positive shout out from their teacher for the following: " + replaceString(punishment.getInfractionDescription().get(0)) +
+//                    ".\n " +
+//                    "Please check your email for additional details and respond to the teacher directly with any comments, as this is an automated text.";
 
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -322,21 +323,22 @@ public class PunishmentService {
         if (infraction.getInfractionName().equals("Behavioral Concern")) {
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Behavioral Concern for " + student.getFirstName() + " " + student.getLastName());
 
-            punishmentResponse.setMessage(" Hello, \n" +
+            punishmentResponse.setMessage("Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+                    " Hello, \n" +
                     " Your child, " + student.getFirstName() + " " + student.getLastName() +
                     ", demonstrated some concerning behavior during " + adjustString(punishment.getClassPeriod()) + ". " + replaceString(punishment.getInfractionDescription().get(0)) + ". \n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way" + student.getSchool() + " can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
 
-            String textMessage = student.getFirstName() + " " + student.getLastName() +
-                    " exhibited concerning behavior." + replaceString(punishment.getInfractionDescription().get(0)) +
-                    ".\n " +
-                    "No disciplinary action is being taken at this time.\n" +
-                    "\n" +
-                    "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
-
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            String textMessage = student.getFirstName() + " " + student.getLastName() +
+//                    " exhibited concerning behavior." + replaceString(punishment.getInfractionDescription().get(0)) +
+//                    ".\n " +
+//                    "No disciplinary action is being taken at this time.\n" +
+//                    "\n" +
+//                    "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
+//
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -347,21 +349,22 @@ public class PunishmentService {
         if (infraction.getInfractionName().equals("Academic Concern")) {
             punishmentResponse.setSubject(ourSchool.getSchoolName() + " Academic Concern for " + student.getFirstName() + " " + student.getLastName());
 
-            punishmentResponse.setMessage(" Hello, \n" +
+            punishmentResponse.setMessage("Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+                    " Hello, \n" +
                     " There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
                     "’s academic progress in their " + adjustString(punishment.getClassPeriod()) + " class. " + replaceString(punishment.getInfractionDescription().get(0)) + "\n" +
                     " At this time there is no disciplinary action being taken. We just wanted to inform you of our concerns and ask for feedback if you have any insight on the behavior and if there is any way we can help better support " + student.getFirstName() + " " + student.getLastName() +
                     ". We appreciate your assistance and will continue to work to help your child reach their full potential.");
 
-            String textMessage = "There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
-                    "'s academic progress." + replaceString(punishment.getInfractionDescription().get(0)) +
-                    ".\n " +
-                    "No disciplinary action is being taken at this time.\n" +
-                    "\n" +
-                    "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
-
-            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                    new PhoneNumber("+18437900073"), textMessage).create();
+//            String textMessage = "There are some concerns with " + student.getFirstName() + " " + student.getLastName() +
+//                    "'s academic progress." + replaceString(punishment.getInfractionDescription().get(0)) +
+//                    ".\n " +
+//                    "No disciplinary action is being taken at this time.\n" +
+//                    "\n" +
+//                    "Please check your email for details and respond to the teacher directly with any questions, as this is an automated text.";
+//
+//            Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                    new PhoneNumber("+18437900073"), textMessage).create();
 
             emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                     punishmentResponse.getTeacherToEmail(),
@@ -375,8 +378,8 @@ public class PunishmentService {
     private void sendTextAndEmail(Punishment punishment, EmailService emailService, Student student, Infraction infraction, PunishmentResponse punishmentResponse) throws MessagingException {
         punishmentResponse.setMessage(createEmailText(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)), student.getStudentEmail()));
 
-        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
-                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
+//        Message.creator(new PhoneNumber(student.getParentPhoneNumber()),
+//                new PhoneNumber("+18437900073"), createTextMessage(student.getFirstName(), student.getLastName(), infraction.getInfractionLevel(), infraction.getInfractionName(), replaceString(punishment.getInfractionDescription().get(0)))).create();
 
         emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
                 punishmentResponse.getTeacherToEmail(),
@@ -767,7 +770,8 @@ public class PunishmentService {
             punishRepository.save(findMe);
             PunishmentResponse punishmentResponse = new PunishmentResponse();
             punishmentResponse.setPunishment(findMe);
-            punishmentResponse.setMessage(" Hello, \n" +
+            punishmentResponse.setMessage("Parent Email: " + studentClose.getParentEmail() + " Student Email: " + studentClose.getStudentEmail() +
+                    " Hello, \n" +
                     " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
                     " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
                     studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
@@ -840,7 +844,8 @@ public class PunishmentService {
 
         punishment.setStatus("OPEN");
 
-        String message = "Hello, \n" +
+        String message = "Parent Email: " + studentReject.getParentEmail() + " Student Email: " + studentReject.getStudentEmail() +
+                "Hello, \n" +
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
                 contextToStore + " \n" +
@@ -878,7 +883,8 @@ public class PunishmentService {
         punishRepository.save(findMe);
         PunishmentResponse punishmentResponse = new PunishmentResponse();
         punishmentResponse.setPunishment(findMe);
-        punishmentResponse.setMessage(" Hello," +
+        punishmentResponse.setMessage(" Student Email: " + findMe.getStudentEmail() +
+                " Hello," +
                 " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
                 " has had their assignment removed for the infraction: " + infractionClose.getInfractionName() + ". " +
                 "The assignment has been removed for the following reason: \n" + closureReason + " " +
@@ -947,7 +953,8 @@ public class PunishmentService {
         existingRecord.setArchivedBy(userId);
         existingRecord.setArchivedExplanation(explanation);
 
-        String deleteMessage = "Hello,\n" +
+        String deleteMessage = "Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+                "Hello,\n" +
                 "Your child, " + student.getFirstName() + " " + student.getLastName() +
                 " received a referral in error. The referral that was written was for offense number " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() +
                 ". They were assigned a restorative assignment which has now been removed and the referral will be removed from their record. Thank you for your patience. \n" +
@@ -975,7 +982,8 @@ public class PunishmentService {
         existingRecord.setArchivedBy(null);
         existingRecord.setArchivedExplanation(null);
 
-        String restoreMessage = "Hello,\n" +
+        String restoreMessage = "Parent Email: " + student.getParentEmail() + " Student Email: " + student.getStudentEmail() +
+                "Hello,\n" +
                 "Your child, " + student.getFirstName() + " " + student.getLastName() +
                 ", had their referral for offense " + infraction.getInfractionLevel() + " for " + infraction.getInfractionName() +
                 " unintentionally deleted. This referral has now been restored and as a result " + student.getFirstName() + " " + student.getLastName() + " will need to complete the restorative assignment that accompanies the referral at repsdiscipline.vercel.app/student-login . \n" +

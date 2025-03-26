@@ -42,16 +42,20 @@ public class EmailService {
         this.springTemplateEngine = springTemplateEngine;
     }
 
-    public void createEmailAndSend(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
+    public void createEmailAndSend(
+//            String parentEmail,
+            String teacherEmail,
+//            String studentEmail,
+            List<String> spotters, String msg, String subject) throws MessagingException {
         MimeMessage message = javaMailSender.createMimeMessage();
         message.setSubject(subject);
         MimeMessageHelper helper;
         helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(parentEmail);
+//        helper.setTo(parentEmail);
 
         helper.addCc(teacherEmail);
-        helper.addCc(studentEmail);
+//        helper.addCc(studentEmail);
         for (String email : spotters) {
             helper.addBcc(email);
         }
@@ -104,7 +108,7 @@ public class EmailService {
             spotters = findMe.getSpotters();
         }
 
-        createEmailAndSend(parentEmail, teacherEmail, studentEmail, spotters, msg, subject);
+        createEmailAndSend(teacherEmail, spotters, msg, subject);
     }
 
     @Async
@@ -127,7 +131,7 @@ public class EmailService {
                     " they will receive lunch detention and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
                     " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
 
-            createEmailAndSend(findMe.getParentEmail(), punishment.getTeacherEmail(), findMe.getStudentEmail(), findMe.getSpotters(), msg, "DETENTION REMINDER");
+            createEmailAndSend(punishment.getTeacherEmail(), findMe.getSpotters(), msg, "DETENTION REMINDER");
 
 
         } else if (detention.equals("ISS")) {
@@ -137,7 +141,7 @@ public class EmailService {
                     " they will receive ISS and must complete it during that time. If the assignment is completed before then you will receive a confirmation" +
                     " email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
 
-            createEmailAndSend(findMe.getParentEmail(), punishment.getTeacherEmail(), findMe.getStudentEmail(), findMe.getSpotters(), msg, "ISS REMINDER");
+            createEmailAndSend(punishment.getTeacherEmail(), findMe.getSpotters(), msg, "ISS REMINDER");
         }
     }
 
