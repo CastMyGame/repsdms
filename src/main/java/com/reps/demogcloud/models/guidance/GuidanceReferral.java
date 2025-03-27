@@ -18,7 +18,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Document(collection = "Guidance")
-public class Guidance {
+public class GuidanceReferral {
 
     @Id
     private String guidanceId;
