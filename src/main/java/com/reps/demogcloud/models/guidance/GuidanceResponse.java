@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 public class GuidanceResponse {
-    private List<Guidance> guidance;
+    private List<GuidanceReferral> guidance;
     private String error;
     private String message;
 

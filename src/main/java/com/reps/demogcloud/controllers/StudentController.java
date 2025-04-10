@@ -1,7 +1,6 @@
 package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.models.dto.PunishmentDTO;
-import com.reps.demogcloud.models.guidance.Guidance;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.Student;

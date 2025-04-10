@@ -5,8 +5,6 @@ import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.ResourceNotFoundException;
-import com.reps.demogcloud.models.guidance.Guidance;
-import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
@@ -17,18 +15,15 @@ import com.reps.demogcloud.models.student.StudentResponse;
 import com.reps.demogcloud.models.student.UpdateSpottersRequest;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.RoleModel;
+import com.reps.demogcloud.security.models.UserRepository;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.Array;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -47,6 +42,7 @@ public class StudentService {
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
     private final AuthService authService;
+    private final UserRepository userRepository;
 
     private final MongoTemplate mongoTemplate;
 
@@ -55,12 +51,13 @@ public class StudentService {
     private final CustomFilters customFilters;
 
 
-    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, SchoolRepository schoolRepository, AuthService authService, MongoTemplate mongoTemplate, CustomFilters customFilters) {
+    public StudentService(StudentRepository studentRepository, PunishRepository punishRepository, SchoolRepository schoolRepository, AuthService authService, UserRepository userRepository, MongoTemplate mongoTemplate, CustomFilters customFilters) {
 
         this.studentRepository = studentRepository;
         this.punishRepository = punishRepository;
         this.schoolRepository = schoolRepository;
         this.authService = authService;
+        this.userRepository = userRepository;
         this.mongoTemplate = mongoTemplate;
         this.customFilters = customFilters;
     }
@@ -126,6 +123,14 @@ public class StudentService {
     }
 
     public StudentResponse createNewStudent (Student studentRequest ) {
+        // Check if a student with the same email already exists
+        if (studentRepository.existsByStudentEmail(studentRequest.getStudentEmail().toLowerCase())) {
+            throw new IllegalArgumentException("A student with this email already exists.");
+        }
+        // Check if a user with the same email (username) already exists
+        if (userRepository.existsByUsername(studentRequest.getStudentEmail().toLowerCase())) {
+            throw new IllegalArgumentException("A user with this email has already been registered.");
+        }
         Set<RoleModel> roles = new HashSet<>();
         RoleModel student = new RoleModel();
         student.setRole("STUDENT");
