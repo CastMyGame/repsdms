@@ -1,6 +1,6 @@
 package com.reps.demogcloud.controllers;
 
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.services.InfractionService;
 import org.springframework.http.HttpStatus;

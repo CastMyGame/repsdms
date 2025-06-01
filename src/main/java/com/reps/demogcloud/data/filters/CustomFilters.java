@@ -5,7 +5,7 @@ import com.reps.demogcloud.data.OfficeReferralRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.exceptions.EntityNotFoundException;
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.punishment.Punishment;

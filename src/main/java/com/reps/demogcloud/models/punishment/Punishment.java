@@ -1,9 +1,8 @@
 package com.reps.demogcloud.models.punishment;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
+
 import java.time.LocalDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -15,6 +14,7 @@ import java.util.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Builder
 @Document(collection = "Punishments")
 public class Punishment implements Comparable<Punishment>{
 
@@ -34,8 +34,10 @@ public class Punishment implements Comparable<Punishment>{
     private String classPeriod;
     private String teacherEmail;
     //Set initial value to false
+    @JsonProperty("isArchived")
     private boolean isArchived = false;
     // Set initial value to false until saved in review360 or other state discipline system
+    @JsonProperty("isStateFiled")
     private boolean isStateFiled = false;
     private String stateIncidentNumber;
     private String archivedBy;

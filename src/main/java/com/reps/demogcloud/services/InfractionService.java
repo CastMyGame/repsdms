@@ -1,7 +1,7 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.InfractionRepository;
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;

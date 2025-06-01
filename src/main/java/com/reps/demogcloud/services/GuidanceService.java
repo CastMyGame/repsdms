@@ -2,7 +2,7 @@ package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.guidance.GuidanceReferral;
 import com.reps.demogcloud.models.guidance.GuidanceRequest;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
