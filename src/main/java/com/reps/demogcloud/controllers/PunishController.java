@@ -142,8 +142,9 @@ public class PunishController {
 
     @PutMapping("/archived/{userId}/{punishmentId}")
     public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explanation ) throws MessagingException {
-        Punishment response = punishmentService.archiveRecord(punishmentId,userId,explanation);
-        return ResponseEntity.ok(response);
+        Punishment p = punishmentService.archiveRecord(punishmentId,userId,explanation);
+        System.out.println("Returned Punishment: " + p); // <-- Add this
+        return ResponseEntity.ok(p);
     }
 
     @PutMapping("/archived/restore/{punishmentId}")

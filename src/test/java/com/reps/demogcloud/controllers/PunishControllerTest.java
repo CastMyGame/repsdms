@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -32,6 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
+@TestPropertySource(properties = {
+        "spring.jackson.serialization.FAIL_ON_EMPTY_BEANS=false"
+})
 public class PunishControllerTest {
 
     @Autowired
@@ -307,11 +311,12 @@ public class PunishControllerTest {
 
         Punishment archived = Punishment.builder().punishmentId(punishmentId).isArchived(true).build();
 
-        when(punishmentService.archiveRecord(punishmentId, userId, explanation)).thenReturn(archived);
+        when(punishmentService.archiveRecord(punishmentId ,userId , explanation)).thenReturn(archived);
 
         mockMvc.perform(put("/punish/v1/archived/{userId}/{punishmentId}", userId, punishmentId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"" + explanation + "\""))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .characterEncoding("UTF-8")
+                        .content(explanation))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.punishmentId").value(punishmentId))
                 .andExpect(jsonPath("$.isArchived").value(true));

@@ -14,6 +14,7 @@ import java.util.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Setter
 @Builder
 @Document(collection = "Punishments")
 public class Punishment implements Comparable<Punishment>{
