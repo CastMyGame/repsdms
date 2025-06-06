@@ -388,8 +388,6 @@ public class PunishmentService {
         }
         logger.debug(String.valueOf(punishmentRecord));
         return punishmentRecord;
-
-
     }
 
     public List<Punishment> findAll() {
@@ -440,7 +438,6 @@ public class PunishmentService {
             throw new IllegalArgumentException("Infraction description is required.");
         }
 
-        Twilio.init(twilioUsername, twilioPassword);
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
