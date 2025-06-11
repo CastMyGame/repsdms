@@ -471,9 +471,4 @@ public class PunishControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(expectedResponse));
     }
-
-
-
-
-
 }

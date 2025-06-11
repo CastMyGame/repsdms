@@ -1,5 +1,6 @@
 package com.reps.demogcloud.controllers;
 
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
@@ -72,12 +73,13 @@ public class StudentController {
     }
 
     @GetMapping("/lastname/{lastName}")
-    public ResponseEntity<List<Student>> getStudentByLastName (@PathVariable String lastName) throws Exception {
-        var message = studentService.findByStudentLastName(lastName);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
+    public ResponseEntity<?> getStudentByLastName (@PathVariable String lastName) {
+        try {
+            List<Student> students = studentService.findByStudentLastName(lastName);
+            return ResponseEntity.accepted().body(students);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 
     @GetMapping("/email/{email}")

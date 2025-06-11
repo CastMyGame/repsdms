@@ -206,7 +206,10 @@ public class PunishmentService {
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
         PunishmentResponse punishmentResponse = setUpPunishmentResponse(punishment, student);
 
-        Twilio.init(twilioUsername, twilioPassword);
+        if (twilioUsername != null && !twilioUsername.isEmpty() &&
+                twilioPassword != null && !twilioPassword.isEmpty()) {
+            Twilio.init(twilioUsername, twilioPassword);
+        }
 
 
         // Grab school info and populate into punishment
