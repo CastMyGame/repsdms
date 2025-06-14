@@ -4,10 +4,7 @@ import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentRequest;
-import com.reps.demogcloud.models.student.StudentResponse;
-import com.reps.demogcloud.models.student.UpdateSpottersRequest;
+import com.reps.demogcloud.models.student.*;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.mail.MessagingException;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +28,7 @@ import java.util.List;
 @RequestMapping("/student/v1")
 public class StudentController {
 
-    private StudentService studentService;
-
-
-    @Autowired
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
-    }
+    private final StudentService studentService;
 
     //---------------------------------GET Controllers--------------------------------
     @GetMapping("/")
@@ -166,12 +158,10 @@ public class StudentController {
     }
 
     @PostMapping("/points/transfer")
-    public ResponseEntity<List<Student>> transferPoints (@RequestBody String givingStudentEmail,
-                                                         @RequestParam String receivingStudentEmail,
-                                                         @RequestParam Integer pointsTransferred) {
-        List<Student> response = studentService.transferPoints(givingStudentEmail,
-                receivingStudentEmail,
-                pointsTransferred);
+    public ResponseEntity<List<Student>> transferPoints (@Valid @RequestBody TransferPointsRequest request) {
+        List<Student> response = studentService.transferPoints(request.getGivingStudentEmail(),
+                request.getReceivingStudentEmail(),
+                request.getPointsTransferred());
         return ResponseEntity
                 .accepted()
                 .body(response);

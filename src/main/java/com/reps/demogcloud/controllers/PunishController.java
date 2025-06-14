@@ -24,13 +24,7 @@ import java.util.List;
 )
 @RequestMapping("/punish/v1")
 public class PunishController {
-    PunishmentService punishmentService;
-
-    @Autowired
-    public PunishController(PunishmentService punishmentService) {
-        this.punishmentService = punishmentService;
-    }
-
+    private final PunishmentService punishmentService;
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {

@@ -14,18 +14,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import javax.mail.MessagingException;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -33,7 +28,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
-@WebMvcTest(controllers = StudentController.class)
+@WebMvcTest(StudentController.class)
+@WithMockUser(username = "testuser", roles = {"TEACHER"})
 public class StudentControllerTest {
 
     @Autowired
@@ -124,7 +120,6 @@ public class StudentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", roles = {"TEACHER"})
     void getStudentByLastName_sadPath_throwsException() throws Exception {
         when(studentService.findByStudentLastName("NoName"))
                 .thenThrow(new ResourceNotFoundException("That student does not exist"));
@@ -161,7 +156,9 @@ public class StudentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(student)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("Success"));
+                .andExpect(jsonPath("$.student.studentEmail").value("student@example.com"))
+                .andExpect(jsonPath("$.student.studentIdNumber").value("123"))
+                .andExpect(jsonPath("$.student.lastName").value("Smith"));
     }
 
     @Test
@@ -191,7 +188,8 @@ public class StudentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(students)))
                 .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$[0].message").value("Success"));
+                .andExpect(jsonPath("$[0].error").doesNotExist())
+                .andExpect(jsonPath("$[0].student.studentIdNumber").value("123"));
     }
 
     // --- POST /student/v1/points/add ---
@@ -222,13 +220,21 @@ public class StudentControllerTest {
     @Test
     void transferPoints_success() throws Exception {
         List<Student> transferredStudents = List.of(student, student);
-        when(studentService.transferPoints(eq("giver@example.com"), eq("receiver@example.com"), eq(3))).thenReturn(transferredStudents);
+
+        when(studentService.transferPoints("giver@example.com", "receiver@example.com", 3))
+                .thenReturn(transferredStudents);
+
+        String requestBody = """
+        {
+            "givingStudentEmail": "giver@example.com",
+            "receivingStudentEmail": "receiver@example.com",
+            "pointsTransferred": 3
+        }
+        """;
 
         mockMvc.perform(post("/student/v1/points/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"giver@example.com\"") // body is givingStudentEmail as string JSON
-                        .param("receivingStudentEmail", "receiver@example.com")
-                        .param("pointsTransferred", "3"))
+                        .content(requestBody))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -362,5 +368,154 @@ public class StudentControllerTest {
                 .andExpect(jsonPath("$.studentEmail").value("student@example.com"));
     }
 
+    @Test
+    void transferPoints_failure_returnsError() throws Exception {
+        String requestBody = """
+        {
+            "givingStudentEmail": "giver@example.com",
+            "receivingStudentEmail": "receiver@example.com",
+            "pointsTransferred": 3
+        }
+        """;
+
+        when(studentService.transferPoints(anyString(), anyString(), anyInt()))
+                .thenThrow(new RuntimeException("Transfer failed"));
+
+        mockMvc.perform(post("/student/v1/points/transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void addTimeToStudent_failure_returnsError() throws Exception {
+        when(studentService.addTimeToStudent(anyString(), anyInt(), anyInt()))
+                .thenThrow(new RuntimeException("Time addition failed"));
+
+        mockMvc.perform(post("/student/v1/student@example.com/add-time")
+                        .param("hours", "1")
+                        .param("minutes", "30"))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void updateStudents_emptyList_returnsEmpty() throws Exception {
+        when(studentService.updateStudents(anyList())).thenReturn(List.of());
+
+        mockMvc.perform(put("/student/v1/updateStudents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of())))
+                .andExpect(status().isAccepted())
+                .andExpect(content().string("[]"));
+    }
+
+    @Test
+    void massAssignSchool_failure_returnsServerError() throws Exception {
+        when(studentService.massAssignForSchool()).thenThrow(new RuntimeException("DB failure"));
+
+        mockMvc.perform(put("/student/v1/assignSchool"))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void getStudentByParentEmail_success_returnsList() throws Exception {
+        List<Student> students = List.of(student);
+
+        when(studentService.findStudentByParentEmail("parent@example.com")).thenReturn(students);
+
+        mockMvc.perform(get("/student/v1/parentEmail/parent@example.com"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$[0].studentEmail").value("student@example.com"));
+    }
+
+    @Test
+    void getStudentByParentEmail_failure_throwsException() throws Exception {
+        when(studentService.findStudentByParentEmail("bad@example.com"))
+                .thenThrow(new ResourceNotFoundException("Parent not found"));
+
+        mockMvc.perform(get("/student/v1/parentEmail/bad@example.com"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getDetentionList_success_returnsList() throws Exception {
+        PunishmentDTO dto = new PunishmentDTO();
+        dto.setStudentEmail("student@example.com");
+        List<PunishmentDTO> list = List.of(dto);
+
+        when(studentService.getDetentionList("ExampleSchool")).thenReturn(list);
+
+        mockMvc.perform(get("/student/v1/detentionList/ExampleSchool"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$[0].studentEmail").value("student@example.com"));
+    }
+
+    @Test
+    void getIssList_success_returnsList() throws Exception {
+        PunishmentDTO dto = new PunishmentDTO();
+        dto.setStudentEmail("student@example.com");
+        List<PunishmentDTO> list = List.of(dto);
+
+        when(studentService.getIssList("ExampleSchool")).thenReturn(list);
+
+        mockMvc.perform(get("/student/v1/issList/ExampleSchool"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$[0].studentEmail").value("student@example.com"));
+    }
+
+    @Test
+    void getBySpotter_success_returnsList() throws Exception {
+        List<Student> students = List.of(student);
+
+        when(studentService.findBySpotter("spotter@example.com")).thenReturn(students);
+
+        mockMvc.perform(get("/student/v1/findBySpotter/spotter@example.com"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$[0].studentEmail").value("student@example.com"));
+    }
+
+    @Test
+    void getStudentByParentEmail_returnsAccepted() throws Exception {
+        List<Student> mockStudents = List.of(new Student());
+        Mockito.when(studentService.findStudentByParentEmail("test@parent.com"))
+                .thenReturn(mockStudents);
+
+        mockMvc.perform(get("/student/v1/parentEmail/test@parent.com"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void getDetentionList_returnsAccepted() throws Exception {
+        List<PunishmentDTO> mockList = List.of(new PunishmentDTO());
+        Mockito.when(studentService.getDetentionList("TestSchool"))
+                .thenReturn(mockList);
+
+        mockMvc.perform(get("/student/v1/detentionList/TestSchool"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void getIssList_returnsAccepted() throws Exception {
+        List<PunishmentDTO> mockList = List.of(new PunishmentDTO());
+        Mockito.when(studentService.getIssList("TestSchool"))
+                .thenReturn(mockList);
+
+        mockMvc.perform(get("/student/v1/issList/TestSchool"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void getBySpotter_returnsAccepted() throws Exception {
+        List<Student> mockList = List.of(new Student());
+        Mockito.when(studentService.findBySpotter("spotter@test.com"))
+                .thenReturn(mockList);
+
+        mockMvc.perform(get("/student/v1/findBySpotter/spotter@test.com"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
 }
 

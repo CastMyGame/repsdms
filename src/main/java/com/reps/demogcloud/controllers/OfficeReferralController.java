@@ -26,12 +26,7 @@ import java.util.List;
 @RequestMapping("/officeReferral/v1")
 public class OfficeReferralController {
 
-    OfficeReferralService officeReferralService;
-
-    @Autowired
-    public OfficeReferralController(OfficeReferralService officeReferralService) {
-        this.officeReferralService = officeReferralService;
-    }
+    private final OfficeReferralService officeReferralService;
 
     @GetMapping("/punishments")
     public ResponseEntity<List<OfficeReferral>> getAll() {
@@ -40,7 +35,7 @@ public class OfficeReferralController {
                 .accepted()
                 .body(message);
     }
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<OfficeReferral> getByReferralId(@PathVariable String id) throws ResourceNotFoundException {
         var message = officeReferralService.findByReferralId(id);
 
@@ -49,7 +44,7 @@ public class OfficeReferralController {
                 .body(message);
     }
 
-    @GetMapping("/{email}")
+    @GetMapping("/admin/{email}")
     public ResponseEntity<List<OfficeReferral>> getByAdminEmail(@PathVariable String email) throws ResourceNotFoundException {
         var message = officeReferralService.findByAdminEmail(email);
 
