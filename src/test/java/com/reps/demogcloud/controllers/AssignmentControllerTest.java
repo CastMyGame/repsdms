@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -40,6 +41,8 @@ class AssignmentControllerTest {
     private JwtUtils jwtUtils;
     @Autowired
     private ObjectMapper objectMapper;
+
+    // --- Success Tests ---
 
     @Test
     void getAllAssignments_returnsAccepted_withList() throws Exception {
@@ -64,7 +67,7 @@ class AssignmentControllerTest {
     @Test
     void updateAssignment_returnsAccepted_withAssignment() throws Exception {
         String id = "abc123";
-        when(assignmentService.updateNewAssignment(any(Assignment.class), any(String.class)))
+        when(assignmentService.updateNewAssignment(any(Assignment.class), eq(id)))
                 .thenReturn(testAssignment);
 
         mockMvc.perform(put("/assignments/v1/" + id)
@@ -83,4 +86,46 @@ class AssignmentControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(content().json(objectMapper.writeValueAsString(testAssignment)));
     }
+
+    // --- Failure Tests ---
+
+    @Test
+    void getAllAssignments_returns500_whenServiceFails() throws Exception {
+        when(assignmentService.getAllAssignments()).thenThrow(new RuntimeException("Failed to fetch"));
+
+        mockMvc.perform(get("/assignments/v1/"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void createNewAssignment_returns500_whenServiceFails() throws Exception {
+        when(assignmentService.createNewAssignment(any())).thenThrow(new RuntimeException("Creation error"));
+
+        mockMvc.perform(post("/assignments/v1/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(testAssignment)))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void updateAssignment_returns500_whenServiceFails() throws Exception {
+        String id = "invalid-id";
+        when(assignmentService.updateNewAssignment(any(), eq(id))).thenThrow(new RuntimeException("Update failed"));
+
+        mockMvc.perform(put("/assignments/v1/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(testAssignment)))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void deleteAssignment_returns500_whenServiceFails() throws Exception {
+        String assignmentName = "MissingAssignment";
+        when(assignmentService.deleteAssignment(assignmentName)).thenThrow(new RuntimeException("Delete failed"));
+
+        mockMvc.perform(delete("/assignments/v1/delete/" + assignmentName))
+                .andExpect(status().isInternalServerError());
+    }
+
+    // Optional: Add 400 validation test if you later add @Valid annotations
 }
