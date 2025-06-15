@@ -30,8 +30,8 @@ import java.util.Map;
 )
 @RequestMapping("/guidance/v1")
 public class GuidanceController {
-        PunishmentService punishmentService;
-        GuidanceService guidanceService;
+        private final PunishmentService punishmentService;
+        private final GuidanceService guidanceService;
 
         @GetMapping("/referrals")
         public ResponseEntity<List<GuidanceReferral>> getAll() {

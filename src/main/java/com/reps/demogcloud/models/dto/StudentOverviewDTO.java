@@ -6,11 +6,13 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class StudentOverviewDTO {
    private List<Punishment> punishments;
    private List<OfficeReferral> officeReferrals;

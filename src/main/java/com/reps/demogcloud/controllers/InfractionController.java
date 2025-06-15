@@ -3,6 +3,7 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.services.InfractionService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +13,9 @@ import java.util.List;
 @RestController
 @CrossOrigin
 @RequestMapping("infraction/v1")
+@RequiredArgsConstructor
 public class InfractionController {
     private final InfractionService infractionService;
-
-    public InfractionController(InfractionService infractionService) {
-        this.infractionService = infractionService;
-    }
 
     //---------------------------GET Controllers------------------------------
     @GetMapping("/all")
