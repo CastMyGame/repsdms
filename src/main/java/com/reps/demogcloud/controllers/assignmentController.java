@@ -20,12 +20,7 @@ import java.util.List;
 @RequestMapping("/assignments/v1")
 public class assignmentController {
 
-    private AssignmentService assignmentService;
-
-    @Autowired
-    public assignmentController(AssignmentService assignmentService) {
-        this.assignmentService = assignmentService;
-    }
+    private final AssignmentService assignmentService;
 
     //-----------------------GET Controllers----------------------------
     @GetMapping("/")

@@ -7,6 +7,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class PunishmentResponse {
     private Punishment punishment;
     private String error;

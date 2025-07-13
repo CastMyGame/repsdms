@@ -4,7 +4,7 @@ import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.data.filters.CustomFilters;
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.punishment.ThreadEvent;

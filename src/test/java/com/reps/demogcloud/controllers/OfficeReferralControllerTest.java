@@ -1,0 +1,139 @@
+package com.reps.demogcloud.controllers;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reps.demogcloud.exceptions.GlobalExceptionHandler;
+import com.reps.demogcloud.models.officeReferral.*;
+import com.reps.demogcloud.security.config.SecurityConfig;
+import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.utils.JwtUtils;
+import com.reps.demogcloud.services.OfficeReferralService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@WebMvcTest(OfficeReferralController.class)
+@WithMockUser(username = "testuser", roles = {"ADMIN"})
+class OfficeReferralControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private OfficeReferralService officeReferralService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private UserService userService;
+
+    @MockBean
+    private JwtUtils jwtUtils;
+
+    private OfficeReferral referral;
+    private OfficeReferralResponse response;
+
+    @BeforeEach
+    void setUp() {
+        referral = new OfficeReferral();
+        referral.setOfficeReferralId("123");
+        referral.setAdminEmail("admin@example.com");
+        referral.setArchived(false);
+        response = new OfficeReferralResponse(); // Populate fields if needed
+    }
+
+    @Test
+    void getAll_returnsAccepted() throws Exception {
+        when(officeReferralService.findAll()).thenReturn(List.of(referral));
+
+        mockMvc.perform(get("/officeReferral/v1/punishments"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void getByReferralId_returnsReferral() throws Exception {
+        when(officeReferralService.findByReferralId("123")).thenReturn(referral);
+
+        mockMvc.perform(get("/officeReferral/v1/id/123"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void getByAdminEmail_returnsList() throws Exception {
+        when(officeReferralService.findByAdminEmail("admin@example.com")).thenReturn(List.of(referral));
+
+        mockMvc.perform(get("/officeReferral/v1/admin/{email}", "admin@example.com"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void createNewAdminReferralBulk_returnsList() throws Exception {
+        List<OfficeReferralRequest> requests = List.of(new OfficeReferralRequest());
+        when(officeReferralService.createNewAdminReferralBulk(any())).thenReturn(List.of(referral));
+
+        mockMvc.perform(post("/officeReferral/v1/startPunish/adminReferral")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requests)))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void closeByReferralId_returnsResponse() throws Exception {
+        OfficeReferralCloseRequest request = new OfficeReferralCloseRequest();
+        when(officeReferralService.closeByReferralId(any())).thenReturn(response);
+
+        mockMvc.perform(post("/officeReferral/v1/closeId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void submitByReferralId_returnsResponse() throws Exception {
+        when(officeReferralService.submitByReferralId("123")).thenReturn(response);
+
+        mockMvc.perform(post("/officeReferral/v1/submit/123"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void updateMapIndex_returnsReferral() throws Exception {
+        when(officeReferralService.updateMapIndex("123", 1)).thenReturn(referral);
+
+        mockMvc.perform(put("/officeReferral/v1/123/index/1"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void rejectAnswers_returnsReferral() throws Exception {
+        when(officeReferralService.rejectAnswers("456")).thenReturn(referral);
+
+        mockMvc.perform(put("/officeReferral/v1/rejected/456"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void updateAllDescriptions_returnsList() throws Exception {
+        when(officeReferralService.updateDescriptions()).thenReturn(List.of(referral));
+
+        mockMvc.perform(put("/officeReferral/v1/descriptions"))
+                .andExpect(status().isAccepted());
+    }
+}

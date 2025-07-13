@@ -1,10 +1,9 @@
 package com.reps.demogcloud.controllers;
 
-import com.reps.demogcloud.models.ResourceNotFoundException;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.guidance.GuidanceReferral;
 import com.reps.demogcloud.models.guidance.GuidanceRequest;
 import com.reps.demogcloud.models.guidance.GuidanceResponse;
-import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.ResourceUpdateRequest;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.services.GuidanceService;
@@ -31,8 +30,8 @@ import java.util.Map;
 )
 @RequestMapping("/guidance/v1")
 public class GuidanceController {
-        PunishmentService punishmentService;
-        GuidanceService guidanceService;
+        private final PunishmentService punishmentService;
+        private final GuidanceService guidanceService;
 
         @GetMapping("/referrals")
         public ResponseEntity<List<GuidanceReferral>> getAll() {

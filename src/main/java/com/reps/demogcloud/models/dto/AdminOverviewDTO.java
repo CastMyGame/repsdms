@@ -5,11 +5,13 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.school.School;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class AdminOverviewDTO {
    private List<TeacherDTO> punishmentResponse;
    private List<TeacherDTO> writeUpResponse;

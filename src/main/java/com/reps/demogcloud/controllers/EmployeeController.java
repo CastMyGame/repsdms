@@ -8,6 +8,7 @@ import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.services.EmployeeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,18 +26,13 @@ import java.util.Set;
         }
 )
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/employees/v1")
-public class EmployeeControllers {
+public class EmployeeController {
 
     private final EmployeeService employeeService;
 
     private final EmployeeRepository employeeRepository;
-
-    public EmployeeControllers(EmployeeService employeeService, EmployeeRepository employeeRepository) {
-        this.employeeService = employeeService;
-        this.employeeRepository = employeeRepository;
-    }
-
 
     // -----------------------------------GET Controllers---------------------------------
     @GetMapping("/employees")

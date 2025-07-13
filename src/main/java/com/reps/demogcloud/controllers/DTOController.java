@@ -32,12 +32,7 @@ import java.util.List;
 @RequestMapping("/DTO/v1")
 public class DTOController {
     private static final Logger logger = LoggerFactory.getLogger(DTOController.class);
-    DTOService dtoService;
-
-    @Autowired
-    public DTOController(DTOService dtoService) {
-        this.dtoService = dtoService;
-    }
+    private final DTOService dtoService;
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
@@ -52,23 +47,16 @@ public class DTOController {
     //Uses Logged In User
     @GetMapping("/TeacherOverviewData")
     public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
-        String currentUserEmail = getCurrentUserEmail(); // Fetch the logged-in user
+        String currentUserEmail = getCurrentUserEmail();
 
         try {
-            // Call the service method to fetch teacher overview data
             TeacherOverviewDTO message = dtoService.getTeacherOverData();
-
-            // If the method succeeds, return the response
             return ResponseEntity
                     .accepted()
                     .body(message);
 
         } catch (Exception e) {
-            // Log the exception with context
             logger.error("Error occurred while fetching teacher overview for: {}", currentUserEmail, e);
-
-
-            // Return a detailed error message in the response
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new TeacherOverviewDTO(null, null, null, null, null, null));  // Optionally, return an empty DTO or a custom error DTO
         }
@@ -102,7 +90,6 @@ public class DTOController {
 
     }
 
-    // Helper method to get the current user's email from authentication context
     private String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null ? authentication.getName() : "Unknown";
