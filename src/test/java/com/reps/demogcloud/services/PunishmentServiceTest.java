@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import javax.mail.MessagingException;
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -429,5 +430,62 @@ public class PunishmentServiceTest {
         request.setPhoneLogDescription("");
         return request;
     }
+
+    @Test
+    void sendEmailBasedOnType_referralTriggered_sendsReferralEmail() throws Exception {
+        // Arrange
+        Student student = new Student();
+        student.setFirstName("John");
+        student.setLastName("Doe");
+        student.setStudentEmail("student@example.com");
+        student.setSchool("Test High");
+        student.setCurrency(100);
+        student.setParentEmail("parent@example.com");
+
+        Infraction infraction = new Infraction();
+        infraction.setInfractionName("Disruptive Behavior");
+
+        School school = new School();
+        school.setSchoolName("Test High");
+        school.setMaxPunishLevel(4);
+        school.setCurrency("PTS");
+
+        Punishment punishment = new Punishment();
+        punishment.setStudentEmail("student@example.com");
+        punishment.setInfractionId("inf123");
+        punishment.setInfractionDescription(List.of("Was talking out of turn"));
+        punishment.setClosedTimes(4);
+        punishment.setStatus("OPEN");
+        punishment.setTimeCreated(LocalDate.of(2024, 3, 15));
+        punishment.setTeacherEmail("teacher@example.com");
+
+        PunishmentFormRequest formRequest = new PunishmentFormRequest();
+        formRequest.setCurrency(0);
+
+        when(studentRepository.findByStudentEmailIgnoreCase(anyString())).thenReturn(student);
+        when(infractionRepository.findByInfractionId(anyString())).thenReturn(infraction);
+        when(schoolRepository.findSchoolBySchoolName(anyString())).thenReturn(school);
+        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(anyString(), anyString(), anyString(), eq(false)))
+                .thenReturn(List.of(punishment));
+        when(punishRepository.save(any(Punishment.class))).thenReturn(punishment);
+
+        // Act
+        PunishmentResponse result = punishmentService.sendEmailBasedOnType(
+                formRequest,
+                punishment,
+                punishRepository,
+                studentRepository,
+                infractionRepository,
+                emailService,
+                schoolRepository
+        );
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Test High Office Referral for John Doe", result.getSubject());
+        verify(emailService).sendEmail(eq("teacher@example.com"), anyString(), contains("Copy and paste the following"));
+        verify(punishRepository).save(any(Punishment.class));
+    }
+
 }
 
