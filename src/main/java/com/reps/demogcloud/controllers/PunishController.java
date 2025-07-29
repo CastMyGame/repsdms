@@ -4,7 +4,9 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
+import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.mail.MessagingException;
 import java.util.List;
 
-
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin(
@@ -25,12 +27,27 @@ import java.util.List;
 @RequestMapping("/punish/v1")
 public class PunishController {
     private final PunishmentService punishmentService;
+    private final PunishmentCreationService punishmentCreationService;
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
         var message = punishmentService.findAll();
         return ResponseEntity.ok(message);
     }
+
+    @GetMapping("/archived")
+    public ResponseEntity<List<Punishment>> getAllArchived() {
+        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
+        return ResponseEntity.ok(message);
+    }
+
+    @GetMapping("/student/punishments/{studentEmail}")
+    public ResponseEntity<List<Punishment>> getAllPunishmentByStudentEmail(@PathVariable String studentEmail) {
+        List<Punishment> message = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
+
+        return ResponseEntity.ok(message);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Punishment> getByPunishId(@PathVariable String id) throws ResourceNotFoundException {
         var message = punishmentService.findByPunishmentId(id);
@@ -59,29 +76,16 @@ public class PunishController {
         return ResponseEntity.ok(message);
     }
 
-    @GetMapping("/archived")
-    public ResponseEntity<List<Punishment>> getAllArchived() {
-        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
-        return ResponseEntity.ok(message);
-    }
-
     @GetMapping("/punishments/{studentEmail}")
     public ResponseEntity<List<Punishment>> getPunishmentForStudent(@PathVariable String studentEmail){
         List<Punishment> response = punishmentService.getAllPunishmentForStudent(studentEmail);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/student/punishments/{studentEmail}")
-    public ResponseEntity<List<Punishment>> getAllPunishmentByStudentEmail(@PathVariable String studentEmail) {
-        List<Punishment> message = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
-
-        return ResponseEntity.ok(message);
-    }
-
     //-----------------------------POST Controllers---------------------------
     @PostMapping("/punishId/close")
     public ResponseEntity<PunishmentResponse> closePunishment(@RequestBody ClosePunishmentRequest closePunishmentRequest) throws ResourceNotFoundException, MessagingException {
-        System.out.println(closePunishmentRequest);
+        log.info(closePunishmentRequest.toString());
         var message = punishmentService.closePunishment(closePunishmentRequest.getInfractionName(), closePunishmentRequest.getStudentEmail(), closePunishmentRequest.getStudentAnswer());
 
         return ResponseEntity.ok(message);
@@ -96,14 +100,14 @@ public class PunishController {
 
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
-        var message = punishmentService.createNewPunishForm(punishmentFormRequest);
+        var message = punishmentCreationService.createNewPunishForm(punishmentFormRequest);
 
         return ResponseEntity.ok(message);
     }
 
     @PostMapping("/startPunish/formList")
     public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException {
-        var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
+        var message = punishmentCreationService.createNewPunishFormBulk(punishmentListRequest);
 
         return ResponseEntity.ok(message);
     }
@@ -137,7 +141,7 @@ public class PunishController {
     @PutMapping("/archived/{userId}/{punishmentId}")
     public ResponseEntity<Punishment> archivedDeleted(@PathVariable String punishmentId, @PathVariable String userId, @RequestBody String explanation ) throws MessagingException {
         Punishment p = punishmentService.archiveRecord(punishmentId,userId,explanation);
-        System.out.println("Returned Punishment: " + p); // <-- Add this
+        log.info("Returned Punishment: " + p);
         return ResponseEntity.ok(p);
     }
 
