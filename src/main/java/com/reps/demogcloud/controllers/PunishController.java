@@ -4,7 +4,6 @@ package com.reps.demogcloud.controllers;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
-import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +26,6 @@ import java.util.List;
 @RequestMapping("/punish/v1")
 public class PunishController {
     private final PunishmentService punishmentService;
-    private final PunishmentCreationService punishmentCreationService;
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/punishments")
     public ResponseEntity<List<Punishment>> getAll() {
@@ -100,14 +98,14 @@ public class PunishController {
 
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
-        var message = punishmentCreationService.createNewPunishForm(punishmentFormRequest);
+        var message = punishmentService.createNewPunishForm(punishmentFormRequest);
 
         return ResponseEntity.ok(message);
     }
 
     @PostMapping("/startPunish/formList")
     public ResponseEntity<List<PunishmentResponse>> createNewFormPunishBulk(@RequestBody List<PunishmentFormRequest> punishmentListRequest) throws MessagingException {
-        var message = punishmentCreationService.createNewPunishFormBulk(punishmentListRequest);
+        var message = punishmentService.createNewPunishFormBulk(punishmentListRequest);
 
         return ResponseEntity.ok(message);
     }

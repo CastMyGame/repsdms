@@ -2,15 +2,13 @@ package com.reps.demogcloud.utils;
 
 import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
+import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.enums.InfractionType;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
-import com.reps.demogcloud.models.punishment.Punishment;
-import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
-import com.reps.demogcloud.models.punishment.ThreadEvent;
+import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.*;
@@ -219,6 +217,22 @@ public class PunishmentUtils {
 
         return emailService.sendEmailBasedOnType(
                 formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+    }
+
+    public Punishment fetchOpenPunishment(String studentEmail, String infractionName) {
+        return punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail, infractionName, "OPEN")
+                .stream()
+                .filter(p -> !p.isArchived())
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("No open punishments found for " + studentEmail));
+    }
+
+    public void appendStudentAnswers(Punishment punishment, List<StudentAnswer> answers) {
+        ArrayList<String> existing = punishment.getInfractionDescription();
+        for (StudentAnswer answer : answers) {
+            existing.add(answer.toString());
+        }
+        punishment.setInfractionDescription(existing);
     }
 
 
