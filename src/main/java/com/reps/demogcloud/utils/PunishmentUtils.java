@@ -1,7 +1,6 @@
 package com.reps.demogcloud.utils;
 
 import com.reps.demogcloud.data.*;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.enums.InfractionType;
@@ -33,10 +32,7 @@ public class PunishmentUtils {
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
     private final EmailService emailService;
-    private final CustomFilters customFilters;
     private final EmployeeService employeeService;
-    private final EmployeeRepository employeeRepository;
-    private final StudentService studentService;
     private final GuidanceService guidanceService;
     private final OfficeReferralService officeReferralService;
 
