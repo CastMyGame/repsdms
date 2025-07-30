@@ -5,18 +5,13 @@ import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.TeacherDTO;
-import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.employee.Employee;
-import com.reps.demogcloud.models.infraction.Infraction;
-import com.reps.demogcloud.models.enums.InfractionType;
-import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
-import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
-import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.punishment.PunishmentClosureService;
 import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
+import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
@@ -32,20 +27,12 @@ import java.time.LocalDate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 
 import javax.mail.MessagingException;
-
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
-
 
 @Service
 @Slf4j
@@ -55,46 +42,21 @@ public class PunishmentService {
     private final PunishmentCreationService punishmentCreationService;
     private final PunishmentClosureService punishmentClosureService;
     private final PunishmentQueryService punishmentQueryService;
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final PunishmentUpdateService punishmentUpdateService;
     private final StudentRepository studentRepository;
-    private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
-    private final SchoolRepository schoolRepository;
     private final EmailService emailService;
-    private final CustomFilters customFilters;
-    private final EmployeeService employeeService;
     private final EmployeeRepository employeeRepository;
     private final StudentService studentService;
-    private final GuidanceService guidanceService;
-    private final OfficeReferralService officeReferralService;
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
     public List<Punishment> findByStudentEmailAndInfraction(String email, String infractionId) throws ResourceNotFoundException {
-        var fetchData = punishRepository.findByStudentEmailAndInfractionId(email, infractionId);
-        var punishmentRecord = fetchData.stream()
-                .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
-                .toList();  // Collect the filtered punishments into a list
-
-        if (punishmentRecord.isEmpty()) {
-            throw new ResourceNotFoundException("That student does not exist");
-        }
-        logger.debug(String.valueOf(punishmentRecord));
-        return punishmentRecord;
+        return punishmentQueryService.findByStudentEmailAndInfraction(email, infractionId);
     }
 
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var fetchData = customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
-
-
-        if (fetchData.isEmpty()) {
-            throw new ResourceNotFoundException("No punishments with that status exist");
-        }
-        logger.debug(String.valueOf(fetchData));
-        return fetchData;
+        return punishmentQueryService.findByStatus(status);
     }
 
     public Punishment findByPunishmentId(String punishmentId) throws ResourceNotFoundException {
@@ -129,18 +91,18 @@ public class PunishmentService {
         return punishmentQueryService.getTeacherResponse(punishmentList);
     }
 
+    public List<Punishment> findAllSchool() {
+        return punishmentQueryService.findAllSchool();
+    }
+
+    public List<Punishment> findAllPunishmentsByStudentEmail() {
+        return punishmentQueryService.findAllPunishmentsByStudentEmail();
+    }
+
 
     //-----------------------------------------------CREATE METHODS-------------------------------------------
 
     // Methods that Need Global Filters Due for schools
-    public List<Punishment> findAllSchool() {
-        return customFilters.FetchPunishmentDataByIsArchivedAndSchool(false);
-    }
-
-    public List<Punishment> findAllPunishmentsByStudentEmail() {
-        return customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
-    }
-
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
         return punishmentCreationService.createNewPunishForm(formRequest);
     }
@@ -148,8 +110,6 @@ public class PunishmentService {
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> requests) throws MessagingException {
         return punishmentCreationService.createNewPunishFormBulk(requests);
     }
-
-    //  --------------------------------------DURATION METHODS AND CRON JOBS----------------------------------------------------------
 
     //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
 
@@ -184,45 +144,11 @@ public class PunishmentService {
     }
 
     public Punishment updateMapIndex(String id, int index) {
-        Punishment punishment = punishRepository.findByPunishmentId(id);
-        if (punishment != null) {
-            punishment.setMapIndex(index);
-            punishRepository.save(punishment);
-            return punishment;
-
-        } else {
-            throw new ResourceNotFoundException("No Punishment with Id " + id + " number exist");
-
-        }
-
-
+        return punishmentUpdateService.updateMapIndex(id, index);
     }
 
     public List<Punishment> updateTimeCreated() {
-        List<Punishment> all = punishRepository.findByIsArchived(false);
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            if (punishment.getInfractionName().equals("Tardy") ||
-                    punishment.getInfractionName().equals("Horseplay") ||
-                    punishment.getInfractionName().equals("Disruptive Behavior") ||
-                    punishment.getInfractionName().equals("Unauthorized Device/Cell Phone") ||
-                    punishment.getInfractionName().equals("Dress Code")) {
-                punishment.setArchived(true);
-                punishment.setArchivedBy("repsdiscipline@gmail.com");
-                punishment.setArchivedOn(LocalDate.now());
-                punishment.setArchivedExplanation(" Tardy Sweep 5/10");
-                punishRepository.save(punishment);
-                saved.add(punishment);
-            }
-//            int year = punishment.getTimeCreated().getYear();
-//            Month month = punishment.getTimeCreated().getMonth();
-//            int day = punishment.getTimeCreated().getDayOfMonth();
-//            LocalDate time = LocalDate.of(year, month, day);
-//            punishment.setTimeCreated(time);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-        }
-        return saved;
+        return punishmentUpdateService.updateTimeCreated();
     }
 
 //    public List<Punishment> updateInfractions() {
@@ -239,64 +165,23 @@ public class PunishmentService {
 //    }
 
     public List<Punishment> updateDescriptions() {
-        List<Punishment> all = punishRepository.findAll();
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            if (punishment.getInfractionDescription().size() > 1) {
-                punishment.getInfractionDescription().remove(0);
-                punishRepository.save(punishment);
-                saved.add(punishment);
-            }
-        }
-        return saved;
+        return punishmentUpdateService.updateDescriptions();
     }
 
     public List<Punishment> updateStudentEmails() {
-        List<Punishment> all = punishRepository.findAll();
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            String studentEmail = punishment.getStudentEmail();
-            punishment.setStudentEmail(studentEmail);
-            punishRepository.save(punishment);
-            saved.add(punishment);
-        }
-        return saved;
+        return punishmentUpdateService.updateStudentEmails();
     }
 
     public List<Punishment> updateInfractionName() {
-        List<Punishment> all = punishRepository.findAll();
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
-            punishment.setInfractionName(infractionName.getInfractionName());
-            punishRepository.save(punishment);
-            saved.add(punishment);
-        }
-        return saved;
+        return punishmentUpdateService.updateInfractionName();
     }
 
     public List<Punishment> updateInfractionLevel() {
-        List<Punishment> all = punishRepository.findAll();
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            Infraction infractionName = infractionRepository.findByInfractionId(punishment.getInfractionId());
-            punishment.setInfractionLevel(infractionName.getInfractionLevel());
-            punishRepository.save(punishment);
-            saved.add(punishment);
-        }
-        return saved;
+        return punishmentUpdateService.updateInfractionLevel();
     }
 
     public List<Punishment> updateSchools() {
-        List<Punishment> all = punishRepository.findAll();
-        List<Punishment> saved = new ArrayList<>();
-        for (Punishment punishment : all) {
-            Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-            punishment.setSchoolName(student.getSchool());
-            punishRepository.save(punishment);
-            saved.add(punishment);
-        }
-        return saved;
+        return punishmentUpdateService.updateSchools();
     }
 
     private void filePositiveWithState(PunishmentFormRequest formRequest) throws IOException, InterruptedException {

@@ -9,6 +9,7 @@ import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.services.UserContextService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ public class PunishmentQueryService {
     private final InfractionRepository infractionRepository;
     private final MongoTemplate mongoTemplate;
     private final CustomFilters customFilters;
+    private final UserContextService userContextService;
 
     public Punishment findByPunishmentId(String punishmentId) {
         Punishment p = punishRepository.findByPunishmentId(punishmentId);
@@ -208,4 +210,40 @@ public class PunishmentQueryService {
     public List<Punishment> findAllPunishmentsByStudentEmail() {
         return customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
     }
+
+    public List<Punishment> findByArchivedAndSchool(boolean isArchived) {
+        return punishRepository.findByIsArchivedAndSchoolName(isArchived, userContextService.getCurrentUserSchool());
+    }
+
+    public List<Punishment> findByArchivedStatusAndStatus(boolean archived, String status) {
+        return findByArchivedAndSchool(archived).stream()
+                .filter(p -> p.getStatus().equalsIgnoreCase(status))
+                .collect(Collectors.toList());
+    }
+
+    public List<Punishment> findByIsArchivedAndSchool(boolean isArchived) {
+        String schoolName = userContextService.getSchoolForCurrentUser();
+        return punishRepository.findByIsArchivedAndSchoolName(isArchived, schoolName);
+    }
+
+    public List<Punishment> findByIsArchivedAndSchoolAndStatus(boolean isArchived, String status) {
+        return findByIsArchivedAndSchool(isArchived).stream()
+                .filter(p -> p.getStatus().equalsIgnoreCase(status))
+                .collect(Collectors.toList());
+    }
+
+    public List<Punishment> findByLoggedInTeacher(boolean isArchived) {
+        String email = userContextService.getCurrentUsername();
+        return findByIsArchivedAndSchool(isArchived).stream()
+                .filter(p -> p.getTeacherEmail().equalsIgnoreCase(email))
+                .collect(Collectors.toList());
+    }
+
+    public List<Punishment> findByLoggedInStudent(boolean isArchived) {
+        String email = userContextService.getCurrentUsername();
+        return findByIsArchivedAndSchool(isArchived).stream()
+                .filter(p -> p.getStudentEmail().equalsIgnoreCase(email))
+                .collect(Collectors.toList());
+    }
+
 }
