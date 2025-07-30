@@ -10,6 +10,9 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
+import com.reps.demogcloud.services.email.EmailNotificationService;
+import com.reps.demogcloud.services.email.EmailSenderService;
+import com.reps.demogcloud.services.email.EmailTemplateBuilderService;
 import com.twilio.Twilio;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class EmailService {
 
+    private final EmailNotificationService emailNotificationService;
+    private final EmailSenderService emailSenderService;
+    private final EmailTemplateBuilderService emailTemplateBuilderService;
+
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
@@ -44,13 +51,6 @@ public class EmailService {
     @Value("${sm://RepsDiscipline-twilio_password}")
     private String twilioPassword;
 
-    @Autowired
-    public EmailService(JavaMailSender javaMailSender, StudentRepository studentRepository, EmployeeRepository employeeRepository, SpringTemplateEngine springTemplateEngine) {
-        this.javaMailSender = javaMailSender;
-        this.studentRepository = studentRepository;
-        this.employeeRepository = employeeRepository;
-        this.springTemplateEngine = springTemplateEngine;
-    }
 
     public static String adjustString(String input) {
         // Use regex to match the part before the number and the number itself
