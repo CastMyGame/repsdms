@@ -136,7 +136,7 @@ public class PunishmentUtils {
         linkGuidanceIfNeeded(formRequest, student, saved);
 
         return emailService.sendEmailBasedOnType(
-                formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+                formRequest, saved, emailService);
     }
 
     public PunishmentResponse handleBasicClose(String status, PunishmentFormRequest formRequest, Punishment punishment, Student student, LocalDate now) throws MessagingException {
@@ -147,7 +147,7 @@ public class PunishmentUtils {
         linkGuidanceIfNeeded(formRequest, student, saved);
 
         return emailService.sendEmailBasedOnType(
-                formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+                formRequest, saved, emailService);
     }
 
     public PunishmentResponse handleLevelFourReferral(PunishmentFormRequest formRequest, Punishment punishment, Student student) throws MessagingException {
@@ -173,7 +173,7 @@ public class PunishmentUtils {
         linkGuidanceIfNeeded(formRequest, student, saved);
 
         return emailService.sendEmailBasedOnType(
-                formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+                formRequest, saved, emailService);
     }
 
     public PunishmentResponse handleAdminReferral(PunishmentFormRequest formRequest, Punishment punishment, Student student, LocalDate now) throws MessagingException {
@@ -184,7 +184,7 @@ public class PunishmentUtils {
         linkGuidanceIfNeeded(formRequest, student, saved);
 
         return emailService.sendEmailBasedOnType(
-                formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+                formRequest, saved, emailService);
     }
 
     public PunishmentResponse handleDefaultOpen(PunishmentFormRequest formRequest, Punishment punishment, Student student) throws MessagingException {
@@ -208,11 +208,11 @@ public class PunishmentUtils {
         linkGuidanceIfNeeded(formRequest, student, saved);
 
         if ("CFR".equals(punishment.getStatus())) {
-            return emailService.sendCFREmailBasedOnType(saved, studentRepository, infractionRepository, schoolRepository);
+            return emailService.sendCFREmailBasedOnType(saved);
         }
 
         return emailService.sendEmailBasedOnType(
-                formRequest, saved, punishRepository, studentRepository, infractionRepository, emailService, schoolRepository);
+                formRequest, saved, emailService);
     }
 
     public Punishment fetchOpenPunishment(String studentEmail, String infractionName) {

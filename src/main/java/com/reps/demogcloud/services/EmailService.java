@@ -11,14 +11,10 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.services.email.EmailNotificationService;
 import com.reps.demogcloud.services.email.EmailReferralService;
 import com.reps.demogcloud.services.email.EmailSenderService;
-import com.reps.demogcloud.services.email.EmailTemplateBuilderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import javax.mail.MessagingException;
 import java.util.*;
@@ -81,7 +77,7 @@ public class EmailService {
         emailNotificationService.sendPositiveShoutOut(toEmail, studentName);
     }
 
-    public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService,) throws MessagingException {
+    public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService) throws MessagingException {
         return emailReferralService.sendEmailBasedOnType(formRequest, punishment, emailService);
     }
 
