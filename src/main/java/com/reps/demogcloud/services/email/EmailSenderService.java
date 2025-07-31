@@ -1,5 +1,6 @@
 package com.reps.demogcloud.services.email;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -100,4 +101,36 @@ public class EmailSenderService {
             log.error("Exception occurred while sending email: {}", e.getMessage());
         }
     }
+
+    public void sendDetailedEmail(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        message.setSubject(subject);
+        MimeMessageHelper helper;
+        helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(parentEmail);
+
+        helper.addCc(teacherEmail);
+        helper.addCc(studentEmail);
+        for (String email : spotters) {
+            helper.addBcc(email);
+        }
+        helper.setText(msg, true);
+        javaMailSender.send(message);
+    }
+
+
+    public void sendGenericEmail(List<String> ccEmails, String recipientEmail, String subject, String msg) throws MessagingException {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom("REPS.DMS@gmail.com");
+        helper.setTo(recipientEmail);
+        for (String email : ccEmails) {
+            helper.addBcc(email);
+        }
+        helper.setSubject(subject);
+        helper.setText(msg, true);
+        javaMailSender.send(message);
+    }
+
 }

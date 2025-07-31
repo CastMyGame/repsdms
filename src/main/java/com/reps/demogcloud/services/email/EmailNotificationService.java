@@ -1,7 +1,9 @@
 package com.reps.demogcloud.services.email;
 
 import com.reps.demogcloud.models.email.ClassAnnouncementRequest;
+import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.StudentRepository;
@@ -82,4 +84,26 @@ public class EmailNotificationService {
 
         sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(), student.getStudentEmail(), message, subject);
     }
+
+    public void notifyParentViaTextAndEmail(Punishment punishment, Student student, Infraction infraction, PunishmentResponse response) throws MessagingException {
+        String message = templateBuilderService.createEmailText(
+                student.getFirstName(),
+                student.getLastName(),
+                infraction.getInfractionLevel(),
+                infraction.getInfractionName(),
+                templateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
+                student.getStudentEmail()
+        );
+
+        response.setMessage(message);
+
+        sendPtsEmail(
+                response.getParentToEmail(),
+                response.getTeacherToEmail(),
+                response.getStudentToEmail(),
+                response.getSubject(),
+                response.getMessage()
+        );
+    }
+
 }
