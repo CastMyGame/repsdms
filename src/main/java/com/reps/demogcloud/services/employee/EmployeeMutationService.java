@@ -1,15 +1,12 @@
 package com.reps.demogcloud.services.employee;
 
 import com.reps.demogcloud.data.EmployeeRepository;
-import com.reps.demogcloud.data.SchoolRepository;
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.security.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -24,7 +21,7 @@ import java.util.Optional;
 @Slf4j
 @RequiredArgsConstructor
 public class EmployeeMutationService {
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     private final EmployeeRepository employeeRepository;
     private final StudentRepository studentRepository;
 

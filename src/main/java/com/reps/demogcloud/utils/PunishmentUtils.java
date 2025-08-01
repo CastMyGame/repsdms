@@ -1,8 +1,10 @@
 package com.reps.demogcloud.utils;
 
 import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.enums.InfractionType;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
@@ -10,10 +12,12 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.services.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.mail.MessagingException;
@@ -26,8 +30,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PunishmentUtils {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
+    private final EmployeeRepository employeeRepository;
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
@@ -35,21 +39,6 @@ public class PunishmentUtils {
     private final EmployeeService employeeService;
     private final GuidanceService guidanceService;
     private final OfficeReferralService officeReferralService;
-
-    public static String determineLevel(List<Integer> levels, int maxLevel) {
-        int level = 1;
-        int discLevel = maxLevel == 0 ? 4 : maxLevel;
-
-        for (Integer lev : levels) {
-            if (lev > level) {
-                level = lev;
-            }
-            if (level >= discLevel) {
-                return "4";
-            }
-        }
-        return String.valueOf(level);
-    }
 
     public void validateFormRequest(PunishmentFormRequest formRequest) {
         if (formRequest.getInfractionDescription() == null || formRequest.getInfractionDescription().isEmpty()) {
@@ -230,6 +219,4 @@ public class PunishmentUtils {
         }
         punishment.setInfractionDescription(existing);
     }
-
-
 }

@@ -1,9 +1,6 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.EmployeeRepository;
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
@@ -12,9 +9,6 @@ import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.security.models.AuthenticationRequest;
-import com.reps.demogcloud.security.models.RoleModel;
-import com.reps.demogcloud.security.services.AuthService;
 import com.reps.demogcloud.services.employee.EmployeeClassService;
 import com.reps.demogcloud.services.employee.EmployeeCreationService;
 import com.reps.demogcloud.services.employee.EmployeeMutationService;
@@ -24,12 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -39,9 +30,6 @@ public class EmployeeService {
     private final EmployeeQueryService employeeQueryService;
     private final EmployeeMutationService employeeMutationService;
     private final EmployeeClassService employeeClassService;
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final EmployeeRepository employeeRepository;
 
     public EmployeeResponse createNewEmployee(Employee request) {
         return employeeCreationService.createNewEmployee(request);

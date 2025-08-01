@@ -2,7 +2,6 @@ package com.reps.demogcloud.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.data.*;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.Employee;
@@ -12,9 +11,8 @@ import com.reps.demogcloud.services.punishment.PunishmentClosureService;
 import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
 import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
 
+import com.reps.demogcloud.utils.StudentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,8 +23,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -47,7 +43,7 @@ public class PunishmentService {
     private final PunishRepository punishRepository;
     private final EmailService emailService;
     private final EmployeeRepository employeeRepository;
-    private final StudentService studentService;
+    private final StudentUtils studentUtils;
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
@@ -295,7 +291,7 @@ public class PunishmentService {
 
         List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
         for (Punishment punishment : punishments) {
-            if (studentService.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
+            if (studentUtils.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
                 emailService.sendAlertEmail("DETENTION", punishment);
             } else {
                 emailService.sendAlertEmail("ISS", punishment);

@@ -2,7 +2,6 @@ package com.reps.demogcloud.services.student;
 
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
@@ -26,10 +25,7 @@ public class StudentMutationService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final CustomFilters customFilters;
-    private final StudentUtils studentUtils;
     private final StudentRepository studentRepository;
-    private final PunishRepository punishRepository;
     private final AuthService authService;
     private final UserRepository userRepository;
     private final StudentQueryService studentQueryService;

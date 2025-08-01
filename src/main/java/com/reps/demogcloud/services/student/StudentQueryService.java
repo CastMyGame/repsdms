@@ -2,11 +2,12 @@ package com.reps.demogcloud.services.student;
 
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.utils.DtoUtils;
+import com.reps.demogcloud.utils.SchoolUtils;
 import com.reps.demogcloud.utils.StudentUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -23,8 +24,8 @@ import java.util.*;
 public class StudentQueryService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final CustomFilters customFilters;
     private final StudentUtils studentUtils;
+    private final SchoolUtils schoolUtils;
     private final StudentRepository studentRepository;
     private final PunishRepository punishRepository;
 
@@ -106,7 +107,7 @@ public class StudentQueryService {
     }
 
     public List<Student> findByStudentLastName(String lastName) throws ResourceNotFoundException {
-        List<Student> fetchData = customFilters.findByLastNameAndSchool(lastName);
+        List<Student> fetchData = findByLastNameAndSchool(lastName);
         List<Student> studentRecord = fetchData.stream()
                 .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList(); // Collect the filtered punishments into a list
@@ -154,7 +155,7 @@ public class StudentQueryService {
     }
 
     public List<Student> getAllStudents(boolean bool) {
-        List<Student> students = customFilters.findByIsArchivedAndSchool(bool);
+        List<Student> students = findByIsArchivedAndSchool(bool);
         students.sort(Comparator.comparing(Student::getLastName));
         return students;
     }
@@ -181,5 +182,17 @@ public class StudentQueryService {
         return studentRepository.findBySchool(school);
     }
 
+    public List<Student> findByLastNameAndSchool(String lastName) {
+        return studentRepository.findByIsArchivedAndLastNameAndSchool(false, lastName, schoolUtils.fetchSchoolName());
+    }
+
+    public List<Student> findByIsArchivedAndSchool(boolean b) {
+        List<Student> archivedRecords = studentRepository.findByIsArchivedAndSchool(b, schoolUtils.fetchSchoolName());
+        if (archivedRecords.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return archivedRecords;
+
+    }
 
 }

@@ -1,11 +1,6 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.PunishRepository;
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
-import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.school.School;
@@ -13,27 +8,15 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
 import com.reps.demogcloud.models.student.UpdateSpottersRequest;
-import com.reps.demogcloud.security.models.AuthenticationRequest;
-import com.reps.demogcloud.security.models.RoleModel;
-import com.reps.demogcloud.security.models.UserRepository;
-import com.reps.demogcloud.security.services.AuthService;
 import com.reps.demogcloud.services.student.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-
-
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -45,9 +28,6 @@ public class StudentService {
     private final StudentPointService studentPointService;
     private final StudentSpotterService studentSpotterService;
     private final StudentAdminService studentAdminService;
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final StudentRepository studentRepository;
-    private final SchoolRepository schoolRepository;
 
     public List<Student> findStudentByParentEmail(String parentEmail) throws ResourceNotFoundException {
         return studentQueryService.findStudentByParentEmail(parentEmail);

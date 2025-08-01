@@ -1,58 +1,31 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.*;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
-import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
-import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
-import org.junit.jupiter.api.BeforeEach;
+import com.reps.demogcloud.services.punishment.PunishmentQueryService;
+import com.reps.demogcloud.utils.PunishmentUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-import javax.mail.MessagingException;
-import java.time.LocalDate;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PunishmentServiceTest {
     @Mock
-    private StudentRepository studentRepository;
-    @Mock
-    private InfractionRepository infractionRepository;
-    @Mock
     private PunishRepository punishRepository;
     @Mock
-    private SchoolRepository schoolRepository;
-    @Mock
-    private EmailService emailService;
-    @Mock
-    private CustomFilters customFilters;
-    @Mock
-    private EmployeeService employeeService;
-    @Mock
-    private EmployeeRepository employeeRepository;
-    @Mock
-    private StudentService studentService;
-    @Mock
-    private GuidanceService guidanceService;
-    @Mock
-    private OfficeReferralService officeReferralService;
-    @Mock
-    private MongoTemplate mongoTemplate;
-
+    private PunishmentQueryService punishmentQueryService;
     @InjectMocks
     private PunishmentService punishmentService;
 
@@ -151,27 +124,27 @@ public class PunishmentServiceTest {
         String status = "IN_PROGRESS";
         Punishment p1 = new Punishment();
 
-        when(customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
+        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
                 .thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findByStatus(status);
 
         assertEquals(1, result.size());
-        verify(customFilters).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
+        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
     }
 
     @Test
     void testFindByStatus_ThrowsResourceNotFoundException() {
         String status = "INVALID_STATUS";
 
-        when(customFilters.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
+        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
                 .thenReturn(Collections.emptyList());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 punishmentService.findByStatus(status)
         );
 
-        verify(customFilters).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
+        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
     }
 
     @Test
@@ -221,13 +194,13 @@ public class PunishmentServiceTest {
         Punishment p1 = new Punishment();
         p1.setArchived(false);
 
-        when(customFilters.FetchPunishmentDataByIsArchivedAndSchool(false)).thenReturn(List.of(p1));
+        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchool(false)).thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findAllSchool();
 
         assertEquals(1, result.size());
         assertFalse(result.get(0).isArchived());
-        verify(customFilters).FetchPunishmentDataByIsArchivedAndSchool(false);
+        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchool(false);
     }
 
     @Test
@@ -235,14 +208,14 @@ public class PunishmentServiceTest {
         Punishment p1 = new Punishment();
         p1.setArchived(false);
 
-        when(customFilters.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false))
+        when(punishmentQueryService.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false))
                 .thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findAllPunishmentsByStudentEmail();
 
         assertEquals(1, result.size());
         assertFalse(result.get(0).isArchived());
-        verify(customFilters).LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
+        verify(punishmentQueryService).LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
     }
 
     @Test
