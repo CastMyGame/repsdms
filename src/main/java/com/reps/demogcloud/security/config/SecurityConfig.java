@@ -29,31 +29,30 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf().disable()
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/public/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .oauth2Login(oauth -> oauth
-                        .defaultSuccessUrl("/api/login/success", true)
-                );
-
-        return http.build();
-    }
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
+        http
+                .cors().and().csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/register", "/contact-us","/auth","/auth/**","/forgot-password","/reset-password", "/student/v1/points/transfer","/DTO/v1/**").permitAll()
-//                .antMatchers("/student/v1/").authenticated() // Add this line
-//                .antMatchers("/student/v1/allStudents").authenticated()
-                .anyRequest().authenticated();
+                .antMatchers(
+                        "/register",
+                        "/contact-us",
+                        "/auth",
+                        "/auth/**",
+                        "/forgot-password",
+                        "/reset-password",
+                        "/student/v1/points/transfer",
+                        "/DTO/v1/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .oauth2Login()
+                .defaultSuccessUrl("/auth/oauth-success", true); // Optional custom redirect
+
+        // Your custom JWT filter for token-based auth
         http.addFilterBefore(jwtFilterRequest, UsernamePasswordAuthenticationFilter.class);
     }
+
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
