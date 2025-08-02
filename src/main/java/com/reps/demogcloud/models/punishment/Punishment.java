@@ -22,7 +22,7 @@ public class Punishment implements Comparable<Punishment>{
     @Id
     private String punishmentId;
     private String studentEmail;
-    private String schoolName;
+    private String school;
     private String infractionId;
     private String infractionName;
     private String infractionLevel;
@@ -34,12 +34,8 @@ public class Punishment implements Comparable<Punishment>{
     private LocalDate timeClosed;
     private String classPeriod;
     private String teacherEmail;
-    //Set initial value to false
-    @JsonProperty("isArchived")
-    private boolean isArchived = false;
-    // Set initial value to false until saved in review360 or other state discipline system
-    @JsonProperty("isStateFiled")
-    private boolean isStateFiled = false;
+    private boolean archived = false;
+    private boolean stateFiled = false;
     private String stateIncidentNumber;
     private String archivedBy;
     private String archivedExplanation;

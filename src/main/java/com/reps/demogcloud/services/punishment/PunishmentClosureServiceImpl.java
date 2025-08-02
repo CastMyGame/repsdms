@@ -187,7 +187,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment restoreRecord(String punishmentId) throws MessagingException {
-        Punishment punishment = punishRepository.findByPunishmentIdAndIsArchived(punishmentId, true);
+        Punishment punishment = punishRepository.findByPunishmentIdAndArchived(punishmentId, true);
         if (punishment == null) throw new ResourceNotFoundException("Archived punishment not found");
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());

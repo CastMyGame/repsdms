@@ -23,7 +23,7 @@ public class GuidanceReferral {
     @Id
     private String guidanceId;
     private String studentEmail;
-    private String schoolName;
+    private String school;
     private LocalDate timeCreated;
     private LocalDate timeClosed;
     private String classPeriod;

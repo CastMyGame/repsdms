@@ -32,7 +32,7 @@ public class Student {
     private String parentPhoneNumber;
     private String studentPhoneNumber;
     //Set initial value to true
-    private boolean isArchived = false;
+    private boolean archived = false;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;

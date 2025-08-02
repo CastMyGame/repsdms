@@ -37,7 +37,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateTimeCreated() {
-        List<Punishment> all = punishRepository.findByIsArchived(false);
+        List<Punishment> all = punishRepository.findByArchived(false);
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
             if (punishment.getInfractionName().equals("Tardy") ||
@@ -110,7 +110,7 @@ public class PunishmentUpdateService {
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
             Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-            punishment.setSchoolName(student.getSchool());
+            punishment.setSchool(student.getSchool());
             punishRepository.save(punishment);
             saved.add(punishment);
         }

@@ -35,7 +35,7 @@ public class PunishController {
 
     @GetMapping("/archived")
     public ResponseEntity<List<Punishment>> getAllArchived() {
-        List<Punishment> message = punishmentService.findAllPunishmentIsArchived(true);
+        List<Punishment> message = punishmentService.findAllPunishmentArchived(true);
         return ResponseEntity.ok(message);
     }
 

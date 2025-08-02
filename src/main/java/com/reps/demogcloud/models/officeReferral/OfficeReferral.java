@@ -23,16 +23,14 @@ private String infractionLevel;
     private String studentEmail;
     private String adminEmail;
     private String teacherEmail;
-    private String schoolName;
+    private String school;
     private String status;
     private String closedExplanation;
     private LocalDate timeCreated;
     private LocalDate timeClosed;
     private String classPeriod;
-    //Set initial value to false
-    private boolean isArchived = false;
-    // Set initial value to false until saved in review360 or other state discipline system
-    private boolean isStateFiled = false;
+    private boolean archived = false;
+    private boolean stateFiled = false;
     private String stateIncidentNumber;
     private String archivedBy;
     private String archivedExplanation;

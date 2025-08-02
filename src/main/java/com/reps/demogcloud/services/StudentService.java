@@ -56,8 +56,8 @@ public class StudentService {
         return studentQueryService.findByStudentId(studentId);
     }
 
-    public List<Student> findAllStudentIsArchived(boolean bool) throws ResourceNotFoundException {
-        return studentQueryService.findAllStudentIsArchived(bool);
+    public List<Student> findAllStudentArchived(boolean bool) throws ResourceNotFoundException {
+        return studentQueryService.findAllStudentArchived(bool);
     }
 
     public List<PunishmentDTO> getDetentionList(String school) {

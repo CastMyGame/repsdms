@@ -67,8 +67,8 @@ public class EmployeeService {
         return employeeMutationService.spendCurrency(requests);
     }
 
-    public List<Employee> editSchool(String schoolName) {
-        return employeeMutationService.editSchool(schoolName);
+    public List<Employee> editSchool(String school) {
+        return employeeMutationService.editSchool(school);
     }
 
     public void transferCurrency(CurrencyTransferRequest request) {

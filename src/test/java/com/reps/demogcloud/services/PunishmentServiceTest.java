@@ -109,14 +109,14 @@ public class PunishmentServiceTest {
         Punishment p1 = new Punishment();
         p1.setArchived(false);
 
-        when(punishRepository.findByIsArchived(false)).thenReturn(List.of(p1));
+        when(punishRepository.findByArchived(false)).thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findAll();
 
         assertEquals(1, result.size());
         assertFalse(result.get(0).isArchived());
 
-        verify(punishRepository).findByIsArchived(false);
+        verify(punishRepository).findByArchived(false);
     }
 
     @Test
@@ -124,27 +124,27 @@ public class PunishmentServiceTest {
         String status = "IN_PROGRESS";
         Punishment p1 = new Punishment();
 
-        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
+        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status))
                 .thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findByStatus(status);
 
         assertEquals(1, result.size());
-        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
+        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status);
     }
 
     @Test
     void testFindByStatus_ThrowsResourceNotFoundException() {
         String status = "INVALID_STATUS";
 
-        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status))
+        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status))
                 .thenReturn(Collections.emptyList());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 punishmentService.findByStatus(status)
         );
 
-        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
+        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status);
     }
 
     @Test
@@ -194,13 +194,13 @@ public class PunishmentServiceTest {
         Punishment p1 = new Punishment();
         p1.setArchived(false);
 
-        when(punishmentQueryService.FetchPunishmentDataByIsArchivedAndSchool(false)).thenReturn(List.of(p1));
+        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchool(false)).thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findAllSchool();
 
         assertEquals(1, result.size());
         assertFalse(result.get(0).isArchived());
-        verify(punishmentQueryService).FetchPunishmentDataByIsArchivedAndSchool(false);
+        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchool(false);
     }
 
     @Test
@@ -208,14 +208,14 @@ public class PunishmentServiceTest {
         Punishment p1 = new Punishment();
         p1.setArchived(false);
 
-        when(punishmentQueryService.LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false))
+        when(punishmentQueryService.LoggedInStudentFetchPunishmentDataByArchivedAndSchool(false))
                 .thenReturn(List.of(p1));
 
         List<Punishment> result = punishmentService.findAllPunishmentsByStudentEmail();
 
         assertEquals(1, result.size());
         assertFalse(result.get(0).isArchived());
-        verify(punishmentQueryService).LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
+        verify(punishmentQueryService).LoggedInStudentFetchPunishmentDataByArchivedAndSchool(false);
     }
 
     @Test

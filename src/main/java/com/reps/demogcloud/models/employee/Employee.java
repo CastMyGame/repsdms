@@ -28,8 +28,7 @@ public class Employee {
     private String email;
     private Set<RoleModel> roles;
     private String school;
-    //Set initial value to true
-    private boolean isArchived = false;
+    private boolean archived = false;
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;

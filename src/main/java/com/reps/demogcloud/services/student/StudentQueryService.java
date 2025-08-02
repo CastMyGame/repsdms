@@ -30,7 +30,7 @@ public class StudentQueryService {
     private final PunishRepository punishRepository;
 
     public List<PunishmentDTO> getIssList(String schoolName) {
-        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(schoolName, false);
+        List<Punishment> punishments = punishRepository.findAllBySchoolAndArchived(schoolName, false);
 
         Set<String> seenStudentEmails = new HashSet<>();
         List<PunishmentDTO> result = new ArrayList<>();
@@ -63,7 +63,7 @@ public class StudentQueryService {
     }
 
     public List<PunishmentDTO> getDetentionList(String school) {
-        List<Punishment> punishments = punishRepository.findAllBySchoolNameAndIsArchived(school, false);
+        List<Punishment> punishments = punishRepository.findAllBySchoolAndArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
         for (Punishment punishment : punishments) {
@@ -155,7 +155,7 @@ public class StudentQueryService {
     }
 
     public List<Student> getAllStudents(boolean bool) {
-        List<Student> students = findByIsArchivedAndSchool(bool);
+        List<Student> students = findByArchivedAndSchool(bool);
         students.sort(Comparator.comparing(Student::getLastName));
         return students;
     }
@@ -170,8 +170,8 @@ public class StudentQueryService {
         return findMe;
     }
 
-    public List<Student> findAllStudentIsArchived(boolean bool) throws ResourceNotFoundException {
-        List<Student> archivedRecords = studentRepository.findByIsArchived(bool);
+    public List<Student> findAllStudentArchived(boolean bool) throws ResourceNotFoundException {
+        List<Student> archivedRecords = studentRepository.findByArchived(bool);
         if (archivedRecords.isEmpty()) {
             throw new ResourceNotFoundException("No Archived Records exist in students table");
         }
@@ -183,11 +183,11 @@ public class StudentQueryService {
     }
 
     public List<Student> findByLastNameAndSchool(String lastName) {
-        return studentRepository.findByIsArchivedAndLastNameAndSchool(false, lastName, schoolUtils.fetchSchoolName());
+        return studentRepository.findByArchivedAndLastNameAndSchool(false, lastName, schoolUtils.fetchSchoolName());
     }
 
-    public List<Student> findByIsArchivedAndSchool(boolean b) {
-        List<Student> archivedRecords = studentRepository.findByIsArchivedAndSchool(b, schoolUtils.fetchSchoolName());
+    public List<Student> findByArchivedAndSchool(boolean b) {
+        List<Student> archivedRecords = studentRepository.findByArchivedAndSchool(b, schoolUtils.fetchSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }

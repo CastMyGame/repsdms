@@ -50,8 +50,8 @@ public class EmployeeMutationService {
         return spenders;
     }
 
-    public List<Employee> editSchool(String schoolName) {
-        List<Employee> employees = employeeRepository.findBySchool(schoolName);
+    public List<Employee> editSchool(String school) {
+        List<Employee> employees = employeeRepository.findBySchool(school);
         List<Employee> updated = new ArrayList<>();
         for (Employee employee : employees) {
             employee.setCurrency(5);

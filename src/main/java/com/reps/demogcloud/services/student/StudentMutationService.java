@@ -48,7 +48,7 @@ public class StudentMutationService {
         authenticationRequest.setPassword(studentRequest.getStudentEmail().toLowerCase());
         authenticationRequest.setFirstName(studentRequest.getFirstName());
         authenticationRequest.setLastName(studentRequest.getLastName());
-        authenticationRequest.setSchoolName(studentRequest.getSchool());
+        authenticationRequest.setSchool(studentRequest.getSchool());
         authenticationRequest.setRoles(roles);
         studentRequest.setPoints(0);
         try {

@@ -41,9 +41,9 @@ public class EmailReferralService {
             punishRepository.save(punishment);
 
             List<Punishment> history = new ArrayList<>();
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(student.getStudentEmail(), infraction.getInfractionName(), "CLOSED", false));
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false));
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndIsArchived(student.getStudentEmail(), infraction.getInfractionName(), "CFR", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "CLOSED", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "CFR", false));
 
             List<String> messages = new ArrayList<>();
             for (Punishment past : history) {

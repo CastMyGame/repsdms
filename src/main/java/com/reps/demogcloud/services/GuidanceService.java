@@ -82,7 +82,7 @@ public class GuidanceService {
         ArrayList<String> description = new ArrayList<>();
         description.add(punishmentRequest.getGuidanceDescription());
         guidanceObj.setReferralDescription(description);
-        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setSchool(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
@@ -110,7 +110,7 @@ public class GuidanceService {
         guidanceObj.setTimeCreated(now);
         guidanceObj.setTeacherEmail(request.getGuidance().getTeacherEmail());
         guidanceObj.setReferralDescription(request.getGuidance().getReferralDescription());
-        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setSchool(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());

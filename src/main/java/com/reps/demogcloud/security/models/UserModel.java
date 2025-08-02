@@ -21,7 +21,7 @@ public class UserModel {
     private String password;
     private String firstName;
     private String lastName;
-    private String schoolName;
+    private String school;
     private Set<RoleModel> roles;
 
 

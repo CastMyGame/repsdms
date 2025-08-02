@@ -114,9 +114,9 @@ public class EmployeeController {
                 .body(response);
     }
 
-    @PutMapping("/{schoolName}")
-    public ResponseEntity<List<Employee>> editSchool(@PathVariable String schoolName) {
-        List<Employee> updated = employeeService.editSchool(schoolName);
+    @PutMapping("/{school}")
+    public ResponseEntity<List<Employee>> editSchool(@PathVariable String school) {
+        List<Employee> updated = employeeService.editSchool(school);
         return updated == null
                 ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(updated, HttpStatus.OK);

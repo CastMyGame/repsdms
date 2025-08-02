@@ -22,7 +22,7 @@ public class CustomUserDetails implements UserDetails {
     private boolean enabled;
 
     // Additional custom field
-    private String schoolName;
+    private String school;
 
     // Constructors, getters, and setters...
     //Using Lombok

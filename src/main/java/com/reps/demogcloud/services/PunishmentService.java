@@ -63,8 +63,8 @@ public class PunishmentService {
         return punishmentQueryService.findAll();
     }
 
-    public List<Punishment> findAllPunishmentIsArchived(boolean bool) {
-        return punishmentQueryService.findAllPunishmentIsArchived(bool);
+    public List<Punishment> findAllPunishmentArchived(boolean bool) {
+        return punishmentQueryService.findAllPunishmentArchived(bool);
     }
 
     public List<Punishment> getAllOpenAssignments() {
@@ -289,7 +289,7 @@ public class PunishmentService {
     public void alertIssAndDetention() throws MessagingException {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
-        List<Punishment> punishments = punishRepository.findByIsArchivedAndStatus(false, "OPEN");
+        List<Punishment> punishments = punishRepository.findByArchivedAndStatus(false, "OPEN");
         for (Punishment punishment : punishments) {
             if (studentUtils.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
                 emailService.sendAlertEmail("DETENTION", punishment);

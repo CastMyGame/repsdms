@@ -15,8 +15,8 @@ public class OfficeReferralUtils {
     private final OfficeReferralRepository officeReferralRepository;
     private final SchoolUtils schoolUtils;
 
-    public List<OfficeReferral> FetchOfficeReferralsByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
-        List<OfficeReferral> archivedRecords = officeReferralRepository.findByIsArchivedAndSchoolName(bool, schoolUtils.fetchSchoolName());
+    public List<OfficeReferral> FetchOfficeReferralsByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<OfficeReferral> archivedRecords = officeReferralRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }

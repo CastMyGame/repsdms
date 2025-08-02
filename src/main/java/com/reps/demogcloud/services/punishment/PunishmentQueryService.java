@@ -49,7 +49,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findAllByArchived(boolean archived) {
-        return punishRepository.findByIsArchived(archived);
+        return punishRepository.findByArchived(archived);
     }
 
     public List<Punishment> findAllForStudent(String studentEmail) {
@@ -117,7 +117,7 @@ public class PunishmentQueryService {
         List<Punishment> saved = new ArrayList<>();
         for (Punishment p : all) {
             Student student = studentRepository.findByStudentEmailIgnoreCase(p.getStudentEmail());
-            p.setSchoolName(student.getSchool());
+            p.setSchool(student.getSchool());
             saved.add(punishRepository.save(p));
         }
         return saved;
@@ -136,11 +136,11 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findAll() {
-        return punishRepository.findByIsArchived(false);
+        return punishRepository.findByArchived(false);
     }
 
-    public List<Punishment> findAllPunishmentIsArchived(boolean bool) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByIsArchived(bool);
+    public List<Punishment> findAllPunishmentArchived(boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByArchived(bool);
         if (archivedRecords.isEmpty()) {
             throw new ResourceNotFoundException("No Archived Records exist in punihsment table");
         }
@@ -195,7 +195,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findByStatus(String status) throws ResourceNotFoundException {
-        var fetchData = FetchPunishmentDataByIsArchivedAndSchoolAndStatus(false, status);
+        var fetchData = FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status);
 
 
         if (fetchData.isEmpty()) {
@@ -206,15 +206,15 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findAllSchool() {
-        return FetchPunishmentDataByIsArchivedAndSchool(false);
+        return FetchPunishmentDataByArchivedAndSchool(false);
     }
 
     public List<Punishment> findAllPunishmentsByStudentEmail() {
-        return LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(false);
+        return LoggedInStudentFetchPunishmentDataByArchivedAndSchool(false);
     }
 
-    public List<Punishment> findByArchivedAndSchool(boolean isArchived) {
-        return punishRepository.findByIsArchivedAndSchoolName(isArchived, userContextService.getCurrentUserSchool());
+    public List<Punishment> findByArchivedAndSchool(boolean archived) {
+        return punishRepository.findByArchivedAndSchool(archived, userContextService.getCurrentUserSchool());
     }
 
     public List<Punishment> findByArchivedStatusAndStatus(boolean archived, String status) {
@@ -223,27 +223,22 @@ public class PunishmentQueryService {
                 .collect(Collectors.toList());
     }
 
-    public List<Punishment> findByIsArchivedAndSchool(boolean isArchived) {
-        String schoolName = userContextService.getSchoolForCurrentUser();
-        return punishRepository.findByIsArchivedAndSchoolName(isArchived, schoolName);
-    }
-
-    public List<Punishment> findByIsArchivedAndSchoolAndStatus(boolean isArchived, String status) {
-        return findByIsArchivedAndSchool(isArchived).stream()
+    public List<Punishment> findByArchivedAndSchoolAndStatus(boolean archived, String status) {
+        return findByArchivedAndSchool(archived).stream()
                 .filter(p -> p.getStatus().equalsIgnoreCase(status))
                 .collect(Collectors.toList());
     }
 
-    public List<Punishment> findByLoggedInTeacher(boolean isArchived) {
+    public List<Punishment> findByLoggedInTeacher(boolean archived) {
         String email = userContextService.getCurrentUsername();
-        return findByIsArchivedAndSchool(isArchived).stream()
+        return findByArchivedAndSchool(archived).stream()
                 .filter(p -> p.getTeacherEmail().equalsIgnoreCase(email))
                 .collect(Collectors.toList());
     }
 
-    public List<Punishment> findByLoggedInStudent(boolean isArchived) {
+    public List<Punishment> findByLoggedInStudent(boolean archived) {
         String email = userContextService.getCurrentUsername();
-        return findByIsArchivedAndSchool(isArchived).stream()
+        return findByArchivedAndSchool(archived).stream()
                 .filter(p -> p.getStudentEmail().equalsIgnoreCase(email))
                 .collect(Collectors.toList());
     }
@@ -260,22 +255,22 @@ public class PunishmentQueryService {
     }
 
 
-    public List<Punishment> FetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool, schoolUtils.fetchSchoolName());
+    public List<Punishment> FetchPunishmentDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
         return archivedRecords;
     }
 
-    public List<Punishment> FetchPunishmentDataByIsArchivedAndSchoolAndStatus(boolean bool, String status) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = FetchPunishmentDataByIsArchivedAndSchool(bool);
+    public List<Punishment> FetchPunishmentDataByArchivedAndSchoolAndStatus(boolean bool, String status) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = FetchPunishmentDataByArchivedAndSchool(bool);
         return archivedRecords.stream().filter(x -> x.getStatus().equalsIgnoreCase(status)).toList();
 
     }
 
-    public List<Punishment> FetchPunishmentDataByInfractionNameAndIsArchived(String infractionId, boolean bool) throws ResourceNotFoundException {
-        List<Punishment> archivedRecords = punishRepository.findByInfractionIdAndIsArchivedAndSchoolName(infractionId, bool, schoolUtils.fetchSchoolName());
+    public List<Punishment> FetchPunishmentDataByInfractionNameAndArchived(String infractionId, boolean bool) throws ResourceNotFoundException {
+        List<Punishment> archivedRecords = punishRepository.findByInfractionIdAndArchivedAndSchool(infractionId, bool, schoolUtils.fetchSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -303,19 +298,19 @@ public class PunishmentQueryService {
                 .collect(Collectors.toList());
     }
 
-    public List<Punishment> LoggedInUserFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+    public List<Punishment> LoggedInUserFetchPunishmentDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool, schoolUtils.fetchSchoolName());
+        List<Punishment> archivedRecords = punishRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
         return archivedRecords.stream().filter(x -> x.getTeacherEmail().equalsIgnoreCase(authentication.getName())).toList();
 
 
     }
 
-    public List<Punishment> LoggedInStudentFetchPunishmentDataByIsArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+    public List<Punishment> LoggedInStudentFetchPunishmentDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Punishment> archivedRecords = punishRepository.findByIsArchivedAndSchoolName(bool, schoolUtils.fetchSchoolName());
+        List<Punishment> archivedRecords = punishRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
         return archivedRecords.stream().filter(x -> x.getStudentEmail().equalsIgnoreCase(authentication.getName())).toList();
 
 

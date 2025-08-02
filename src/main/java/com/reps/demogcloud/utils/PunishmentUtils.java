@@ -1,10 +1,8 @@
 package com.reps.demogcloud.utils;
 
 import com.reps.demogcloud.data.*;
-import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.CurrencyTransferRequest;
-import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.enums.InfractionType;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.officeReferral.OfficeReferralCode;
@@ -12,12 +10,8 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralRequest;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.services.*;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.mail.MessagingException;
@@ -31,7 +25,6 @@ import java.util.UUID;
 public class PunishmentUtils {
 
     private final StudentRepository studentRepository;
-    private final EmployeeRepository employeeRepository;
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
@@ -79,7 +72,7 @@ public class PunishmentUtils {
         p.setInfractionId(infraction.getInfractionId());
         p.setInfractionName(infraction.getInfractionName());
         p.setInfractionLevel(infraction.getInfractionLevel());
-        p.setSchoolName(student.getSchool());
+        p.setSchool(student.getSchool());
         p.setPunishmentId(UUID.randomUUID().toString());
         p.setTimeCreated(now);
         p.setClosedTimes(Integer.parseInt(getClosedLevel(student.getStudentEmail(), infraction.getInfractionName(), maxLevel)));

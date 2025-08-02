@@ -32,7 +32,7 @@ public class EmployeeCreationService {
         authenticationRequest.setPassword(emailPrefix);
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
-        authenticationRequest.setSchoolName(request.getSchool());
+        authenticationRequest.setSchool(request.getSchool());
         authenticationRequest.setRoles(request.getRoles());
         if (doesEmployeeExist == null) {
             try {

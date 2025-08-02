@@ -66,7 +66,7 @@ public class OfficeReferralService {
         request.setStudentEmail(findMe.getStudentEmail());
         request.setTeacherEmail(officeReferralRequest.getTeacherEmail());
         request.setClassPeriod(officeReferralRequest.getClassPeriod());
-        request.setSchoolName(ourSchool.getSchoolName());
+        request.setSchool(ourSchool.getSchoolName());
         request.setStatus("OPEN");
         request.setTimeCreated(now);
         request.setReferralDescription(officeReferralRequest.getReferralDescription());
@@ -139,7 +139,7 @@ public class OfficeReferralService {
 
     // Methods that Need Global Filters Due for schools
     public List<OfficeReferral> findAllSchool() {
-        return officeReferralUtils.FetchOfficeReferralsByIsArchivedAndSchool(false);
+        return officeReferralUtils.FetchOfficeReferralsByArchivedAndSchool(false);
     }
 
     public List<OfficeReferral> findByAdminEmail(String adminEmail) {
