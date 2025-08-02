@@ -100,13 +100,13 @@ public class AuthControllers {
         String password = authenticationRequest.getPassword();
         String firstName = authenticationRequest.getFirstName();
         String lastName = authenticationRequest.getLastName();
-        String school = authenticationRequest.getSchoolName();
+        String school = authenticationRequest.getSchool();
 
         UserModel userModel = new UserModel();
         userModel.setUsername(username);
         userModel.setFirstName(firstName);
         userModel.setLastName(lastName);
-        userModel.setSchoolName(school);
+        userModel.setSchool(school);
 
         // Use BCryptPasswordEncoder to encode the provided password
         String encodedPassword = passwordEncoder.encode(password);

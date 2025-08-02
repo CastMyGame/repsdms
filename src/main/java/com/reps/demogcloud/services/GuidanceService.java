@@ -1,7 +1,6 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.*;
-import com.reps.demogcloud.data.filters.CustomFilters;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.guidance.GuidanceReferral;
 import com.reps.demogcloud.models.guidance.GuidanceRequest;
@@ -34,18 +33,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GuidanceService {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final StudentRepository studentRepository;
-    private final InfractionRepository infractionRepository;
-    private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
     private final EmailService emailService;
-    private final CustomFilters customFilters;
-    private final EmployeeService employeeService;
-    private final EmployeeRepository employeeRepository;
-    private final StudentService studentService;
     private final GuidanceRepository guidanceRepository;
-    private final OfficeReferralService officeReferralService;
+
     @Value("${sm://RepsDiscipline-twilio_username}")
     private String twilioUsername;
     @Value("${sm://RepsDiscipline-twilio_password}")
@@ -90,7 +82,7 @@ public class GuidanceService {
         ArrayList<String> description = new ArrayList<>();
         description.add(punishmentRequest.getGuidanceDescription());
         guidanceObj.setReferralDescription(description);
-        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setSchool(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());
@@ -118,7 +110,7 @@ public class GuidanceService {
         guidanceObj.setTimeCreated(now);
         guidanceObj.setTeacherEmail(request.getGuidance().getTeacherEmail());
         guidanceObj.setReferralDescription(request.getGuidance().getReferralDescription());
-        guidanceObj.setSchoolName(ourSchool.getSchoolName());
+        guidanceObj.setSchool(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
         guidanceObj.setClassPeriod(request.getGuidance().getClassPeriod());

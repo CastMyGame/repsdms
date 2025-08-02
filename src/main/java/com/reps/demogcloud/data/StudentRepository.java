@@ -8,16 +8,16 @@ import java.util.List;
 
 @Repository
 public interface StudentRepository extends MongoRepository<Student,String> {
-    List<Student> findByIsArchived (boolean bool);
+    List<Student> findByArchived(boolean bool);
     List<Student> findByLastName(String lastName);
     List<Student> findByParentEmail(String email);
     List<Student> findBySchool(String school);
     Student findByStudentEmailIgnoreCase(String email);
     Student findByStudentIdNumber (String id);
 
-    List<Student> findByIsArchivedAndSchool(boolean b, String school);
+    List<Student> findByArchivedAndSchool(boolean b, String school);
 
-    List<Student> findByIsArchivedAndLastNameAndSchool(Boolean bool,String lastName, String schoolName);
+    List<Student> findByArchivedAndLastNameAndSchool(boolean bool, String lastName, String school);
 
     List<Student> findBySpottersContainsIgnoreCase(String spotterEmail);
 

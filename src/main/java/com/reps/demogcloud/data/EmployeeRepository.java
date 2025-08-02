@@ -13,10 +13,11 @@ public interface EmployeeRepository extends MongoRepository<Employee, String> {
     //Select everything from students where last name is equal to our first argument
     List<Employee> findByLastName(String lastName);
     Employee findByEmailIgnoreCase(String email);
-    List<Employee> findByIsArchived (boolean bool);
+
+    List<Employee> findByArchived(boolean bool);
     Employee findByEmployeeId (String employeeId);
 
-    List<Employee> findByIsArchivedAndSchool(boolean bool, String school);
+    List<Employee> findByArchivedAndSchool(boolean bool, String school);
 
     List<Employee> findBySchool (String school);
 }

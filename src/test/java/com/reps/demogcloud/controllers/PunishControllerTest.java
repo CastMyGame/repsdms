@@ -44,12 +44,6 @@ public class PunishControllerTest {
     @MockBean
     private PunishmentService punishmentService;
 
-    @MockBean
-    private UserService userService;
-
-    @MockBean
-    private JwtUtils jwtUtils;
-
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -142,7 +136,7 @@ public class PunishControllerTest {
 
     @Test
     void getAllArchived_returnsArchivedPunishments() throws Exception {
-        when(punishmentService.findAllPunishmentIsArchived(true)).thenReturn(punishmentList);
+        when(punishmentService.findAllPunishmentArchived(true)).thenReturn(punishmentList);
 
         mockMvc.perform(get("/punish/v1/archived"))
                 .andExpect(status().isOk())
@@ -309,7 +303,7 @@ public class PunishControllerTest {
         String userId = "user456";
         String explanation = "Test reason";
 
-        Punishment archived = Punishment.builder().punishmentId(punishmentId).isArchived(true).build();
+        Punishment archived = Punishment.builder().punishmentId(punishmentId).archived(true).build();
 
         when(punishmentService.archiveRecord(punishmentId ,userId , explanation)).thenReturn(archived);
 
@@ -326,7 +320,7 @@ public class PunishControllerTest {
     void restoreArchivedDeleted_returnsRestoredPunishment() throws Exception {
         String punishmentId = "pun999";
 
-        Punishment restored = Punishment.builder().punishmentId(punishmentId).isArchived(false).build();
+        Punishment restored = Punishment.builder().punishmentId(punishmentId).archived(false).build();
 
         when(punishmentService.restoreRecord(punishmentId)).thenReturn(restored);
 
@@ -390,8 +384,8 @@ public class PunishControllerTest {
     @Test
     void updateAllSchools_returnsList() throws Exception {
         List<Punishment> updated = List.of(
-                Punishment.builder().punishmentId("school1").schoolName("High School A").build(),
-                Punishment.builder().punishmentId("school2").schoolName("High School B").build()
+                Punishment.builder().punishmentId("school1").school("High School A").build(),
+                Punishment.builder().punishmentId("school2").school("High School B").build()
         );
 
         when(punishmentService.updateSchools()).thenReturn(updated);

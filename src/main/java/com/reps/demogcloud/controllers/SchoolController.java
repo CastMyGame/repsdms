@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @CrossOrigin(origins = {
         "http//localhost:3000",
         "https://repsdiscipline.vercel.app",
@@ -29,7 +31,7 @@ public class SchoolController {
     }
 
     @PutMapping("/{schoolName}")
-    public ResponseEntity<SchoolResponse> editSchool (@PathVariable String schoolName, @RequestParam String update) {
+    public ResponseEntity<SchoolResponse> editSchool(@PathVariable String schoolName, @RequestParam Map<String, String> update) {
         SchoolResponse schoolResponse = schoolService.editSchool(schoolName, update);
         return schoolResponse.getSchool() == null
                 ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
