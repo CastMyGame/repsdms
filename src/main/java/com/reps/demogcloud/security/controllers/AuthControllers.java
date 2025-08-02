@@ -88,7 +88,7 @@ public class AuthControllers {
     }
 
     //------------------------GET Controllers----------------------
-    @GetMapping("/test")
+    @GetMapping("/auth/test")
     private  String testingToken(){
         return "I WORKS";
     }
