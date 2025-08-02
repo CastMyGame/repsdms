@@ -1,7 +1,9 @@
 package com.reps.demogcloud.security.config;
 
+import com.reps.demogcloud.security.services.CustomOAuth2UserService;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.utils.CustomOAuth2SuccessHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +29,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private JwtFilterRequest jwtFilterRequest;
 
+    @Autowired
+    private CustomOAuth2UserService customOAuth2UserService;
+
+    @Autowired
+    private CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+
 
 
     @Override
@@ -46,11 +54,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 ).permitAll()
                 .anyRequest().authenticated()
                 .and()
-                .oauth2Login()
-                .defaultSuccessUrl("/auth/oauth-success", true); // Optional custom redirect
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint()
+                        .userService(customOAuth2UserService)
+                .and()
+                .successHandler(customOAuth2SuccessHandler)); // Optional custom redirect
 
         // Your custom JWT filter for token-based auth
         http.addFilterBefore(jwtFilterRequest, UsernamePasswordAuthenticationFilter.class);
+
     }
 
 
