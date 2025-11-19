@@ -2,6 +2,8 @@ package com.reps.demogcloud.security.config;
 
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.services.CustomOAuth2UserService;
+import com.reps.demogcloud.security.config.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,13 +20,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-// Add your OAuth2 components:
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -34,9 +29,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final JwtFilterRequest jwtFilterRequest;
     private final Environment env;
 
-    // Provided elsewhere (you'll implement these two):
-    private final OAuth2UserService<OidcUserRequest, OidcUser> customOAuth2UserService;
-    private final AuthenticationSuccessHandler oAuth2LoginSuccessHandler;
+    // OAuth2 components for Google SSO
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -69,7 +65,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .userInfoEndpoint()
                     .oidcUserService(customOAuth2UserService)
                     .and()
-                    .successHandler(oAuth2LoginSuccessHandler);
+                    .successHandler(oAuth2LoginSuccessHandler)
+                    .failureHandler(oAuth2LoginFailureHandler);
         } else {
             // Harden: if disabled, ensure oauth2 login is not active
             http.oauth2Login().disable();
@@ -103,6 +100,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         config.addAllowedOrigin("https://reps-react-ui.vercel.app");
         config.addAllowedOrigin("https://repsdev.vercel.app");
         config.addAllowedOrigin("https://repsdiscipline.vercel.app");
+        config.addAllowedOrigin("https://www.repsdiscipline.com");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

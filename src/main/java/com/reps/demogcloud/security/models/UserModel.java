@@ -23,6 +23,7 @@ public class UserModel {
     private String lastName;
     private String school;
     private Set<RoleModel> roles;
+    private boolean enabled = true; // Default to true for existing users, can be set to false to disable access
 
 
 }
