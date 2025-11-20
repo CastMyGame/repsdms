@@ -3,12 +3,15 @@ package com.reps.demogcloud.security.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reps.demogcloud.security.models.AuthenticationResponse;
 import com.reps.demogcloud.security.models.UserModel;
+import com.reps.demogcloud.security.services.GoogleOAuthTokenStore;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -27,6 +30,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final JwtUtils jwtUtils;
     private final UserService userService;
     private final Environment env;
+    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final GoogleOAuthTokenStore tokenStore;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -40,6 +45,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         UserModel userModel = userService.loadUserModelByUsername(email);
         UserDetails userDetails = userService.loadUserByUsername(email);
 
+        // Persist Google OAuth tokens for Gmail PoC
+        storeGoogleTokens(authentication, userModel);
+
         // Generate JWT token
         String token = jwtUtils.generateToken(userDetails);
 
@@ -50,7 +58,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             // Extract user information for sessionStorage
             String userName = userModel.getUsername(); // email is the username
             String schoolName = userModel.getSchool() != null ? userModel.getSchool() : "";
-            String email = userModel.getUsername(); // username is the email
+            String userEmail = userModel.getUsername(); // username is the email
             String role = "";
             
             // Get the first role (or combine all roles)
@@ -62,7 +70,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
             String encodedUserName = URLEncoder.encode(userName, StandardCharsets.UTF_8.toString());
             String encodedSchoolName = URLEncoder.encode(schoolName, StandardCharsets.UTF_8.toString());
-            String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8.toString());
+            String encodedEmail = URLEncoder.encode(userEmail, StandardCharsets.UTF_8.toString());
             String encodedRole = URLEncoder.encode(role, StandardCharsets.UTF_8.toString());
             String encodedUserModel = URLEncoder.encode(objectMapper.writeValueAsString(userModel), StandardCharsets.UTF_8.toString());
             
@@ -89,6 +97,28 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         clearAuthenticationAttributes(request);
+    }
+
+    private void storeGoogleTokens(Authentication authentication, UserModel userModel) {
+        try {
+            OAuth2AuthorizedClient authorizedClient =
+                    authorizedClientService.loadAuthorizedClient("google", authentication.getName());
+
+            if (authorizedClient != null && authorizedClient.getAccessToken() != null) {
+                tokenStore.storeToken(
+                        userModel.getUsername(),
+                        new GoogleOAuthTokenStore.GoogleOAuthToken(
+                                authorizedClient.getAccessToken().getTokenValue(),
+                                authorizedClient.getAccessToken().getExpiresAt(),
+                                authorizedClient.getRefreshToken() != null
+                                        ? authorizedClient.getRefreshToken().getTokenValue()
+                                        : null
+                        )
+                );
+            }
+        } catch (Exception ex) {
+            // Gmail PoC is best-effort; log and continue
+        }
     }
 }
 
