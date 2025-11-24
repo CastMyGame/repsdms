@@ -98,7 +98,6 @@ public class GuidanceService {
     }
 
     public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) {
-//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         LocalDate now = LocalDate.now();
 
         Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
