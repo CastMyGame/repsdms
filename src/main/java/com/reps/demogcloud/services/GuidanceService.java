@@ -38,9 +38,9 @@ public class GuidanceService {
     private final EmailService emailService;
     private final GuidanceRepository guidanceRepository;
 
-    @Value("${sm://RepsDiscipline-twilio_username}")
+    //@Value("${sm://RepsDiscipline-twilio_username}")
     private String twilioUsername;
-    @Value("${sm://RepsDiscipline-twilio_password}")
+   // @Value("${sm://RepsDiscipline-twilio_password}")
     private String twilioPassword;
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -98,7 +98,6 @@ public class GuidanceService {
     }
 
     public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) {
-//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         LocalDate now = LocalDate.now();
 
         Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());

@@ -23,53 +23,39 @@ public class EmailSenderService {
 
     private final JavaMailSender javaMailSender;
     private final SpringTemplateEngine templateEngine;
+    private final EmailRoutingService emailRoutingService;
 
     public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
-        Context context = new Context();
-        context.setVariables(templateModel);
+        emailRoutingService.sendHtmlEmail(templateName, toEmail, subject, templateModel, null);
+    }
 
-        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-        helper.setSubject(subject);
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(toEmail);
-        String htmlContent = templateEngine.process(templateName, context);
-        helper.setText(htmlContent, true);
-
-        javaMailSender.send(mimeMessage);
+    /**
+     * Send HTML email with optional sender email (for Gmail API)
+     */
+    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel, String fromEmail) throws MessagingException {
+        emailRoutingService.sendHtmlEmail(templateName, toEmail, subject, templateModel, fromEmail);
     }
 
     public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setSubject(subject);
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(toEmail);
-        helper.setText(msg, true);
+        emailRoutingService.sendEmail(toEmail, subject, msg, null);
+    }
 
-        javaMailSender.send(message);
+    /**
+     * Send email with optional sender email (for Gmail API)
+     */
+    public void sendEmail(String toEmail, String subject, String msg, String fromEmail) throws MessagingException {
+        emailRoutingService.sendEmail(toEmail, subject, msg, fromEmail);
     }
 
     public void sendBulkEmail(String to, List<String> cc, String subject, String msg, List<String> bcc) throws MessagingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setSubject(subject);
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(to);
-        if (cc != null) cc.forEach(email -> {
-            try {
-                helper.addCc(email);
-            } catch (MessagingException ignored) {
-            }
-        });
-        if (bcc != null) bcc.forEach(email -> {
-            try {
-                helper.addBcc(email);
-            } catch (MessagingException ignored) {
-            }
-        });
-        helper.setText(msg, true);
-        javaMailSender.send(message);
+        emailRoutingService.sendBulkEmail(to, cc, subject, msg, bcc, null);
+    }
+
+    /**
+     * Send bulk email with optional sender email (for Gmail API)
+     */
+    public void sendBulkEmail(String to, List<String> cc, String subject, String msg, List<String> bcc, String fromEmail) throws MessagingException {
+        emailRoutingService.sendBulkEmail(to, cc, subject, msg, bcc, fromEmail);
     }
 
     public void sendContactEmail(String to, String subject, String body) {
@@ -83,15 +69,19 @@ public class EmailSenderService {
     }
 
     public void sendClassAnnouncement(String from, List<String> classEmails, String subject, String messageBody) throws MessagingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setFrom(from);
-        helper.setSubject(subject);
-        for (String email : classEmails) {
-            helper.addCc(email);
+        // Class announcements are USER-INITIATED (teacher sends to class)
+        // Try Gmail API if teacher has OAuth token, otherwise use SMTP
+        if (classEmails != null && !classEmails.isEmpty()) {
+            emailRoutingService.sendBulkEmail(
+                classEmails.get(0), // First email as primary recipient
+                classEmails.size() > 1 ? classEmails.subList(1, classEmails.size()) : null, // Rest as CC
+                subject,
+                messageBody,
+                null, // No BCC
+                from, // Teacher's email for Gmail API
+                true  // This is a user-initiated action
+            );
         }
-        helper.setText(messageBody, true);
-        javaMailSender.send(message);
     }
 
     public void sendSafe(String toEmail, String subject, String msg) {
@@ -103,34 +93,25 @@ public class EmailSenderService {
     }
 
     public void sendDetailedEmail(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        message.setSubject(subject);
-        MimeMessageHelper helper;
-        helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(parentEmail);
-
-        helper.addCc(teacherEmail);
-        helper.addCc(studentEmail);
-        for (String email : spotters) {
-            helper.addBcc(email);
-        }
-        helper.setText(msg, true);
-        javaMailSender.send(message);
+        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, null);
     }
 
+    /**
+     * Send detailed email with optional sender email (for Gmail API)
+     */
+    public void sendDetailedEmail(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject, String fromEmail) throws MessagingException {
+        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, fromEmail);
+    }
 
     public void sendGenericEmail(List<String> ccEmails, String recipientEmail, String subject, String msg) throws MessagingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setFrom("REPS.DMS@gmail.com");
-        helper.setTo(recipientEmail);
-        for (String email : ccEmails) {
-            helper.addBcc(email);
-        }
-        helper.setSubject(subject);
-        helper.setText(msg, true);
-        javaMailSender.send(message);
+        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, null);
+    }
+
+    /**
+     * Send generic email with optional sender email (for Gmail API)
+     */
+    public void sendGenericEmail(List<String> ccEmails, String recipientEmail, String subject, String msg, String fromEmail) throws MessagingException {
+        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, fromEmail);
     }
 
 }

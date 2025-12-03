@@ -11,6 +11,8 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
@@ -30,12 +32,18 @@ public class EmailNotificationService {
 
     @Async
     public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject) throws MessagingException {
+
+        String sender = ( getCurrentUserEmail() !=null && !getCurrentUserEmail().isEmpty()) ? getCurrentUserEmail():null;
+
+        System.out.println("Sending Email using " + sender);
+
+
         Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
         if (student == null) {
             throw new IllegalArgumentException("Student not found for email: " + studentEmail);
         }
         List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
-        emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters);
+        emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters,sender);
     }
 
     @Async
@@ -104,6 +112,26 @@ public class EmailNotificationService {
                 response.getSubject(),
                 response.getMessage()
         );
+    }
+
+
+    public String getCurrentUserEmail() {
+        // 1. Get the Authentication object from the SecurityContext
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            // 2. The principal is typically the UserDetails object (or a custom user object)
+            Object principal = authentication.getPrincipal();
+
+            // Check if the principal is the standard Spring User object
+            if (principal instanceof org.springframework.security.core.userdetails.User userDetails) {
+                // Spring's default UserDetails doesn't have an email field, but the
+                // username field is often used for the email address.
+                return userDetails.getUsername();
+            }
+
+        }
+        return null; // No user logged in or authentication failed
     }
 
 }

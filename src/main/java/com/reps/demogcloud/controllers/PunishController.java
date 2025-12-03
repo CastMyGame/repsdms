@@ -89,6 +89,7 @@ public class PunishController {
         return ResponseEntity.ok(message);
     }
 
+    @Deprecated
     @PostMapping("/close/{id}")
     public ResponseEntity<PunishmentResponse> closeByPunishmentId(@PathVariable String id) throws ResourceNotFoundException, MessagingException {
         var message = punishmentService.closeByPunishmentId(id);
@@ -96,6 +97,7 @@ public class PunishController {
         return ResponseEntity.ok(message);
     }
 
+@Deprecated
     @PostMapping("/startPunish/form")
     public ResponseEntity<PunishmentResponse> createNewFormPunish(@RequestBody PunishmentFormRequest punishmentFormRequest) throws MessagingException {
         var message = punishmentService.createNewPunishForm(punishmentFormRequest);

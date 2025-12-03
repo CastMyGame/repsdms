@@ -10,6 +10,8 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -45,18 +48,29 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
 
+        // Check if user is enabled
+        if (!foundUser.isEnabled()) {
+            throw new UsernameNotFoundException("User account is disabled: " + username);
+        }
+
         String name = foundUser.getUsername();
         String hashedPassword = foundUser.getPassword(); // The stored hashed password
 
-        // You should use BCryptPasswordEncoder to encode the raw password provided by the user
-        // and compare it with the stored hashed password
-        // Example:
-        // BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        // boolean passwordMatches = passwordEncoder.matches(rawPassword, hashedPassword);
+        // Convert roles to authorities
+        Collection<GrantedAuthority> authorities = new ArrayList<>();
+        if (foundUser.getRoles() != null) {
+            for (RoleModel role : foundUser.getRoles()) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getRole()));
+            }
+        }
 
-        // Here, we're returning a basic UserDetails with no roles/authorities.
-        // In practice, you should load roles/authorities from your database based on the user's profile.
-        return new User(name, hashedPassword, new ArrayList<>());
+        // Return UserDetails with enabled status and authorities
+        return new User(name, hashedPassword, 
+                true, // enabled
+                true, // accountNonExpired
+                true, // credentialsNonExpired
+                true, // accountNonLocked
+                authorities);
     }
 
     public UserModel loadUserModelByUsername(String username) {
