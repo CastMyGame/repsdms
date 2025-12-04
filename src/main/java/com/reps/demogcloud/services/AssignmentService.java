@@ -1,11 +1,15 @@
 package com.reps.demogcloud.services;
 
 import com.reps.demogcloud.data.AssignmentRepository;
+import com.reps.demogcloud.data.AssignmentTemplateRepository;
 import com.reps.demogcloud.models.assignments.Assignment;
 
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
+import com.reps.demogcloud.models.assignments.AssignmentConverter;
+import com.reps.demogcloud.models.assignments.AssignmentTemplate;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,13 +17,13 @@ import java.util.List;
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
+    private final AssignmentTemplateRepository assignmentTemplateRepository;
 
-    public AssignmentService(AssignmentRepository assignmentRepository) {
-        this.assignmentRepository = assignmentRepository;
-    }
+    // -------- LEGACY METHODS (still operate on old Assignment model) --------
     public List<Assignment> getAllAssignments() {
         List<Assignment> assignments = new ArrayList<>();
         try {
@@ -54,5 +58,40 @@ public class AssignmentService {
             // You can throw a custom exception or return null depending on your requirements
             throw new Exception("Assignment with ID " + id + " not found");
         }
+    }
+    // -------- NEW METHOD: MIGRATE LEGACY -> TEMPLATES --------
+
+    /**
+     * One-time migration: read all legacy Assignment documents
+     * and write corresponding AssignmentTemplate documents
+     * into the 'assignment_templates' collection.
+     *
+     * Returns the count migrated.
+     */
+    public int migrateLegacyAssignmentsToTemplates() {
+        List<Assignment> legacyAssignments = assignmentRepository.findAll();
+        log.info("Found {} legacy assignments to migrate", legacyAssignments.size());
+
+        int migrated = 0;
+        for (Assignment legacy : legacyAssignments) {
+            AssignmentTemplate template = AssignmentConverter.fromLegacy(legacy);
+            assignmentTemplateRepository.save(template);
+            migrated++;
+            log.info("Migrated legacy assignment {} -> template {}",
+                    legacy.getAssignmentId(), template.getId());
+        }
+
+        log.info("Finished migrating {} legacy assignments to templates", migrated);
+        return migrated;
+    }
+
+    // -------- (OPTIONAL) simple template read methods for later --------
+
+    public List<AssignmentTemplate> getAllTemplates() {
+        return assignmentTemplateRepository.findAll();
+    }
+
+    public List<AssignmentTemplate> getTemplatesByInfractionAndLevel(String infractionName, int level) {
+        return assignmentTemplateRepository.findByInfractionNameAndLevel(infractionName, level);
     }
 }
