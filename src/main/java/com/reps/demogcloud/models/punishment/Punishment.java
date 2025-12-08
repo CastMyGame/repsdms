@@ -44,6 +44,9 @@ public class Punishment implements Comparable<Punishment>{
     private Map<Date,List<String>> answerHistory;
     private ArrayList<String> infractionDescription;
 
+    // 🔹 NEW: which assignment template this punishment uses
+    private String assignmentTemplateId;
+
 
 
     public void setAnswerHistory(Date date, List<String> context) {

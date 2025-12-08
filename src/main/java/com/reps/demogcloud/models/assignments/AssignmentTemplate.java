@@ -22,11 +22,33 @@ public class AssignmentTemplate {
 
     private boolean createdBySystem = true;
     private String createdByUserId;
+    private String schoolId;
+
+    // How broad this template applies
+    private Scope scope = Scope.SYSTEM_DEFAULT;
+
+    // Optional: avoid “zombie” templates
+    private boolean active = true;
 
     private Instant createdAt;
     private Instant updatedAt;
 
     private List<TemplateQuestion> questions;
+
+    private Visibility visibility = Visibility.PRIVATE;
+
+    public enum Visibility {
+        PRIVATE,  // only owner sees it unless explicitly linked
+        SCHOOL    // visible/shareable inside the same school
+        // later: DISTRICT, PUBLIC, etc.
+    }
+
+
+    public enum Scope {
+        SYSTEM_DEFAULT,   // REPS default
+        SCHOOL_DEFAULT,   // default for a school
+        TEACHER_DEFAULT   // default for a specific teacher
+    }
 
     public enum QuestionType {
         READING_MC,

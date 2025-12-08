@@ -12,7 +12,9 @@ import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
 import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
 
+import com.reps.demogcloud.utils.PunishmentUtils;
 import com.reps.demogcloud.utils.StudentUtils;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,7 +34,7 @@ import javax.mail.MessagingException;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class PunishmentService {
 
     private final PunishmentCreationService punishmentCreationService;
@@ -44,6 +46,7 @@ public class PunishmentService {
     private final EmailService emailService;
     private final EmployeeRepository employeeRepository;
     private final StudentUtils studentUtils;
+
 
 
     // -----------------------------------------FIND BY METHODS-----------------------------------------
