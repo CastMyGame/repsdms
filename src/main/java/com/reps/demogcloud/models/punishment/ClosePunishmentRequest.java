@@ -17,6 +17,5 @@ public class ClosePunishmentRequest {
 
     private String infractionName;
     private String studentEmail;
-    private LocalDate timeClosed;
     private List<StudentAnswer> studentAnswer;
 }

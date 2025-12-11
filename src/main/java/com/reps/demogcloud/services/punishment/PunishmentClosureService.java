@@ -4,7 +4,6 @@ package com.reps.demogcloud.services.punishment;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.punishment.StudentAnswer;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.mail.MessagingException;
 import java.util.List;

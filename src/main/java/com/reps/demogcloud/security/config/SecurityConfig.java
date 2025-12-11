@@ -44,7 +44,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(
                         "/register", "/contact-us", "/auth", "/forgot-password", "/reset-password",
                         "/student/v1/points/transfer", "/DTO/v1/**",
-                        "/oauth2/**", "/login", "/error"
+                        "/oauth2/**", "/login", "/error", "/assignments/v1/templates"
                 ).permitAll()
                 .anyRequest().authenticated()
                 .and();

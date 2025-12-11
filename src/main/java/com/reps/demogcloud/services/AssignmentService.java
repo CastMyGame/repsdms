@@ -1,25 +1,37 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.AssignmentRepository;
+import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.assignments.Assignment;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 
+import com.reps.demogcloud.models.assignments.AssignmentConverter;
+import com.reps.demogcloud.models.assignments.AssignmentTemplate;
+import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
+import com.reps.demogcloud.models.dto.AssignmentTemplateSummaryDTO;
+import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.student.Student;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
+    private final AssignmentTemplateRepository assignmentTemplateRepository;
+    private final AssignmentTemplateBindingRepository bindingRepository;
+    private final StudentRepository studentRepository;
+    private final PunishRepository punishRepository;
 
-    public AssignmentService(AssignmentRepository assignmentRepository) {
-        this.assignmentRepository = assignmentRepository;
-    }
+    // -------- LEGACY METHODS (still operate on old Assignment model) --------
     public List<Assignment> getAllAssignments() {
         List<Assignment> assignments = new ArrayList<>();
         try {
@@ -54,5 +66,406 @@ public class AssignmentService {
             // You can throw a custom exception or return null depending on your requirements
             throw new Exception("Assignment with ID " + id + " not found");
         }
+    }
+    // -------- NEW METHOD: MIGRATE LEGACY -> TEMPLATES --------
+
+    /**
+     * One-time migration: read all legacy Assignment documents
+     * and write corresponding AssignmentTemplate documents
+     * into the 'assignment_templates' collection.
+     *
+     * Returns the count migrated.
+     */
+    public int migrateLegacyAssignmentsToTemplates() {
+        List<Assignment> legacyAssignments = assignmentRepository.findAll();
+        log.info("Found {} legacy assignments to migrate", legacyAssignments.size());
+
+        int migrated = 0;
+        for (Assignment legacy : legacyAssignments) {
+            AssignmentTemplate template = AssignmentConverter.fromLegacy(legacy);
+            assignmentTemplateRepository.save(template);
+            migrated++;
+            log.info("Migrated legacy assignment {} -> template {}",
+                    legacy.getAssignmentId(), template.getId());
+        }
+
+        log.info("Finished migrating {} legacy assignments to templates", migrated);
+        return migrated;
+    }
+
+    // ================= V2: TEMPLATE METHODS (canonical going forward) =================
+
+    public List<AssignmentTemplate> getAllTemplates() {
+        return assignmentTemplateRepository.findAll();
+    }
+
+    public AssignmentTemplate getTemplateById(String id) throws Exception {
+        return assignmentTemplateRepository.findById(id)
+                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+    }
+
+    public List<AssignmentTemplate> getTemplatesByInfractionAndLevel(String infractionName, int level) {
+        return assignmentTemplateRepository.findByInfractionNameAndLevel(infractionName, level);
+    }
+
+    public AssignmentTemplate createAssignmentTemplate(AssignmentTemplate template) {
+        if (template.getId() != null) {
+            template.setId(null);
+        }
+
+        Instant now = Instant.now();
+        template.setCreatedAt(now);
+        template.setUpdatedAt(now);
+
+        if (template.getCreatedByUserId() != null && !template.getCreatedByUserId().isBlank()) {
+            // Teacher / user created
+            template.setCreatedBySystem(false);
+            if (template.getScope() == null) {
+                template.setScope(AssignmentTemplate.Scope.TEACHER_DEFAULT);
+            }
+        } else {
+            // No user ID → treat as system
+            template.setCreatedBySystem(true);
+            if (template.getScope() == null) {
+                template.setScope(AssignmentTemplate.Scope.SYSTEM_DEFAULT);
+            }
+        }
+
+        return assignmentTemplateRepository.save(template);
+    }
+
+    public AssignmentTemplate updateAssignmentTemplate(String id, AssignmentTemplate updated) throws Exception {
+        AssignmentTemplate existing = assignmentTemplateRepository.findById(id)
+                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+
+        // Fields you want to allow updating:
+        existing.setInfractionName(updated.getInfractionName());
+        existing.setLevel(updated.getLevel());
+        existing.setQuestions(updated.getQuestions());
+        // you might NOT want to update createdBySystem / createdByUserId here
+        existing.setUpdatedAt(Instant.now());
+
+        return assignmentTemplateRepository.save(existing);
+    }
+
+    public void deleteAssignmentTemplate(String id) throws Exception {
+        AssignmentTemplate existing = assignmentTemplateRepository.findById(id)
+                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+
+        assignmentTemplateRepository.delete(existing);
+    }
+
+    public AssignmentTemplate resolveTemplateForInfraction(
+            String teacherEmail,
+            String schoolId,
+            String infractionName,
+            int level
+    ) throws Exception {
+
+        // 1) Teacher-specific binding
+        if (teacherEmail != null) {
+            var bindingOpt = bindingRepository
+                    .findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
+                            teacherEmail, infractionName, level
+                    );
+
+            if (bindingOpt.isPresent()) {
+                String templateId = bindingOpt.get().getAssignmentTemplateId();
+                return assignmentTemplateRepository.findById(templateId)
+                        .orElseThrow(() -> new Exception(
+                                "Binding exists but template " + templateId + " not found"));
+            }
+        }
+
+        // 2) School-wide fallback
+        if (schoolId != null) {
+            var bindingOpt = bindingRepository
+                    .findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
+                            schoolId, infractionName, level
+                    );
+
+            if (bindingOpt.isPresent()) {
+                String templateId = bindingOpt.get().getAssignmentTemplateId();
+                return assignmentTemplateRepository.findById(templateId)
+                        .orElseThrow(() -> new Exception(
+                                "School binding exists but template " + templateId + " not found"));
+            }
+        }
+
+        // 3) System default fallback
+        var systemTemplates =
+                assignmentTemplateRepository
+                        .findByInfractionNameAndLevelAndScopeAndActiveTrue(
+                                infractionName,
+                                level,
+                                AssignmentTemplate.Scope.SYSTEM_DEFAULT
+                        );
+
+        if (!systemTemplates.isEmpty()) {
+            return systemTemplates.get(0);
+        }
+
+        throw new Exception(
+                "No AssignmentTemplate found for infraction=" + infractionName + ", level=" + level);
+    }
+
+    public AssignmentTemplate resolveTemplateForPunishment(Punishment punishment) {
+        String infractionName = punishment.getInfractionName();
+        int level = Integer.parseInt(punishment.getInfractionLevel());
+        String teacherEmail = punishment.getTeacherEmail();
+
+        // (Optional) school-level default
+        String schoolId = null;
+        try {
+            Student s = studentRepository.findByStudentEmailIgnoreCase(
+                    punishment.getStudentEmail()
+            );
+            if (s != null) {
+                schoolId = s.getSchool();
+            }
+        } catch (Exception ignored) {}
+
+        // 1) Teacher-specific binding
+        AssignmentTemplateBinding teacherBinding =
+                bindingRepository
+                        .findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
+                                teacherEmail,
+                                infractionName,
+                                level
+                        )
+                        .orElse(null);
+
+        if (teacherBinding != null) {
+            return assignmentTemplateRepository
+                    .findById(teacherBinding.getAssignmentTemplateId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Binding exists but template not found: " + teacherBinding.getAssignmentTemplateId()
+                    ));
+        }
+
+        // 2) School-level default
+        if (schoolId != null) {
+            List<AssignmentTemplate> schoolDefaults =
+                    assignmentTemplateRepository
+                            .findByInfractionNameAndLevelAndScopeAndSchoolIdAndActiveTrue(
+                                    infractionName,
+                                    level,
+                                    AssignmentTemplate.Scope.SCHOOL_DEFAULT,
+                                    schoolId
+                            );
+            if (!schoolDefaults.isEmpty()) {
+                return schoolDefaults.get(0);
+            }
+        }
+
+        // 3) System default
+        List<AssignmentTemplate> systemDefaults =
+                assignmentTemplateRepository
+                        .findByInfractionNameAndLevelAndScopeAndActiveTrue(
+                                infractionName,
+                                level,
+                                AssignmentTemplate.Scope.SYSTEM_DEFAULT
+                        );
+
+        if (!systemDefaults.isEmpty()) {
+            return systemDefaults.get(0);
+        }
+
+        throw new IllegalStateException(
+                "No assignment template found for infraction=" + infractionName + ", level=" + level
+        );
+    }
+
+    // ================= BINDINGS: TEACHER DEFAULTS & SHARING =================
+
+    public AssignmentTemplateBinding setTeacherDefaultTemplate(
+            String teacherEmail,
+            String schoolId,
+            String infractionName,
+            int level,
+            String assignmentTemplateId
+    ) throws Exception {
+
+        // Ensure the template exists
+        AssignmentTemplate template = assignmentTemplateRepository.findById(assignmentTemplateId)
+                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + assignmentTemplateId + " not found"));
+
+        Instant now = Instant.now();
+
+        // Deactivate existing binding for this teacher/infraction/level
+        bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
+                teacherEmail, infractionName, level
+        ).ifPresent(existing -> {
+            existing.setActive(false);
+            existing.setUpdatedAt(now);
+            bindingRepository.save(existing);
+        });
+
+        // Create the new binding
+        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
+        binding.setTeacherEmail(teacherEmail);
+        binding.setSchoolId(schoolId);
+        binding.setInfractionName(infractionName);
+        binding.setLevel(level);
+        binding.setAssignmentTemplateId(template.getId());
+        binding.setActive(true);
+        binding.setCreatedAt(now);
+        binding.setUpdatedAt(now);
+
+        return bindingRepository.save(binding);
+    }
+
+    public void clearTeacherDefaultTemplate(
+            String teacherEmail,
+            String infractionName,
+            int level
+    ) {
+        Instant now = Instant.now();
+
+        bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
+                teacherEmail, infractionName, level
+        ).ifPresent(existing -> {
+            existing.setActive(false);
+            existing.setUpdatedAt(now);
+            bindingRepository.save(existing);
+        });
+    }
+
+    public List<AssignmentTemplateBinding> getActiveBindingsForTeacher(String teacherEmail) {
+        return bindingRepository.findByTeacherEmailAndActiveTrue(teacherEmail);
+    }
+
+    public List<AssignmentTemplateBinding> getActiveBindingsForTemplate(String templateId) {
+        return bindingRepository.findByAssignmentTemplateIdAndActiveTrue(templateId);
+    }
+
+    public List<AssignmentTemplateSummaryDTO> searchTemplates(
+            String infractionName,
+            Integer level,
+            String creatorEmail,
+            Boolean createdBySystem,
+            String textQuery
+    ) {
+        List<AssignmentTemplate> all = assignmentTemplateRepository.findAll();
+
+        if (all.isEmpty()) {
+            // No templates at all → just return empty list of DTOs
+            return List.of();
+        }
+
+        String infractionFilter = infractionName != null ? infractionName.trim().toLowerCase() : null;
+        String creatorFilter = creatorEmail != null ? creatorEmail.trim().toLowerCase() : null;
+        String textFilter = textQuery != null ? textQuery.trim().toLowerCase() : null;
+
+        List<AssignmentTemplate> filtered = all.stream()
+                .filter(t -> {
+                    // infractionName filter
+                    if (infractionFilter != null) {
+                        if (t.getInfractionName() == null ||
+                                !t.getInfractionName().trim().toLowerCase().equals(infractionFilter)) {
+                            return false;
+                        }
+                    }
+
+                    // level filter
+                    if (level != null && t.getLevel() != level) {
+                        return false;
+                    }
+
+                    // creator email filter (using createdByUserId as email)
+                    if (creatorFilter != null) {
+                        String creator = t.getCreatedByUserId();
+                        if (creator == null || !creator.trim().toLowerCase().equals(creatorFilter)) {
+                            return false;
+                        }
+                    }
+
+                    // createdBySystem filter
+                    if (createdBySystem != null) {
+                        if (t.isCreatedBySystem() != createdBySystem) {
+                            return false;
+                        }
+                    }
+
+                    // text query filter: look in title/body/prompt of any question
+                    if (textFilter != null) {
+                        return matchesTextQuery(t, textFilter);
+                    }
+
+                    return true;
+                })
+                .toList();
+
+        return filtered.stream()
+                .map(this::toSummaryDTO)
+                .toList();
+    }
+
+    private boolean matchesTextQuery(AssignmentTemplate template, String textFilter) {
+        if (template.getQuestions() == null || template.getQuestions().isEmpty()) {
+            return false;
+        }
+
+        for (AssignmentTemplate.TemplateQuestion q : template.getQuestions()) {
+            // Check Name
+            if (template.getName() != null &&
+                    template.getName().toLowerCase().contains(textFilter)) {
+                return true;
+            }
+            // Check title
+            if (StringUtils.hasText(q.getTitle()) &&
+                    q.getTitle().toLowerCase().contains(textFilter)) {
+                return true;
+            }
+            // Check prompt
+            if (StringUtils.hasText(q.getPrompt()) &&
+                    q.getPrompt().toLowerCase().contains(textFilter)) {
+                return true;
+            }
+            // Check passage body
+            if (StringUtils.hasText(q.getPassageBody()) &&
+                    q.getPassageBody().toLowerCase().contains(textFilter)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private AssignmentTemplateSummaryDTO toSummaryDTO(AssignmentTemplate t) {
+
+        String preview = null;
+        if (t.getQuestions() != null && !t.getQuestions().isEmpty()) {
+            var q = t.getQuestions().get(0);
+            if (q.getPrompt() != null && !q.getPrompt().isBlank()) {
+                preview = q.getPrompt();
+            } else if (q.getTitle() != null && !q.getTitle().isBlank()) {
+                preview = q.getTitle();
+            } else if (q.getPassageBody() != null && !q.getPassageBody().isBlank()) {
+                preview = q.getPassageBody().substring(0, Math.min(80, q.getPassageBody().length()))
+                        + (q.getPassageBody().length() > 80 ? "..." : "");
+            }
+        }
+
+        return new AssignmentTemplateSummaryDTO(
+                t.getId(),
+                t.getName(),
+                t.getInfractionName(),
+                t.getLevel(),
+                t.isCreatedBySystem(),
+                t.getCreatedByUserId(),
+                (t.getQuestions() != null ? t.getQuestions().size() : 0),
+                preview,
+                t.getCreatedAt(),
+                t.getUpdatedAt()
+        );
+    }
+
+    public AssignmentTemplate buildAssignmentForPunishment(String punishmentId) throws Exception {
+        Punishment punishment = punishRepository.findById(punishmentId)
+                .orElseThrow(() -> new Exception("Punishment not found: " + punishmentId));
+
+        // ✅ THIS is the key: use your binding-aware resolver
+        return resolveTemplateForPunishment(punishment);
     }
 }
