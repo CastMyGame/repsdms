@@ -17,10 +17,11 @@ public class AssignmentTemplate {
 
     @Id
     private String id;               // will map from legacy assignmentId
+    private String name;
     private String infractionName;
     private int level;
 
-    private boolean createdBySystem = true;
+    private boolean createdBySystem = false;
     private String createdByUserId;
     private String schoolId;
 

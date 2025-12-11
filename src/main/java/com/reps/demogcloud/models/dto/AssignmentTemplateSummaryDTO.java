@@ -12,6 +12,7 @@ import java.time.Instant;
 public class AssignmentTemplateSummaryDTO {
 
     private String id;
+    private String name;
 
     // identifying info
     private String infractionName;

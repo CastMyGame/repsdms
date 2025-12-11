@@ -24,4 +24,6 @@ public interface AssignmentTemplateBindingRepository
     List<AssignmentTemplateBinding> findByTeacherEmailAndActiveTrue(String teacherEmail);
 
     List<AssignmentTemplateBinding> findByAssignmentTemplateIdAndActiveTrue(String assignmentTemplateId);
+
+    Optional<AssignmentTemplateBinding> findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(String teacherEmail, String infractionName, int level);
 }

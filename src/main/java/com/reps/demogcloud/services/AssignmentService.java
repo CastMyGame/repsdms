@@ -1,8 +1,6 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.AssignmentRepository;
-import com.reps.demogcloud.data.AssignmentTemplateBindingRepository;
-import com.reps.demogcloud.data.AssignmentTemplateRepository;
+import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.assignments.Assignment;
 
 import java.time.Instant;
@@ -13,6 +11,8 @@ import com.reps.demogcloud.models.assignments.AssignmentConverter;
 import com.reps.demogcloud.models.assignments.AssignmentTemplate;
 import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
 import com.reps.demogcloud.models.dto.AssignmentTemplateSummaryDTO;
+import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.student.Student;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +28,8 @@ public class AssignmentService {
     private final AssignmentRepository assignmentRepository;
     private final AssignmentTemplateRepository assignmentTemplateRepository;
     private final AssignmentTemplateBindingRepository bindingRepository;
+    private final StudentRepository studentRepository;
+    private final PunishRepository punishRepository;
 
     // -------- LEGACY METHODS (still operate on old Assignment model) --------
     public List<Assignment> getAllAssignments() {
@@ -107,18 +109,26 @@ public class AssignmentService {
     }
 
     public AssignmentTemplate createAssignmentTemplate(AssignmentTemplate template) {
-        // new templates will generally be teacher- or system-created
         if (template.getId() != null) {
-            // Let Mongo generate an ID instead of trusting client if you prefer
             template.setId(null);
         }
+
         Instant now = Instant.now();
         template.setCreatedAt(now);
         template.setUpdatedAt(now);
 
-        // For now default to system-created; later we’ll set createdByUserId & createdBySystem=false
-        if (!template.isCreatedBySystem() && template.getCreatedByUserId() == null) {
+        if (template.getCreatedByUserId() != null && !template.getCreatedByUserId().isBlank()) {
+            // Teacher / user created
+            template.setCreatedBySystem(false);
+            if (template.getScope() == null) {
+                template.setScope(AssignmentTemplate.Scope.TEACHER_DEFAULT);
+            }
+        } else {
+            // No user ID → treat as system
             template.setCreatedBySystem(true);
+            if (template.getScope() == null) {
+                template.setScope(AssignmentTemplate.Scope.SYSTEM_DEFAULT);
+            }
         }
 
         return assignmentTemplateRepository.save(template);
@@ -197,6 +207,73 @@ public class AssignmentService {
 
         throw new Exception(
                 "No AssignmentTemplate found for infraction=" + infractionName + ", level=" + level);
+    }
+
+    public AssignmentTemplate resolveTemplateForPunishment(Punishment punishment) {
+        String infractionName = punishment.getInfractionName();
+        int level = Integer.parseInt(punishment.getInfractionLevel());
+        String teacherEmail = punishment.getTeacherEmail();
+
+        // (Optional) school-level default
+        String schoolId = null;
+        try {
+            Student s = studentRepository.findByStudentEmailIgnoreCase(
+                    punishment.getStudentEmail()
+            );
+            if (s != null) {
+                schoolId = s.getSchool();
+            }
+        } catch (Exception ignored) {}
+
+        // 1) Teacher-specific binding
+        AssignmentTemplateBinding teacherBinding =
+                bindingRepository
+                        .findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
+                                teacherEmail,
+                                infractionName,
+                                level
+                        )
+                        .orElse(null);
+
+        if (teacherBinding != null) {
+            return assignmentTemplateRepository
+                    .findById(teacherBinding.getAssignmentTemplateId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Binding exists but template not found: " + teacherBinding.getAssignmentTemplateId()
+                    ));
+        }
+
+        // 2) School-level default
+        if (schoolId != null) {
+            List<AssignmentTemplate> schoolDefaults =
+                    assignmentTemplateRepository
+                            .findByInfractionNameAndLevelAndScopeAndSchoolIdAndActiveTrue(
+                                    infractionName,
+                                    level,
+                                    AssignmentTemplate.Scope.SCHOOL_DEFAULT,
+                                    schoolId
+                            );
+            if (!schoolDefaults.isEmpty()) {
+                return schoolDefaults.get(0);
+            }
+        }
+
+        // 3) System default
+        List<AssignmentTemplate> systemDefaults =
+                assignmentTemplateRepository
+                        .findByInfractionNameAndLevelAndScopeAndActiveTrue(
+                                infractionName,
+                                level,
+                                AssignmentTemplate.Scope.SYSTEM_DEFAULT
+                        );
+
+        if (!systemDefaults.isEmpty()) {
+            return systemDefaults.get(0);
+        }
+
+        throw new IllegalStateException(
+                "No assignment template found for infraction=" + infractionName + ", level=" + level
+        );
     }
 
     // ================= BINDINGS: TEACHER DEFAULTS & SHARING =================
@@ -330,6 +407,11 @@ public class AssignmentService {
         }
 
         for (AssignmentTemplate.TemplateQuestion q : template.getQuestions()) {
+            // Check Name
+            if (template.getName() != null &&
+                    template.getName().toLowerCase().contains(textFilter)) {
+                return true;
+            }
             // Check title
             if (StringUtils.hasText(q.getTitle()) &&
                     q.getTitle().toLowerCase().contains(textFilter)) {
@@ -367,6 +449,7 @@ public class AssignmentService {
 
         return new AssignmentTemplateSummaryDTO(
                 t.getId(),
+                t.getName(),
                 t.getInfractionName(),
                 t.getLevel(),
                 t.isCreatedBySystem(),
@@ -376,5 +459,13 @@ public class AssignmentService {
                 t.getCreatedAt(),
                 t.getUpdatedAt()
         );
+    }
+
+    public AssignmentTemplate buildAssignmentForPunishment(String punishmentId) throws Exception {
+        Punishment punishment = punishRepository.findById(punishmentId)
+                .orElseThrow(() -> new Exception("Punishment not found: " + punishmentId));
+
+        // ✅ THIS is the key: use your binding-aware resolver
+        return resolveTemplateForPunishment(punishment);
     }
 }

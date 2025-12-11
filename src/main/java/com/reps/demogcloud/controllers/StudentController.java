@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @CrossOrigin(origins = {
-"http//localhost:3000",
+        "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
         "https://repsdev.vercel.app"})
 

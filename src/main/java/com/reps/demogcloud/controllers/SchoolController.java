@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @CrossOrigin(origins = {
-        "http//localhost:3000",
+        "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
         "https://repsdev.vercel.app"})
 

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {
-"http//localhost:3000",
+        "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
         "https://repsdev.vercel.app"})
 
@@ -33,6 +33,14 @@ public class AssignmentController {
         return ResponseEntity
                 .accepted()
                 .body(message);
+    }
+
+    @GetMapping("/templates/for-punishment/{punishmentId}")
+    public ResponseEntity<AssignmentTemplate> getTemplateForPunishment(
+            @PathVariable String punishmentId
+    ) throws Exception {
+        AssignmentTemplate template = assignmentService.buildAssignmentForPunishment(punishmentId);
+        return ResponseEntity.ok(template);
     }
 
     //------------------------POST Controllers-----------------------------
@@ -152,4 +160,14 @@ public class AssignmentController {
         assignmentService.deleteAssignmentTemplate(id);
         return ResponseEntity.noContent().build();
     }
+    // Make sure to migrate this as the main and phase out the old get assignments
+    @GetMapping("/by-punishment/{punishmentId}")
+    public ResponseEntity<AssignmentTemplate> getAssignmentForPunishment(
+            @PathVariable String punishmentId
+    ) throws Exception {
+
+        AssignmentTemplate assignment = assignmentService.buildAssignmentForPunishment(punishmentId);
+        return ResponseEntity.ok(assignment);
+    }
+
 }
