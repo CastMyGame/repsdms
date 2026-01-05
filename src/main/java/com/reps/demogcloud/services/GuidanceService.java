@@ -245,7 +245,8 @@ public class GuidanceService {
                 ccList,
                 student.getStudentEmail(),
                 subject,
-                finalMessage// Use HTML message
+                finalMessage,// Use HTML message
+                student.getPreferredLanguage()
         );
 
         guidanceRepository.save(guidance);

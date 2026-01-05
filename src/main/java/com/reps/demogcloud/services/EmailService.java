@@ -11,6 +11,7 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.services.email.EmailNotificationService;
 import com.reps.demogcloud.services.email.EmailReferralService;
 import com.reps.demogcloud.services.email.EmailSenderService;
+import com.reps.demogcloud.services.translation.TranslationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -27,9 +28,10 @@ public class EmailService {
     private final EmailNotificationService emailNotificationService;
     private final EmailSenderService emailSenderService;
     private final EmailReferralService emailReferralService;
+    private final TranslationService translationService;
 
-    public void createEmailAndSend(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
-        emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject);
+    public void createEmailAndSend(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject, String languageCode) throws MessagingException {
+        emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, languageCode);
     }
 
     public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
@@ -37,34 +39,35 @@ public class EmailService {
     }
 
     @Async
-    public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
-        emailSenderService.sendEmail(toEmail, subject, msg);
+    public void sendEmail(String toEmail, String subject, String msg, String languageCode) throws MessagingException {
+        emailSenderService.sendEmail(toEmail, subject, msg, languageCode);
     }
 
     @Async
     public void sendPtsEmail(String parentEmail,
                              String teacherEmail,
                              String studentEmail,
+                             String msg,
                              String subject,
-                             String msg) throws MessagingException {
-        emailNotificationService.sendPtsEmail(parentEmail, teacherEmail, studentEmail, msg, subject);
+                             String languageCode) throws MessagingException {
+        emailNotificationService.sendPtsEmail(parentEmail, teacherEmail, studentEmail, msg, subject, languageCode);
     }
 
     @Async
     public void sendContactUsMail(ContactUsRequest request) {
-        emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage());
+        emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage(), request.getPreferredLanguage());
     }
 
-    public void sendAlertEmail(String detention, Punishment punishment) throws MessagingException {
-        emailNotificationService.sendAlertEmail(detention, punishment);
+    public void sendAlertEmail(String detention, Punishment punishment, String languageCode) throws MessagingException {
+        emailNotificationService.sendAlertEmail(detention, punishment, languageCode);
     }
 
     @Async
     public void sendEmailGeneric(ArrayList<String> ccEmails,
                                  String recipientEmail,
                                  String subject,
-                                 String msg) throws MessagingException {
-        emailSenderService.sendGenericEmail(ccEmails, recipientEmail, subject, msg);
+                                 String msg, String languageCode) throws MessagingException {
+        emailSenderService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, languageCode);
     }
 
     @Async

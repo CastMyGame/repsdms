@@ -176,7 +176,6 @@ public class PunishControllerTest {
         ClosePunishmentRequest request = new ClosePunishmentRequest();
         request.setInfractionName("Disruptive Behavior");
         request.setStudentEmail("student@example.com");
-        request.setTimeClosed(LocalDate.now());
         request.setStudentAnswer(answers);
 
         // Mock response from service

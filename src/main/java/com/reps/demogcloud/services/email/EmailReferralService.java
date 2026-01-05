@@ -52,13 +52,19 @@ public class EmailReferralService {
                 ));
             }
 
-            response.setSubject(ourSchool.getSchoolName() + " Office Referral for " + student.getFirstName() + " " + student.getLastName());
+            response.setSubject(emailTemplateBuilderService.buildSubject(
+                    ourSchool.getSchoolName(),
+                    student.getFirstName(),
+                    student.getLastName(),
+                    student.getPreferredLanguage(),
+                    true
+            ));
             response.setMessage("Thank you for using the teacher managed referral. Because " + student.getFirstName() + " " + student.getLastName() +
                     " has received their fourth or greater offense for " + infraction.getInfractionName() + ", they must now receive an office referral.\n" +
                     "Please complete an office referral for Failure to Comply with Disciplinary Action.\n" +
                     "Summary: " + messages);
 
-            emailService.sendEmail(response.getTeacherToEmail(), response.getSubject(), response.getMessage());
+            emailService.sendEmail(response.getTeacherToEmail(), response.getSubject(), response.getMessage(),student.getPreferredLanguage());
         } else {
             sendInfractionNotification(punishment, emailService, student, infraction, response);
         }
@@ -71,10 +77,10 @@ public class EmailReferralService {
                 student.getFirstName(), student.getLastName(),
                 infraction.getInfractionLevel(), infraction.getInfractionName(),
                 emailTemplateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
-                student.getStudentEmail()
+                student.getStudentEmail(), student.getPreferredLanguage()
         );
         response.setMessage(msg);
-        emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(), response.getStudentToEmail(), response.getSubject(), msg);
+        emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(), response.getStudentToEmail(), msg, response.getSubject(), student.getPreferredLanguage());
     }
 
     public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
@@ -83,12 +89,18 @@ public class EmailReferralService {
         School school = schoolRepository.findSchoolBySchoolName(student.getSchool());
 
         PunishmentResponse response = setUpPunishmentResponse(punishment, student);
-        response.setSubject(school.getSchoolName() + " referral for " + student.getFirstName() + " " + student.getLastName());
+        response.setSubject(emailTemplateBuilderService.buildSubject(
+                school.getSchoolName(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage(),
+                false
+        ));
         punishment.setTimeClosed(LocalDate.now());
 
         String message = emailTemplateBuilderService.createCFRMessage(
                 student.getFirstName(), student.getLastName(),
-                infraction.getInfractionName(), response.getTeacherToEmail(), student.getStudentEmail()
+                infraction.getInfractionName(), response.getTeacherToEmail(), student.getStudentEmail(), student.getPreferredLanguage()
         );
 
         response.setMessage(message);

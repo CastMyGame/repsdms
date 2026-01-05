@@ -11,5 +11,6 @@ public class ContactUsRequest {
     private String email;
     private String subject;
     private String message;
+    private String preferredLanguage;
 
 }

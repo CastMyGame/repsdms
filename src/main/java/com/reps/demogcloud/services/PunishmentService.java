@@ -289,15 +289,18 @@ public class PunishmentService {
     //    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
 //    @Bean
 //    @Transactional
+
+    // TO DO
+    // Need to find way to get student's preferred language
     public void alertIssAndDetention() throws MessagingException {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
         List<Punishment> punishments = punishRepository.findByArchivedAndStatus(false, "OPEN");
         for (Punishment punishment : punishments) {
             if (studentUtils.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), tomorrow) == 1) {
-                emailService.sendAlertEmail("DETENTION", punishment);
+                emailService.sendAlertEmail("DETENTION", punishment, "en");
             } else {
-                emailService.sendAlertEmail("ISS", punishment);
+                emailService.sendAlertEmail("ISS", punishment, "en");
             }
 
 
