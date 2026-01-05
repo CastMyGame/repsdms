@@ -1,50 +1,67 @@
 package com.reps.demogcloud.services.email;
 
+import com.reps.demogcloud.services.translation.TranslationService;
 import org.springframework.stereotype.Service;
+
+import static com.reps.demogcloud.models.email.EmailTemplates.*;
 
 @Service
 public class EmailTemplateBuilderService {
 
-    public String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail) {
-        String emailText = " Hello, <br>" +
-                " Your child, " + studentFirstName + " " + studentLastName +
-                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
-                ".<br> " +
-                "<br>" +
-                " As a result they have received an assignment. The goal of the assignment is to provide " + studentFirstName + " " + studentLastName +
-                " with information about the infraction and ways to make beneficial decisions in the future. If " + studentFirstName + " " + studentLastName + " does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential. <br>" +
-                "<br> " +
-                " Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login:<br>" +
-                " The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.<br>" +
-                "<br> " +
-                " If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+    private final TranslationService translationService;
 
-        return replaceString(emailText);
+    public EmailTemplateBuilderService(TranslationService translationService) {
+        this.translationService = translationService;
     }
 
-    public String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description) {
-        String textMessage = " Your child, " + studentFirstName + " " + studentLastName +
-                " has received offense number " + infractionLevel + " for " + infractionName + ". " + description +
-                ". " +
-                "They have an assignment which is due by the end of the school day tomorrow and if the assignment is not done they will receive a failure to comply with disciplinary action referral which is an office managed referral." +
-                "Check your email for additional details, including login info. This is an automated text—please reply to the email or contact the school directly with any questions.";
+    public String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail, String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
 
-        return replaceString(textMessage);
+        String template = switch (language) {
+            case "es" -> EMAIL_ES;
+                    default -> EMAIL_EN;
+        };
+
+        String translatedDescription = translateDescriptionIfNeeded(description, language);
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionLevel", infractionLevel,
+                "infractionName", infractionName,
+                "description", translatedDescription,
+                "studentEmail", studentEmail
+        ));
     }
 
-    public String createCFRMessage(String studentFirstName, String studentLastName, String infractionName, String teacherEmail, String studentEmail) {
-        String cfrMessage = " Hello," +
-                "<br>" +
-                " Your child, " + studentFirstName + " " + studentLastName +
-                " has received another offense for " + infractionName + ". <br>" +
-                "<br>" +
-                " They currently have an assignment at the website https://repsdiscipline.vercel.app/student-login they need to complete for this type of offense so they will not be receiving another. Record of this offense will be kept and this email is to inform you of this happening. <br>" +
-                "You may email the teacher directly at " + teacherEmail + " if there are any extenuating circumstances that may have led to this behavior, will prevent the completion of the assignment, or if you have any questions or concerns." +
-                "Your child’s login information is as follows at the website https://repsdiscipline.vercel.app/student-login :<br>" +
-                "The username is their school email and their password is " + studentEmail + " unless they have changed their password using the forgot my password button on the login screen.<br>" +
-                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
+    public String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
 
-        return replaceString(cfrMessage);
+        String template = "es".equals(language) ? TEXT_ES : TEXT_EN;
+
+        String translatedDescription = translateDescriptionIfNeeded(description, language);
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionLevel", infractionLevel,
+                "infractionName", infractionName,
+                "description", translatedDescription
+        ));
+    }
+
+    public String createCFRMessage(String studentFirstName, String studentLastName, String infractionName, String teacherEmail, String studentEmail, String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language) ? CFR_ES : CFR_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionName", infractionName,
+                "teacherEmail", teacherEmail,
+                "studentEmail", studentEmail
+        ));
     }
 
     public String replaceString(String input) {
@@ -53,5 +70,212 @@ public class EmailTemplateBuilderService {
 
     public String adjustString(String input) {
         return input.replaceAll("(.*?)(\\d+)$", "$1 $2").trim();
+    }
+    public String normalizeLanguage(String lang) {
+        if (lang == null || lang.isBlank()) {
+            return "en";
+        }
+        return lang.toLowerCase();
+    }
+
+    private String translateDescriptionIfNeeded(String descriptionEn, String lang) {
+        if (descriptionEn == null || descriptionEn.isBlank()) return descriptionEn;
+        if ("en".equals(lang)) return descriptionEn;
+
+        try {
+            // IMPORTANT: only translate THIS field
+            return translationService.translate(descriptionEn, "en", lang);
+        } catch (Exception ex) {
+            org.slf4j.LoggerFactory.getLogger(EmailTemplateBuilderService.class)
+                    .error("translateDescriptionIfNeeded failed for lang {}: {}", lang, ex.getMessage());
+            return descriptionEn;
+        }
+    }
+
+    private String fillTemplate(String template, java.util.Map<String, String> values) {
+        String result = template;
+        for (var entry : values.entrySet()) {
+            result = result.replace("{{" + entry.getKey() + "}}",
+                    entry.getValue() == null ? "" : entry.getValue());
+        }
+        return replaceString(result);
+    }
+
+    public String buildSubject(String schoolName, String studentFirstName, String studentLastName,
+                               String targetLanguageCode, boolean officeReferral) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template;
+        if (officeReferral) {
+            template = "es".equals(language) ? SUBJECT_OFFICE_REFERRAL_ES : SUBJECT_OFFICE_REFERRAL_EN;
+        } else {
+            template = "es".equals(language) ? SUBJECT_REFERRAL_ES : SUBJECT_REFERRAL_EN;
+        }
+
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String translateUserInput(String text, String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        return translateDescriptionIfNeeded(text, language); // reuse your existing safe logic
+    }
+
+    public String buildOfficeReferralMessage(String studentFirstName, String studentLastName,
+                                             String infractionName, String summary, String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String template = "es".equals(language) ? OFFICE_REFERRAL_MSG_ES : OFFICE_REFERRAL_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFirstName + " " + studentLastName,
+                "infractionName", infractionName,
+                "summary", summary
+        ));
+    }
+
+    public String buildCompletionSubject(String schoolName,
+                                         String studentFirstName,
+                                         String studentLastName,
+                                         String targetLanguageCode,
+                                         boolean keepSchoolInSubject) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template;
+        if (keepSchoolInSubject) {
+            template = "es".equals(language) ? SUBJECT_COMPLETION_WITH_SCHOOL_ES : SUBJECT_COMPLETION_WITH_SCHOOL_EN;
+        } else {
+            template = "es".equals(language) ? SUBJECT_COMPLETION_ES : SUBJECT_COMPLETION_EN;
+        }
+
+        // schoolName placeholder is only used in the WITH_SCHOOL template, but harmless to always pass it
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName == null ? "" : schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    /**
+     * Build completion email body.
+     * No user input in this message today -> no translation calls needed.
+     */
+    public String buildCompletionMessage(String studentFirstName,
+                                         String studentLastName,
+                                         String infractionName,
+                                         String teacherEmail,
+                                         String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language) ? COMPLETION_MSG_ES : COMPLETION_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionName", infractionName == null ? "" : infractionName,
+                "teacherEmail", teacherEmail == null ? "" : teacherEmail
+        ));
+    }
+
+    public String buildLevelThreeRejectSubject(String studentFirstName,
+                                               String studentLastName,
+                                               String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language) ? SUBJECT_L3_REJECT_ES : SUBJECT_L3_REJECT_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildLevelThreeRejectMessage(String feedbackRaw,
+                                               String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+
+        // translate ONLY the user input portion
+        String feedbackTranslated = translateUserInput(feedbackRaw, language);
+
+        String template = "es".equals(language) ? L3_REJECT_MSG_ES : L3_REJECT_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "feedback", feedbackTranslated == null ? "" : feedbackTranslated
+        ));
+    }
+
+    public String buildPunishmentDeletedSubject(String schoolName,
+                                                String studentFirstName,
+                                                String studentLastName,
+                                                String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? SUBJECT_PUNISHMENT_DELETED_ES
+                : SUBJECT_PUNISHMENT_DELETED_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName == null ? "" : schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildPunishmentDeletedMessage(String studentFirstName,
+                                                String studentLastName,
+                                                String infractionName,
+                                                String infractionLevel,
+                                                String explanationUserInput,
+                                                String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        // Translate ONLY the user-input explanation (if you include it)
+        String explanation = translateUserInput(explanationUserInput, language);
+
+        String template = "es".equals(language)
+                ? PUNISHMENT_DELETED_MSG_ES
+                : PUNISHMENT_DELETED_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionName", infractionName == null ? "" : infractionName,
+                "infractionLevel", infractionLevel == null ? "" : infractionLevel,
+                "explanation", explanation == null ? "" : explanation
+        ));
+    }
+
+    public String buildPunishmentRestoredSubject(String schoolName,
+                                                 String studentFirstName,
+                                                 String studentLastName,
+                                                 String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? SUBJECT_PUNISHMENT_RESTORED_ES
+                : SUBJECT_PUNISHMENT_RESTORED_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName == null ? "" : schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildPunishmentRestoredMessage(String studentFirstName,
+                                                 String studentLastName,
+                                                 String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? PUNISHMENT_RESTORED_MSG_ES
+                : PUNISHMENT_RESTORED_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName
+        ));
     }
 }

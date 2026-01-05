@@ -35,6 +35,7 @@ public class PunishmentCreationService {
         LocalDate now = LocalDate.now();
 
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
+        String languageCode = student.getPreferredLanguage();
         School school = punishmentUtils.fetchSchool(student.getSchool());
         int maxLevel = school.getMaxPunishLevel();
 

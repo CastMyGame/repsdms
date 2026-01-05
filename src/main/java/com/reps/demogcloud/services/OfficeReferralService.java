@@ -125,8 +125,8 @@ public class OfficeReferralService {
         emailService.sendPtsEmail(studentReject.getParentEmail(),
                 referral.getTeacherEmail(),
                 studentReject.getStudentEmail(),
-                subject,
-                message);
+                message,
+                subject, studentReject.getPreferredLanguage());
         referral.setMapIndex(0);
         officeReferralRepository.save(referral);
 

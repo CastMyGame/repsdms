@@ -43,6 +43,10 @@ public class Student {
     private List<ThreadEvent> notesArray;
     private List<String> spotters;
 
+    // NEW: language preference (ISO 639-1: "en", "es", etc.)
+    // Default to "en" if null in older records
+    private String preferredLanguage = "en";
+
     // Time bank field to track detention hours and minutes
     private TimeBank timeBank;
 

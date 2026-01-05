@@ -5,15 +5,22 @@ import com.reps.demogcloud.exceptions.GlobalExceptionHandler;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.security.config.SecurityConfig;
+import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.services.PunishmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -28,11 +35,21 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = PunishController.class, excludeAutoConfiguration = {
-        SecurityConfig.class
-})
-@AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
+@WebMvcTest(
+        controllers = PunishController.class,
+        excludeAutoConfiguration = {
+                SecurityAutoConfiguration.class,
+                SecurityFilterAutoConfiguration.class,
+                OAuth2ClientAutoConfiguration.class,
+                OAuth2ResourceServerAutoConfiguration.class
+        },
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class),
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtFilterRequest.class)
+        }
+)
 @TestPropertySource(properties = {
         "spring.jackson.serialization.FAIL_ON_EMPTY_BEANS=false"
 })
@@ -176,7 +193,6 @@ public class PunishControllerTest {
         ClosePunishmentRequest request = new ClosePunishmentRequest();
         request.setInfractionName("Disruptive Behavior");
         request.setStudentEmail("student@example.com");
-        request.setTimeClosed(LocalDate.now());
         request.setStudentAnswer(answers);
 
         // Mock response from service
@@ -313,7 +329,7 @@ public class PunishControllerTest {
                         .content(explanation))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.punishmentId").value(punishmentId))
-                .andExpect(jsonPath("$.isArchived").value(true));
+                .andExpect(jsonPath("$.archived").value(true));
     }
 
     @Test
@@ -327,7 +343,7 @@ public class PunishControllerTest {
         mockMvc.perform(put("/punish/v1/archived/restore/{punishmentId}", punishmentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.punishmentId").value(punishmentId))
-                .andExpect(jsonPath("$.isArchived").value(false));
+                .andExpect(jsonPath("$.archived").value(false));
     }
 
     @Test
@@ -394,9 +410,9 @@ public class PunishControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].punishmentId").value("school1"))
-                .andExpect(jsonPath("$[0].schoolName").value("High School A"))
+                .andExpect(jsonPath("$[0].school").value("High School A"))
                 .andExpect(jsonPath("$[1].punishmentId").value("school2"))
-                .andExpect(jsonPath("$[1].schoolName").value("High School B"));
+                .andExpect(jsonPath("$[1].school").value("High School B"));
     }
 
     @Test

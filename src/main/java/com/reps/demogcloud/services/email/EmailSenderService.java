@@ -1,5 +1,6 @@
 package com.reps.demogcloud.services.email;
 
+import com.reps.demogcloud.services.translation.TranslationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
@@ -32,86 +33,138 @@ public class EmailSenderService {
     /**
      * Send HTML email with optional sender email (for Gmail API)
      */
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel, String fromEmail) throws MessagingException {
-        emailRoutingService.sendHtmlEmail(templateName, toEmail, subject, templateModel, fromEmail);
+    public void sendHtmlEmail(String templateName, String toEmail, String subjectLocalized,
+                              Map<String, Object> templateModel, String fromEmail, String languageCode) throws MessagingException {
+        Context context = new Context();
+        context.setVariables(templateModel);
+        String htmlLocalized = templateEngine.process(templateName, context);
+
+        emailRoutingService.sendEmail(toEmail, subjectLocalized, htmlLocalized, fromEmail);
     }
 
     public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
         emailRoutingService.sendEmail(toEmail, subject, msg, null);
     }
 
+    public void sendEmail(
+            String toEmail,
+            String subjectEn,
+            String msgEn,
+            String languageCode
+    ) throws MessagingException {
+        sendEmail(toEmail, subjectEn, msgEn, null, languageCode);
+    }
+
     /**
      * Send email with optional sender email (for Gmail API)
      */
-    public void sendEmail(String toEmail, String subject, String msg, String fromEmail) throws MessagingException {
-        emailRoutingService.sendEmail(toEmail, subject, msg, fromEmail);
+    public void sendEmail(String toEmail, String subjectEn, String msgEn, String fromEmail, String languageCode) throws MessagingException {
+        emailRoutingService.sendEmail(toEmail, subjectEn, msgEn, fromEmail);
     }
 
-    public void sendBulkEmail(String to, List<String> cc, String subject, String msg, List<String> bcc) throws MessagingException {
-        emailRoutingService.sendBulkEmail(to, cc, subject, msg, bcc, null);
+    public void sendBulkEmail(String to, List<String> cc, String subjectEn, String msgEn, List<String> bcc) throws MessagingException {
+        emailRoutingService.sendBulkEmail(to, cc, subjectEn, msgEn, bcc, null);
     }
 
     /**
      * Send bulk email with optional sender email (for Gmail API)
      */
-    public void sendBulkEmail(String to, List<String> cc, String subject, String msg, List<String> bcc, String fromEmail) throws MessagingException {
-        emailRoutingService.sendBulkEmail(to, cc, subject, msg, bcc, fromEmail);
+    public void sendBulkEmail(String to, List<String> cc, String subjectEn, String msgEn, List<String> bcc, String fromEmail, String languageCode) throws MessagingException {
+        emailRoutingService.sendBulkEmail(to, cc, subjectEn, msgEn, bcc, fromEmail);
     }
 
-    public void sendContactEmail(String to, String subject, String body) {
+    public void sendContactEmail(String to, String subjectEn, String bodyEn, String languageCode) {
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setCc("REPS.DMS@GMAIL.COM");
-        message.setSubject(subject);
-        message.setText(body);
+        message.setSubject(subjectEn);
+        message.setText(bodyEn);
         message.setFrom("REPS.DMS@GMAIL.COM");
         javaMailSender.send(message);
     }
 
-    public void sendClassAnnouncement(String from, List<String> classEmails, String subject, String messageBody) throws MessagingException {
-        // Class announcements are USER-INITIATED (teacher sends to class)
-        // Try Gmail API if teacher has OAuth token, otherwise use SMTP
-        if (classEmails != null && !classEmails.isEmpty()) {
-            emailRoutingService.sendBulkEmail(
-                classEmails.get(0), // First email as primary recipient
-                classEmails.size() > 1 ? classEmails.subList(1, classEmails.size()) : null, // Rest as CC
-                subject,
-                messageBody,
-                null, // No BCC
-                from, // Teacher's email for Gmail API
-                true  // This is a user-initiated action
-            );
-        }
+    public void sendClassAnnouncement(
+            String from,
+            List<String> recipients,
+            String subjectLocalized,
+            String messageBodyLocalized
+    ) throws MessagingException {
+        if (recipients == null || recipients.isEmpty()) return;
+
+        emailRoutingService.sendBulkEmail(
+                recipients.get(0),
+                recipients.size() > 1 ? recipients.subList(1, recipients.size()) : null,
+                subjectLocalized,
+                messageBodyLocalized,
+                null,
+                from
+        );
     }
 
-    public void sendSafe(String toEmail, String subject, String msg) {
+    public void sendSafe(
+            String toEmail,
+            String subjectEn,
+            String msgEn,
+            String languageCode
+    ) {
         try {
-            sendEmail(toEmail, subject, msg);
+            sendEmail(toEmail, subjectEn, msgEn, languageCode);
         } catch (MailException | MessagingException e) {
             log.error("Exception occurred while sending email: {}", e.getMessage());
         }
     }
 
-    public void sendDetailedEmail(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject) throws MessagingException {
-        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, null);
+    public void sendDetailedEmail(
+            String parentEmail,
+            String teacherEmail,
+            String studentEmail,
+            List<String> spotters,
+            String msgEn,
+            String subjectEn,
+            String languageCode
+    ) throws MessagingException {
+        sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msgEn, subjectEn, null, languageCode);
     }
+
 
     /**
      * Send detailed email with optional sender email (for Gmail API)
      */
-    public void sendDetailedEmail(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject, String fromEmail) throws MessagingException {
-        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, fromEmail);
+    public void sendDetailedEmail(
+            String parentEmail,
+            String teacherEmail,
+            String studentEmail,
+            List<String> spotters,
+            String msgEn,
+            String subjectEn,
+            String fromEmail,
+            String languageCode
+    ) throws MessagingException {
+        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msgEn, subjectEn, fromEmail);
     }
 
-    public void sendGenericEmail(List<String> ccEmails, String recipientEmail, String subject, String msg) throws MessagingException {
-        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, null);
+    public void sendGenericEmail(
+            List<String> ccEmails,
+            String recipientEmail,
+            String subjectEn,
+            String msgEn,
+            String languageCode
+    ) throws MessagingException {
+        sendGenericEmail(ccEmails, recipientEmail, subjectEn, msgEn, null, languageCode);
     }
-
     /**
      * Send generic email with optional sender email (for Gmail API)
      */
-    public void sendGenericEmail(List<String> ccEmails, String recipientEmail, String subject, String msg, String fromEmail) throws MessagingException {
-        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, fromEmail);
+    public void sendGenericEmail(
+            List<String> ccEmails,
+            String recipientEmail,
+            String subjectEn,
+            String msgEn,
+            String fromEmail,
+            String languageCode
+    ) throws MessagingException {
+        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subjectEn, msgEn, fromEmail);
     }
 
 }

@@ -12,5 +12,6 @@ public class ClassAnnouncementRequest {
     private String className;
     private String subject;
     private String msg;
+    private String preferredLanguage;
 
 }

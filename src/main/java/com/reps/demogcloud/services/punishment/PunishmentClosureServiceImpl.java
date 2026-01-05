@@ -10,6 +10,7 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.punishment.StudentAnswer;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.EmailService;
+import com.reps.demogcloud.services.email.EmailTemplateBuilderService;
 import com.reps.demogcloud.utils.PunishmentUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
     private final EmailService emailService;
+    private final EmailTemplateBuilderService emailTemplateBuilderService;
 
     @Override
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws MessagingException {
@@ -70,14 +72,10 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
             PunishmentResponse response = new PunishmentResponse();
             response.setPunishment(punishmentToClose);
 
-            String message = "Hello, \n" +
-                    "Your child, " + student.getFirstName() + " " + student.getLastName() +
-                    ", has successfully completed the assignment for the infraction: " + infraction.getInfractionName() + ". " +
-                    "No further action is required. Thank you for your support and your child’s effort.\n" +
-                    "If you have any questions, feel free to contact the teacher at " + punishmentToClose.getTeacherEmail() + ".";
-
+            String message = emailTemplateBuilderService.buildCompletionMessage(student.getFirstName(), student.getLastName(), punishmentToClose.getInfractionName(), punishmentToClose.getTeacherEmail(), student.getPreferredLanguage());
+            String subject = emailTemplateBuilderService.buildCompletionSubject(student.getSchool(), student.getFirstName(), student.getLastName(), student.getPreferredLanguage(), true);
             response.setMessage(message);
-            response.setSubject("Referral Completion for " + student.getFirstName() + " " + student.getLastName());
+            response.setSubject(subject);
             response.setParentToEmail(student.getParentEmail());
             response.setStudentToEmail(student.getStudentEmail());
             response.setTeacherToEmail(punishmentToClose.getTeacherEmail());
@@ -86,8 +84,9 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
                     response.getParentToEmail(),
                     response.getTeacherToEmail(),
                     response.getStudentToEmail(),
+                    response.getMessage(),
                     response.getSubject(),
-                    response.getMessage()
+                    student.getPreferredLanguage()
             );
 
             return response;
@@ -107,18 +106,32 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
         punishment.setTimeClosed(LocalDate.now());
         punishRepository.save(punishment);
 
+        String message = emailTemplateBuilderService.buildCompletionMessage(
+                student.getFirstName(),
+                student.getLastName(),
+                infraction.getInfractionName(),
+                punishment.getTeacherEmail(),
+                student.getPreferredLanguage()
+        );
+
+        String subject = emailTemplateBuilderService.buildCompletionSubject(
+                null, // no school in this subject variant
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage(),
+                false
+        );
+
         PunishmentResponse response = new PunishmentResponse();
         response.setPunishment(punishment);
-        response.setMessage("Hello,\nYour child, " + student.getFirstName() + " " + student.getLastName() +
-                ", has successfully completed the assignment for the infraction: " + infraction.getInfractionName() +
-                ". Thank you for your support.\n\nIf you have any questions, you may reply to this message.");
-        response.setSubject(student.getSchool() + " assignment completion for " + student.getFirstName() + " " + student.getLastName());
+        response.setMessage(message);
+        response.setSubject(subject);
         response.setParentToEmail(student.getParentEmail());
         response.setStudentToEmail(student.getStudentEmail());
         response.setTeacherToEmail(punishment.getTeacherEmail());
 
         emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(),
-                response.getStudentToEmail(), response.getSubject(), response.getMessage());
+                response.getStudentToEmail(), response.getMessage(), response.getSubject(), student.getPreferredLanguage());
 
         return response;
     }
@@ -147,14 +160,31 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nUnfortunately your answers were not acceptable. You must resubmit with better responses.\n\n" +
-                "Feedback: " + contextToStore + "\n\nYou may reply to this message with any questions.";
+        String languageCode = student.getPreferredLanguage();
 
-        String subject = "Level Three Answers Not Accepted for " + student.getFirstName() + " " + student.getLastName();
+        String feedbackRaw = contextToStore.stream()
+                .map(s -> "- " + s)
+                .collect(java.util.stream.Collectors.joining("\n"));
 
-        emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
-                student.getStudentEmail(), subject, message);
+        String subject = emailTemplateBuilderService.buildLevelThreeRejectSubject(
+                student.getFirstName(),
+                student.getLastName(),
+                languageCode
+        );
 
+        String message = emailTemplateBuilderService.buildLevelThreeRejectMessage(
+                feedbackRaw,
+                languageCode
+        );
+
+        emailService.sendPtsEmail(
+                student.getParentEmail(),
+                punishment.getTeacherEmail(),
+                student.getStudentEmail(),
+                message,
+                subject,
+                languageCode
+        );
         return punishment;
     }
 
@@ -173,14 +203,15 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nThe referral for your child, " + student.getFirstName() + " " + student.getLastName() +
-                ", was entered in error and has been removed. The infraction was for " + infraction.getInfractionName() +
-                " (Level " + infraction.getInfractionLevel() + ").\n\nThank you for your patience.";
-
-        String subject = student.getSchool() + " Punishment Deleted for " + student.getFirstName() + " " + student.getLastName();
-
+        String message = emailTemplateBuilderService.buildPunishmentDeletedMessage(student.getFirstName(), student.getLastName(), punishment.getInfractionName(), String.valueOf(infraction.getInfractionLevel()), explanation, student.getPreferredLanguage());
+        String subject = emailTemplateBuilderService.buildPunishmentDeletedSubject(
+                student.getSchool(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
         emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
-                student.getStudentEmail(), subject, message);
+                student.getStudentEmail(),message, subject, student.getPreferredLanguage());
 
         return punishment;
     }
@@ -200,13 +231,28 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nA referral for your child, " + student.getFirstName() + " " + student.getLastName() +
-                ", was unintentionally removed and has now been restored.\nPlease have them complete their assignment at repsdiscipline.vercel.app/student-login.";
 
-        String subject = student.getSchool() + " Punishment Restored for " + student.getFirstName() + " " + student.getLastName();
+        String subject = emailTemplateBuilderService.buildPunishmentRestoredSubject(
+                student.getSchool(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
 
-        emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
-                student.getStudentEmail(), subject, message);
+        String message = emailTemplateBuilderService.buildPunishmentRestoredMessage(
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
+
+        emailService.sendPtsEmail(
+                student.getParentEmail(),
+                punishment.getTeacherEmail(),
+                student.getStudentEmail(),
+                message,
+                subject,
+                student.getPreferredLanguage()
+        );
 
         return punishment;
     }

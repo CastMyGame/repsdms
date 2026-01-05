@@ -19,6 +19,7 @@ import javax.mail.MessagingException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -29,9 +30,10 @@ public class EmailNotificationService {
     private final EmailTemplateBuilderService templateBuilderService;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
+    private final EmailTemplateBuilderService emailTemplateBuilderService;
 
     @Async
-    public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject) throws MessagingException {
+    public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject, String languageCode) throws MessagingException {
 
         String sender = ( getCurrentUserEmail() !=null && !getCurrentUserEmail().isEmpty()) ? getCurrentUserEmail():null;
 
@@ -43,7 +45,7 @@ public class EmailNotificationService {
             throw new IllegalArgumentException("Student not found for email: " + studentEmail);
         }
         List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
-        emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters,sender);
+        emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters,sender, languageCode);
     }
 
     @Async
@@ -59,26 +61,69 @@ public class EmailNotificationService {
 
     @Async
     public void sendContactUsMail(ContactUsRequest request) {
-        emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage());
+        emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage(), request.getPreferredLanguage());
     }
 
     @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
         var teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
         var optionalClass = teacher.getClasses().stream()
-                .filter(c -> c.getClassName().equals(request.getClassName())).findFirst();
-        if (optionalClass.isPresent()) {
+                .filter(c -> c.getClassName().equals(request.getClassName()))
+                .findFirst();
+
+        if (optionalClass.isEmpty()) return;
+
+        List<String> rosterEmails = optionalClass.get().getClassRoster();
+        if (rosterEmails == null || rosterEmails.isEmpty()) return;
+
+        // 1) Group recipients by preferred language
+        // NOTE: decide whether rosterEmails are student emails or parent emails.
+        // If rosterEmails are student emails:
+        //   Student s = studentRepository.findByStudentEmailIgnoreCase(email)
+        // If rosterEmails are parent emails:
+        //   Student s = studentRepository.findByParentEmailIgnoreCase(email) (if you have it)
+        Map<String, List<String>> recipientsByLang = new java.util.HashMap<>();
+
+        for (String email : rosterEmails) {
+            if (email == null || email.isBlank()) continue;
+
+            Student s = studentRepository.findByStudentEmailIgnoreCase(email); // adjust if needed
+            String lang = (s == null) ? "en" : emailTemplateBuilderService.normalizeLanguage(s.getPreferredLanguage());
+
+            recipientsByLang.computeIfAbsent(lang, k -> new java.util.ArrayList<>()).add(email);
+        }
+
+        // 2) Translate ONCE per language (only user input fields)
+        Map<String, String> subjectByLang = new java.util.HashMap<>();
+        Map<String, String> bodyByLang = new java.util.HashMap<>();
+
+        for (String lang : recipientsByLang.keySet()) {
+            if ("en".equals(lang)) {
+                subjectByLang.put(lang, request.getSubject());
+                bodyByLang.put(lang, request.getMsg());
+            } else {
+                // Translate only teacher-entered fields
+                subjectByLang.put(lang, emailTemplateBuilderService.translateUserInput(request.getSubject(), lang));
+                bodyByLang.put(lang, emailTemplateBuilderService.translateUserInput(request.getMsg(), lang));
+            }
+        }
+
+        // 3) Send one bulk email per language group
+        for (var entry : recipientsByLang.entrySet()) {
+            String lang = entry.getKey();
+            List<String> recipients = entry.getValue();
+
             emailSenderService.sendClassAnnouncement(
                     request.getTeacherEmail(),
-                    optionalClass.get().getClassRoster(),
-                    request.getSubject(),
-                    request.getMsg()
+                    recipients,
+                    subjectByLang.get(lang),
+                    bodyByLang.get(lang)
             );
         }
     }
 
     @Async
-    public void sendAlertEmail(String alertType, Punishment punishment) throws MessagingException {
+    public void sendAlertEmail(String alertType, Punishment punishment, String languageCode) throws MessagingException {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         if (student == null) return;
 
@@ -90,7 +135,7 @@ public class EmailNotificationService {
         String subject = alertType + " REMINDER";
         String message = intro + student.getFirstName() + " " + student.getLastName() + action + detentionType + followup;
 
-        sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(), student.getStudentEmail(), message, subject);
+        sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(), student.getStudentEmail(), message, subject, languageCode);
     }
 
     public void notifyParentViaTextAndEmail(Punishment punishment, Student student, Infraction infraction, PunishmentResponse response) throws MessagingException {
@@ -100,7 +145,7 @@ public class EmailNotificationService {
                 infraction.getInfractionLevel(),
                 infraction.getInfractionName(),
                 templateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
-                student.getStudentEmail()
+                student.getStudentEmail(), student.getPreferredLanguage()
         );
 
         response.setMessage(message);
@@ -110,7 +155,8 @@ public class EmailNotificationService {
                 response.getTeacherToEmail(),
                 response.getStudentToEmail(),
                 response.getSubject(),
-                response.getMessage()
+                response.getMessage(),
+                student.getPreferredLanguage()
         );
     }
 
