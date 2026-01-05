@@ -133,4 +133,48 @@ public class EmailTemplates {
 
     Puede responder a este mensaje si tiene alguna pregunta.
     """;
+
+    public static final String SUBJECT_PUNISHMENT_DELETED_EN =
+            "{{schoolName}} Punishment Deleted for {{studentFullName}}";
+    public static final String SUBJECT_PUNISHMENT_DELETED_ES =
+            "{{schoolName}} Notificación eliminada para {{studentFullName}}";
+
+    public static final String PUNISHMENT_DELETED_MSG_EN = """
+    Hello,
+    The referral for your child, {{studentFullName}}, was entered in error and has been removed.
+    The infraction was for {{infractionName}} (Level {{infractionLevel}}).
+
+    Explanation:
+    {{explanation}}
+
+    Thank you for your patience.
+    """;
+
+    public static final String PUNISHMENT_DELETED_MSG_ES = """
+    Hola,
+    La notificación para su hijo/a, {{studentFullName}}, se ingresó por error y ha sido eliminada.
+    La infracción fue por {{infractionName}} (Nivel {{infractionLevel}}).
+
+    Explicación:
+    {{explanation}}
+
+    Gracias por su paciencia.
+    """;
+
+    public static final String SUBJECT_PUNISHMENT_RESTORED_EN =
+            "{{schoolName}} Punishment Restored for {{studentFullName}}";
+    public static final String SUBJECT_PUNISHMENT_RESTORED_ES =
+            "{{schoolName}} Notificación restaurada para {{studentFullName}}";
+
+    public static final String PUNISHMENT_RESTORED_MSG_EN = """
+    Hello,
+    A referral for your child, {{studentFullName}}, was unintentionally removed and has now been restored.
+    Please have them complete their assignment at https://repsdiscipline.vercel.app/student-login.
+    """;
+
+    public static final String PUNISHMENT_RESTORED_MSG_ES = """
+    Hola,
+    Una notificación para su hijo/a, {{studentFullName}}, fue eliminada sin intención y ahora ha sido restaurada.
+    Por favor, pídale que complete su tarea en https://repsdiscipline.vercel.app/student-login.
+    """;
 }

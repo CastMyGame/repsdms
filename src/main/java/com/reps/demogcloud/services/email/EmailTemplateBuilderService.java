@@ -205,4 +205,77 @@ public class EmailTemplateBuilderService {
                 "feedback", feedbackTranslated == null ? "" : feedbackTranslated
         ));
     }
+
+    public String buildPunishmentDeletedSubject(String schoolName,
+                                                String studentFirstName,
+                                                String studentLastName,
+                                                String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? SUBJECT_PUNISHMENT_DELETED_ES
+                : SUBJECT_PUNISHMENT_DELETED_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName == null ? "" : schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildPunishmentDeletedMessage(String studentFirstName,
+                                                String studentLastName,
+                                                String infractionName,
+                                                String infractionLevel,
+                                                String explanationUserInput,
+                                                String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        // Translate ONLY the user-input explanation (if you include it)
+        String explanation = translateUserInput(explanationUserInput, language);
+
+        String template = "es".equals(language)
+                ? PUNISHMENT_DELETED_MSG_ES
+                : PUNISHMENT_DELETED_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName,
+                "infractionName", infractionName == null ? "" : infractionName,
+                "infractionLevel", infractionLevel == null ? "" : infractionLevel,
+                "explanation", explanation == null ? "" : explanation
+        ));
+    }
+
+    public String buildPunishmentRestoredSubject(String schoolName,
+                                                 String studentFirstName,
+                                                 String studentLastName,
+                                                 String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? SUBJECT_PUNISHMENT_RESTORED_ES
+                : SUBJECT_PUNISHMENT_RESTORED_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "schoolName", schoolName == null ? "" : schoolName,
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildPunishmentRestoredMessage(String studentFirstName,
+                                                 String studentLastName,
+                                                 String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language)
+                ? PUNISHMENT_RESTORED_MSG_ES
+                : PUNISHMENT_RESTORED_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName
+        ));
+    }
 }

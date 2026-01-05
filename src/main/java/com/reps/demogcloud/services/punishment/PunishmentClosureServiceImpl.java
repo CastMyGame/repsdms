@@ -203,12 +203,13 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nThe referral for your child, " + student.getFirstName() + " " + student.getLastName() +
-                ", was entered in error and has been removed. The infraction was for " + infraction.getInfractionName() +
-                " (Level " + infraction.getInfractionLevel() + ").\n\nThank you for your patience.";
-
-        String subject = student.getSchool() + " Punishment Deleted for " + student.getFirstName() + " " + student.getLastName();
-
+        String message = emailTemplateBuilderService.buildPunishmentDeletedMessage(student.getFirstName(), student.getLastName(), punishment.getInfractionName(), String.valueOf(infraction.getInfractionLevel()), explanation, student.getPreferredLanguage());
+        String subject = emailTemplateBuilderService.buildPunishmentDeletedSubject(
+                student.getSchool(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
         emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
                 student.getStudentEmail(),message, subject, student.getPreferredLanguage());
 
@@ -230,13 +231,28 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nA referral for your child, " + student.getFirstName() + " " + student.getLastName() +
-                ", was unintentionally removed and has now been restored.\nPlease have them complete their assignment at repsdiscipline.vercel.app/student-login.";
 
-        String subject = student.getSchool() + " Punishment Restored for " + student.getFirstName() + " " + student.getLastName();
+        String subject = emailTemplateBuilderService.buildPunishmentRestoredSubject(
+                student.getSchool(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
 
-        emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
-                student.getStudentEmail(), message, subject, student.getPreferredLanguage());
+        String message = emailTemplateBuilderService.buildPunishmentRestoredMessage(
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage()
+        );
+
+        emailService.sendPtsEmail(
+                student.getParentEmail(),
+                punishment.getTeacherEmail(),
+                student.getStudentEmail(),
+                message,
+                subject,
+                student.getPreferredLanguage()
+        );
 
         return punishment;
     }
