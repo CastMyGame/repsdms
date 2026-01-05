@@ -160,14 +160,31 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         punishRepository.save(punishment);
 
-        String message = "Hello,\nUnfortunately your answers were not acceptable. You must resubmit with better responses.\n\n" +
-                "Feedback: " + contextToStore + "\n\nYou may reply to this message with any questions.";
+        String languageCode = student.getPreferredLanguage();
 
-        String subject = "Level Three Answers Not Accepted for " + student.getFirstName() + " " + student.getLastName();
+        String feedbackRaw = contextToStore.stream()
+                .map(s -> "- " + s)
+                .collect(java.util.stream.Collectors.joining("\n"));
 
-        emailService.sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(),
-                student.getStudentEmail(), message, subject, student.getPreferredLanguage());
+        String subject = emailTemplateBuilderService.buildLevelThreeRejectSubject(
+                student.getFirstName(),
+                student.getLastName(),
+                languageCode
+        );
 
+        String message = emailTemplateBuilderService.buildLevelThreeRejectMessage(
+                feedbackRaw,
+                languageCode
+        );
+
+        emailService.sendPtsEmail(
+                student.getParentEmail(),
+                punishment.getTeacherEmail(),
+                student.getStudentEmail(),
+                message,
+                subject,
+                languageCode
+        );
         return punishment;
     }
 

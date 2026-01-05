@@ -109,4 +109,28 @@ public class EmailTemplates {
         Si tiene alguna pregunta, puede comunicarse con el maestro en {{teacherEmail}}.
         """;
 
+    public static final String SUBJECT_L3_REJECT_EN =
+            "Level Three Answers Not Accepted for {{studentFullName}}";
+    public static final String SUBJECT_L3_REJECT_ES =
+            "Respuestas de nivel tres no aceptadas para {{studentFullName}}";
+
+    public static final String L3_REJECT_MSG_EN = """
+    Hello,
+    Unfortunately your answers were not acceptable. You must resubmit with better responses.
+
+    Feedback:
+    {{feedback}}
+
+    You may reply to this message with any questions.
+    """;
+
+    public static final String L3_REJECT_MSG_ES = """
+    Hola,
+    Lamentablemente, sus respuestas no fueron aceptables. Debe volver a enviarlas con mejores respuestas.
+
+    Comentarios:
+    {{feedback}}
+
+    Puede responder a este mensaje si tiene alguna pregunta.
+    """;
 }

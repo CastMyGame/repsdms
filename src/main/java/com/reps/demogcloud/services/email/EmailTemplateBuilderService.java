@@ -178,4 +178,31 @@ public class EmailTemplateBuilderService {
                 "teacherEmail", teacherEmail == null ? "" : teacherEmail
         ));
     }
+
+    public String buildLevelThreeRejectSubject(String studentFirstName,
+                                               String studentLastName,
+                                               String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+        String studentFullName = studentFirstName + " " + studentLastName;
+
+        String template = "es".equals(language) ? SUBJECT_L3_REJECT_ES : SUBJECT_L3_REJECT_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "studentFullName", studentFullName
+        ));
+    }
+
+    public String buildLevelThreeRejectMessage(String feedbackRaw,
+                                               String targetLanguageCode) {
+        String language = normalizeLanguage(targetLanguageCode);
+
+        // translate ONLY the user input portion
+        String feedbackTranslated = translateUserInput(feedbackRaw, language);
+
+        String template = "es".equals(language) ? L3_REJECT_MSG_ES : L3_REJECT_MSG_EN;
+
+        return fillTemplate(template, java.util.Map.of(
+                "feedback", feedbackTranslated == null ? "" : feedbackTranslated
+        ));
+    }
 }
