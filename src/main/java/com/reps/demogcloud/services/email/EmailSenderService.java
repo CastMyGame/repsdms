@@ -25,8 +25,6 @@ public class EmailSenderService {
     private final JavaMailSender javaMailSender;
     private final SpringTemplateEngine templateEngine;
     private final EmailRoutingService emailRoutingService;
-    private final TranslationService translationService;
-    private final EmailTemplateBuilderService emailTemplateBuilderService;
 
     public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
         emailRoutingService.sendHtmlEmail(templateName, toEmail, subject, templateModel, null);
@@ -143,11 +141,7 @@ public class EmailSenderService {
             String fromEmail,
             String languageCode
     ) throws MessagingException {
-
-        String subject = emailTemplateBuilderService.translateIfNeeded(subjectEn, languageCode);
-        String msg = emailTemplateBuilderService.translateIfNeeded(msgEn, languageCode);
-
-        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, fromEmail);
+        emailRoutingService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msgEn, subjectEn, fromEmail);
     }
 
     public void sendGenericEmail(
@@ -170,11 +164,7 @@ public class EmailSenderService {
             String fromEmail,
             String languageCode
     ) throws MessagingException {
-
-        String subject = emailTemplateBuilderService.translateIfNeeded(subjectEn, languageCode);
-        String msg = emailTemplateBuilderService.translateIfNeeded(msgEn, languageCode);
-
-        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, fromEmail);
+        emailRoutingService.sendGenericEmail(ccEmails, recipientEmail, subjectEn, msgEn, fromEmail);
     }
 
 }

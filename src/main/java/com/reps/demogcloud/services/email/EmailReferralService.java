@@ -45,12 +45,25 @@ public class EmailReferralService {
             history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false));
             history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "CFR", false));
 
-            List<String> messages = new ArrayList<>();
+            List<String> summaryLines = new ArrayList<>();
             for (Punishment past : history) {
-                messages.add(emailTemplateBuilderService.replaceString(
-                        "Infraction took place on " + past.getTimeCreated() + ", Description: " + past.getInfractionDescription() + ". Assignment completed on " + past.getTimeClosed()
-                ));
+                String timeCreated = String.valueOf(past.getTimeCreated());
+                String timeClosed = String.valueOf(past.getTimeClosed());
+
+                // teacher/student entered content (user input)
+                String rawDescription = String.valueOf(past.getInfractionDescription());
+                String translatedDescription = emailTemplateBuilderService.translateUserInput(rawDescription, student.getPreferredLanguage());
+
+                String line =
+                        "Infraction took place on " + timeCreated +
+                                ", Description: " + translatedDescription +
+                                ". Assignment completed on " + timeClosed;
+
+                summaryLines.add(emailTemplateBuilderService.replaceString(line));
             }
+
+// join lines so the template can insert it nicely
+            String summary = String.join("\n", summaryLines);
 
             response.setSubject(emailTemplateBuilderService.buildSubject(
                     ourSchool.getSchoolName(),
@@ -59,10 +72,13 @@ public class EmailReferralService {
                     student.getPreferredLanguage(),
                     true
             ));
-            response.setMessage("Thank you for using the teacher managed referral. Because " + student.getFirstName() + " " + student.getLastName() +
-                    " has received their fourth or greater offense for " + infraction.getInfractionName() + ", they must now receive an office referral.\n" +
-                    "Please complete an office referral for Failure to Comply with Disciplinary Action.\n" +
-                    "Summary: " + messages);
+            response.setMessage(emailTemplateBuilderService.buildOfficeReferralMessage(
+                    student.getFirstName(),
+                    student.getLastName(),
+                    infraction.getInfractionName(),
+                    summary,
+                    student.getPreferredLanguage()
+            ));
 
             emailService.sendEmail(response.getTeacherToEmail(), response.getSubject(), response.getMessage(),student.getPreferredLanguage());
         } else {
@@ -73,14 +89,29 @@ public class EmailReferralService {
     }
 
     public void sendInfractionNotification(Punishment punishment, EmailService emailService, Student student, Infraction infraction, PunishmentResponse response) throws MessagingException {
+        String description0 = "";
+        if (punishment.getInfractionDescription() != null && !punishment.getInfractionDescription().isEmpty()) {
+            description0 = punishment.getInfractionDescription().get(0);
+        }
         String msg = emailTemplateBuilderService.createEmailText(
-                student.getFirstName(), student.getLastName(),
-                infraction.getInfractionLevel(), infraction.getInfractionName(),
-                emailTemplateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
-                student.getStudentEmail(), student.getPreferredLanguage()
+                student.getFirstName(),
+                student.getLastName(),
+                infraction.getInfractionLevel(),
+                infraction.getInfractionName(),
+                emailTemplateBuilderService.replaceString(description0),
+                student.getStudentEmail(),
+                student.getPreferredLanguage()
+        );
+        String subject = emailTemplateBuilderService.buildSubject(
+                student.getSchool(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getPreferredLanguage(),
+                false
         );
         response.setMessage(msg);
-        emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(), response.getStudentToEmail(), msg, response.getSubject(), student.getPreferredLanguage());
+        response.setSubject(subject);
+        emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(), response.getStudentToEmail(), msg, subject, student.getPreferredLanguage());
     }
 
     public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
