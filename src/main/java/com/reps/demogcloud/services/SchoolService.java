@@ -60,4 +60,8 @@ public class SchoolService {
     public School findSchoolByName (String school) {
         return schoolRepository.findSchoolBySchoolName(school);
     }
+
+    public java.util.List<School> getAllSchools() {
+        return schoolRepository.findAll();
+    }
 }

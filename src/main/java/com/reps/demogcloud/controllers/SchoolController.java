@@ -22,6 +22,11 @@ import java.util.Map;
 public class SchoolController {
     private final SchoolService schoolService;
 
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllSchools() {
+        return ResponseEntity.ok(schoolService.getAllSchools());
+    }
+
     @PostMapping("/newSchool")
     public ResponseEntity<SchoolResponse> createSchool (@RequestBody School schoolRequest) {
         SchoolResponse schoolResponse = schoolService.createNewSchool(schoolRequest);
