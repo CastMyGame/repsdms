@@ -94,7 +94,10 @@ public class UserService implements UserDetailsService {
 
         List<UserModel> createdUsers = new ArrayList<>();
         for (Student student : schoolUsers) {
-            UserModel userExists = userRepository.findByUsername(student.getStudentEmail());
+            String email = student.getStudentEmail() == null ? null : student.getStudentEmail().trim().toLowerCase();
+            if (email == null || email.isBlank()) continue;
+
+            UserModel userExists = userRepository.findByUsername(email);
             if (userExists == null) {
                 UserModel newUser = new UserModel();
                 String password = student.getLastName().toLowerCase() + student.getSchool().toLowerCase();

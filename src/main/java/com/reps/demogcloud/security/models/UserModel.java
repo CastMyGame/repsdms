@@ -24,6 +24,13 @@ public class UserModel {
     private String school;
     private Set<RoleModel> roles;
     private boolean enabled = true; // Default to true for existing users, can be set to false to disable access
+    private boolean paid = false;
+    private java.time.Instant accessEndsAt;
+    private String stripeCustomerId;
+    private String stripeSubscriptionId;
+    private String stripePriceId;
+    private String stripeStatus;
+    private java.time.Instant lastPaymentAt;
 
 
 }
