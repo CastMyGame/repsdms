@@ -1,4 +1,4 @@
-package com.reps.demogcloud.security.models;
+package com.reps.demogcloud.security.models.stripe;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

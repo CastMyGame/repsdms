@@ -4,13 +4,14 @@ import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.school.SchoolResponse;
 import com.reps.demogcloud.services.SchoolService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
+@Slf4j
 @CrossOrigin(origins = {
         "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
@@ -29,10 +30,19 @@ public class SchoolController {
 
     @PostMapping("/newSchool")
     public ResponseEntity<SchoolResponse> createSchool (@RequestBody School schoolRequest) {
+        log.info("POST /school/v1/newSchool payload: schoolName='{}', currency='{}'",
+                schoolRequest.getSchoolName(), schoolRequest.getCurrency());
         SchoolResponse schoolResponse = schoolService.createNewSchool(schoolRequest);
-        return schoolResponse.getSchool() == null
-                ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
-                : new ResponseEntity<>(schoolResponse, HttpStatus.CREATED);
+        if (schoolResponse.getSchool() == null) {
+            log.warn("Create school failed: error='{}'", schoolResponse.getError());
+            return new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST);
+        }
+
+        log.info("Create school succeeded: id='{}', name='{}'",
+                schoolResponse.getSchool().getSchoolIdNumber(),
+                schoolResponse.getSchool().getSchoolName());
+
+        return new ResponseEntity<>(schoolResponse, HttpStatus.CREATED);
     }
 
     @PutMapping("/{schoolName}")
