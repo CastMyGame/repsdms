@@ -1,7 +1,7 @@
 package com.reps.demogcloud.security.services.stripe;
 
-import com.reps.demogcloud.security.models.StripeEventLog;
-import com.reps.demogcloud.security.models.StripeEventLogRepository;
+import com.reps.demogcloud.security.models.stripe.StripeEventLog;
+import com.reps.demogcloud.security.models.stripe.StripeEventLogRepository;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.checkout.Session;

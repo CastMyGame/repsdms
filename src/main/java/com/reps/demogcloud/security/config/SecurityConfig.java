@@ -45,7 +45,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/register", "/contact-us", "/auth", "/forgot-password", "/reset-password",
                         "/student/v1/points/transfer", "/DTO/v1/**",
                         "/oauth2/**", "/login", "/error", "/assignments/v1/templates", "/stripe/v1/**",
-                        "/school/v1/all"
+                        "/school/v1/all", "/school/v1/newSchool"
                 ).permitAll()
                 .anyRequest().authenticated()
                 .and();
