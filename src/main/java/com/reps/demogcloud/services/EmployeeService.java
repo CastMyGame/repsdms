@@ -47,7 +47,7 @@ public class EmployeeService {
         return employeeQueryService.findByLoggedInEmployee();
     }
 
-    public School getEmployeeSchool() {
+    public Optional<School> getEmployeeSchool() {
         return employeeQueryService.getEmployeeSchool();
     }
 

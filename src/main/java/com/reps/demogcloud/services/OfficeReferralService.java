@@ -26,10 +26,7 @@ import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
@@ -59,7 +56,11 @@ public class OfficeReferralService {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
-        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+        Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
+
+        School ourSchool = ourSchoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + findMe.getSchool())
+        );
 
         OfficeReferral request = new OfficeReferral();
         request.setAdminEmail(findMe.getAdminEmail());

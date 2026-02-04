@@ -61,11 +61,11 @@ public class EmployeeQueryService {
         return findMe;
     }
 
-    public School getEmployeeSchool() {
+    public Optional<School> getEmployeeSchool() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
 
-        return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+        return schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
     }
 
     public Employee findByUserName(String email) {

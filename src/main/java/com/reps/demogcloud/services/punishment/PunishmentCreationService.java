@@ -22,6 +22,7 @@ import javax.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,11 @@ public class PunishmentCreationService {
 
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
         String languageCode = student.getPreferredLanguage();
-        School school = punishmentUtils.fetchSchool(student.getSchool());
+        Optional<School> schoolOpt = punishmentUtils.fetchSchool(student.getSchool());
+
+        School school = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + student.getSchool())
+        );
         int maxLevel = school.getMaxPunishLevel();
 
         Infraction infraction = punishmentUtils.resolveInfraction(formRequest, school, maxLevel);

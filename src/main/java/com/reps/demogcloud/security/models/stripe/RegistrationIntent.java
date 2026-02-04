@@ -22,7 +22,9 @@ public class RegistrationIntent {
     @Indexed(expireAfterSeconds = 60 * 60 * 24) // 24 hours
     private Instant createdAt;
 
-    private String status; // "PENDING", "COMPLETED", "EXPIRED"
+    private String status;
+    // Expected lifecycle:
+    // PENDING -> CHECKOUT_CREATED -> PROCESSING -> COMPLETED
 
     // School info
     private String schoolIdNumber;
@@ -38,8 +40,33 @@ public class RegistrationIntent {
     private String priceId;
 
     // Stripe fields (filled later)
+    @Indexed(unique = true, sparse = true)
     private String stripeCheckoutSessionId;
     private String stripeCustomerId;
     private String stripeSubscriptionId;
+
+    public static RegistrationIntent pending(
+            String schoolIdNumber,
+            String schoolName,
+            String currencyName,
+            String firstName,
+            String lastName,
+            String email,
+            String priceId
+    ) {
+        return RegistrationIntent.builder()
+                .createdAt(Instant.now())
+                .status("PENDING")
+                .schoolIdNumber(schoolIdNumber)
+                .schoolName(schoolName)
+                .currencyName(currencyName)
+                .firstName(firstName)
+                .lastName(lastName)
+                .email(email)
+                .priceId(priceId)
+                .build();
+    }
 }
+
+
 

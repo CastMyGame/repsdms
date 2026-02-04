@@ -5,12 +5,13 @@ import com.reps.demogcloud.models.school.SchoolResponse;
 import com.reps.demogcloud.services.SchoolService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Set;
+
 @Slf4j
 @CrossOrigin(origins = {
         "http://localhost:3000",
@@ -26,6 +27,14 @@ public class SchoolController {
     @GetMapping("/all")
     public ResponseEntity<?> getAllSchools() {
         return ResponseEntity.ok(schoolService.getAllSchools());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchSchools(
+            @RequestParam String city,
+            @RequestParam String state
+    ) {
+        return ResponseEntity.ok(schoolService.getSchoolsByCityState(city, state));
     }
 
     @PostMapping("/newSchool")

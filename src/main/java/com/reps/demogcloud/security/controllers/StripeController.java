@@ -5,12 +5,14 @@ import com.reps.demogcloud.security.services.stripe.StripeWebhookService;
 import com.stripe.exception.StripeException;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/stripe/v1")
+@Slf4j
 public class StripeController {
 
     private final StripeBillingService stripeBillingService;
@@ -19,7 +21,7 @@ public class StripeController {
     @PostMapping("/create-checkout-session")
     public ResponseEntity<CreateCheckoutSessionResponse> createCheckoutSession(
             @RequestBody CreateCheckoutSessionRequest req
-    ) throws StripeException {
+    ) {
 
         try {
 
@@ -43,13 +45,13 @@ public class StripeController {
             }
 
             String url = stripeBillingService.createCheckoutSessionUrl(req);
-            return ResponseEntity.ok(new CreateCheckoutSessionResponse(url, ""));
+            return ResponseEntity.ok(new CreateCheckoutSessionResponse(url, null));
         } catch (com.stripe.exception.StripeException se) {
-            se.printStackTrace();
+            log.warn("Stripe error creating checkout session: {}", se.getMessage(), se);
             String msg = "Stripe error: " + se.getMessage();
             return ResponseEntity.status(400).body(new CreateCheckoutSessionResponse(null, msg));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Server error creating checkout session", e);
             return ResponseEntity.status(500).body(new CreateCheckoutSessionResponse(null, "Server error creating checkout session"));
         }
     }
@@ -57,15 +59,22 @@ public class StripeController {
     @PostMapping("/webhook")
     public ResponseEntity<String> webhook(
             @RequestBody String payload,
-            @RequestHeader(value="Stripe-Signature", required=false) String sigHeader
+            @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader
     ) {
-        System.out.println(">>> HIT StripeController /stripe/v1/webhook");
+        log.info(">>> HIT StripeController /stripe/v1/webhook");
+
         try {
             stripeWebhookService.handleWebhook(payload, sigHeader);
             return ResponseEntity.ok("ok");
-        } catch (Throwable t) { // YES Throwable for debugging
-            t.printStackTrace();
-            return ResponseEntity.ok("ok"); // always 200 to stop retries while debugging
+        } catch (StripeWebhookService.BadWebhookRequestException bre) {
+            // Stripe sent something invalid (bad signature/payload/missing header)
+            // 400 is correct and SHOULD NOT be retried in normal operation.
+            log.warn("Stripe webhook bad request: {}", bre.getMessage());
+            return ResponseEntity.badRequest().body("bad request");
+        } catch (Exception e) {
+            // Any provisioning / server failure => Stripe SHOULD retry
+            log.error("Stripe webhook server/provisioning failure", e);
+            return ResponseEntity.status(500).body("server error");
         }
     }
 

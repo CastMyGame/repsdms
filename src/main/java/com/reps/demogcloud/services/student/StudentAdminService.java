@@ -191,11 +191,11 @@ public class StudentAdminService {
 
     }
 
-    public School getStudentSchool() {
+    public Optional<School> getStudentSchool() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
 
-        return schoolRepository.findSchoolBySchoolName(findMe.getSchool());
+        return schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
     }
 
     public List<Student> massAssignForSchool() {

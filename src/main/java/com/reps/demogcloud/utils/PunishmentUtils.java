@@ -18,6 +18,7 @@ import javax.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -43,8 +44,8 @@ public class PunishmentUtils {
         return studentRepository.findByStudentEmailIgnoreCase(email);
     }
 
-    public School fetchSchool(String schoolName) {
-        return schoolRepository.findSchoolBySchoolName(schoolName);
+    public Optional<School> fetchSchool(String schoolName) {
+        return schoolRepository.findBySchoolNameIgnoreCase(schoolName);
     }
 
     public String getClosedLevel(String email, String name, int maxLevel) {

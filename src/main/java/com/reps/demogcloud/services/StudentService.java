@@ -101,7 +101,7 @@ public class StudentService {
         return studentAdminService.massAssignForSchool();
     }
 
-    public School getStudentSchool() {
+    public Optional<School> getStudentSchool() {
         return studentAdminService.getStudentSchool();
     }
 
