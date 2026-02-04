@@ -72,7 +72,11 @@ public class GuidanceService {
         LocalDate now = LocalDate.now();
 
         Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(punishmentRequest.getStudentEmail());
-        School ourSchool = schoolRepository.findSchoolBySchoolName(studentRecord.getSchool());
+        Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(studentRecord.getSchool());
+
+        School ourSchool = ourSchoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + studentRecord.getSchool())
+        );
 
         GuidanceReferral guidanceObj = request.getGuidance();
         guidanceObj.setStudentEmail(studentRecord.getStudentEmail());
@@ -101,7 +105,11 @@ public class GuidanceService {
         LocalDate now = LocalDate.now();
 
         Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
-        School ourSchool = schoolRepository.findSchoolBySchoolName(studentRecord.getSchool());
+        Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(studentRecord.getSchool());
+
+        School ourSchool = ourSchoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + studentRecord.getSchool())
+        );
 
         GuidanceReferral guidanceObj = request.getGuidance();
         guidanceObj.setStudentEmail(studentRecord.getStudentEmail());

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,7 +52,11 @@ public class TeacherDtoService {
 
         //Get Employee and School Information based on who is the logged-in user
         Employee teacher = employeeService.findByLoggedInEmployee();
-        School school = employeeService.getEmployeeSchool();
+        Optional<School> schoolOpt = employeeService.getEmployeeSchool();
+
+        School school = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + teacher.getSchool())
+        );
 
         // Step 1: Collect all student emails from the teacher's class rosters
         List<String> classRosterStudentEmails;

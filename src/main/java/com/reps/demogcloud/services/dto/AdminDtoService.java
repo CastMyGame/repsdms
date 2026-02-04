@@ -52,7 +52,11 @@ public class AdminDtoService {
 
         //Get Employee and School Information based on who is the logged-in user
         Employee teacher = employeeService.findByLoggedInEmployee();
-        School school = employeeService.getEmployeeSchool();
+        Optional<School> schoolOpt = employeeService.getEmployeeSchool();
+
+        School school = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + teacher.getSchool())
+        );
 
         return new AdminOverviewDTO(allSchoolPunishmentsWithDisplayInformation, punishmentsFilteredByReferralsOnly, punishmentFilteredByShoutOuts, teachersList, allSchoolReferrals, teacher, school);
     }

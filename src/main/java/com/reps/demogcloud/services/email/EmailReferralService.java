@@ -15,6 +15,7 @@ import javax.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,11 @@ public class EmailReferralService {
     public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService) throws MessagingException {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
-        School ourSchool = schoolRepository.findSchoolBySchoolName(student.getSchool());
+        Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());
+
+        School ourSchool = ourSchoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + student.getSchool())
+        );
 
         PunishmentResponse response = setUpPunishmentResponse(punishment, student);
         response.setSubject(ourSchool.getSchoolName() + " Referral for " + student.getFirstName() + " " + student.getLastName());
@@ -117,7 +122,11 @@ public class EmailReferralService {
     public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
-        School school = schoolRepository.findSchoolBySchoolName(student.getSchool());
+        Optional<School> schoolOpt = schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());
+
+        School school = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + student.getSchool())
+        );
 
         PunishmentResponse response = setUpPunishmentResponse(punishment, student);
         response.setSubject(emailTemplateBuilderService.buildSubject(

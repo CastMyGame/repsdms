@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,11 @@ public class StudentDtoService {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
         List<OfficeReferral> referralList = officeReferralService.findByLoggedInStudent();
         Student student = studentService.findByLoggedInStudent();
-        School school = studentService.getStudentSchool();
+        Optional<School> schoolOpt = studentService.getStudentSchool();
+
+        School school = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + student.getSchool())
+        );
 
         return new StudentOverviewDTO(punishmentList, referralList, school, student);
     }
@@ -36,8 +41,12 @@ public class StudentDtoService {
         List<Punishment> punishmentList = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
         List<OfficeReferral> referralList = officeReferralService.findByStudentEmail(studentEmail);
         Student student = studentService.findByStudentEmail(studentEmail);
-        School school = schoolService.findSchoolByName(student.getSchool());
+        Optional<School> schoolOpt = schoolService.findSchoolByName(student.getSchool());
 
-        return new StudentOverviewDTO(punishmentList, referralList, school, student);
+        School ourSchool = schoolOpt.orElseThrow(() ->
+                new IllegalStateException("School not found: " + student.getSchool())
+        );
+
+        return new StudentOverviewDTO(punishmentList, referralList, ourSchool, student);
     }
 }

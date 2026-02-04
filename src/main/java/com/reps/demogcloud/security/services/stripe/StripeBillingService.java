@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.time.Instant;
 
 @Service
@@ -19,6 +20,18 @@ public class StripeBillingService {
 
     private final Environment env;
     private final RegistrationIntentRepository registrationIntentRepository;
+
+    @PostConstruct
+    public void init() {
+        String stripeSecretKey = env.getProperty("stripe.secret.key");
+        if (isBlank(stripeSecretKey)) {
+            // Don't crash the whole app on boot; fail when the endpoint is called.
+            // This makes local dev + tests much smoother.
+            System.err.println("Stripe secret key missing: stripe.secret.key");
+            return;
+        }
+        Stripe.apiKey = stripeSecretKey;
+    }
 
 
     public String createCheckoutSessionUrl(StripeController.CreateCheckoutSessionRequest req) throws StripeException {
@@ -42,19 +55,19 @@ public class StripeBillingService {
 
         intent = registrationIntentRepository.save(intent);
 
-        String successUrl = env.getProperty(
-                "stripe.checkout.success-url",
-                "https://repsdev.vercel.app"
-        ) + "?session_id={CHECKOUT_SESSION_ID}";
+        String successBase = env.getProperty("stripe.checkout.success-url", "https://repsdev.vercel.app");
+        String successUrl = successBase + (successBase.contains("?") ? "&" : "?") + "session_id={CHECKOUT_SESSION_ID}";
 
-        String cancelUrl  = env.getProperty("stripe.checkout.cancel-url", "https://repsdev.vercel.app");
+        String cancelBase = env.getProperty("stripe.checkout.cancel-url", "https://repsdev.vercel.app");
+        String cancelUrl = cancelBase;
 
         SessionCreateParams params =
                 SessionCreateParams.builder()
                         .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                         .setSuccessUrl(successUrl)
                         .setCancelUrl(cancelUrl)
-                        .setClientReferenceId(req.getSchoolIdNumber().trim()) // better than name now
+                        .setCustomerEmail(req.getEmail().trim().toLowerCase())
+                        .setClientReferenceId(req.getSchoolIdNumber().trim())
                         .addLineItem(
                                 SessionCreateParams.LineItem.builder()
                                         .setPrice(req.getPriceId().trim())
@@ -67,11 +80,16 @@ public class StripeBillingService {
                         .putMetadata("userType", "TEACHER")
                         .putMetadata("priceId", req.getPriceId().trim())
                         .putMetadata("email", req.getEmail().trim().toLowerCase())
+                        .putMetadata("currencyName", req.getCurrencyName().trim())
                         .build();
 
         Session session = Session.create(params);
 
-        // 3) Save session id on the intent (useful for support/debugging)
+        if (session == null || isBlank(session.getUrl())) {
+            throw new IllegalStateException("Stripe session created but no URL was returned");
+        }
+
+        intent.setStatus("CHECKOUT_CREATED");
         intent.setStripeCheckoutSessionId(session.getId());
         registrationIntentRepository.save(intent);
 
