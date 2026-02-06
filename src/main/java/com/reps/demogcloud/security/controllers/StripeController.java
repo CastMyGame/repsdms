@@ -59,9 +59,11 @@ public class StripeController {
     @PostMapping("/webhook")
     public ResponseEntity<String> webhook(
             @RequestBody String payload,
-            @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader
+            @RequestHeader(value = "Stripe-Signature") String sigHeader
     ) {
         log.info(">>> HIT StripeController /stripe/v1/webhook");
+        log.info("Webhook hit. Stripe-Signature present? {}", sigHeader != null && !sigHeader.isBlank());
+
 
         try {
             stripeWebhookService.handleWebhook(payload, sigHeader);

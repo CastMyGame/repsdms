@@ -4,7 +4,6 @@ import com.reps.demogcloud.security.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -24,14 +23,27 @@ public class JwtFilterRequest extends OncePerRequestFilter {
     @Autowired
     private UserService userService;
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
         String path = request.getRequestURI();
-        if (path.startsWith("/stripe/v1/")) {
+        String method = request.getMethod();
+
+        // ✅ Always allow CORS preflight
+        if ("OPTIONS".equalsIgnoreCase(method)) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        // ✅ Public endpoints (no JWT required)
+        if (isPublicPath(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authorizationHeader = request.getHeader("Authorization");
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            // Not authenticated -> let Spring Security decide (it will 401 for protected routes)
             filterChain.doFilter(request, response);
             return;
         }
@@ -67,9 +79,33 @@ public class JwtFilterRequest extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (Exception e) {
-            // never 500 on auth parsing; treat as unauthorized
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired JWT token");
         }
+    }
+
+    private boolean isPublicPath(String path) {
+        // Stripe
+        if (path.startsWith("/stripe/v1/")) return true;
+
+        // School endpoints used on register page
+        if (path.startsWith("/school/v1/search")) return true;
+        if (path.startsWith("/school/v1/newSchool")) return true;
+        if (path.startsWith("/school/v1/all")) return true;
+
+        // Auth / login / oauth routes
+        if (path.startsWith("/login")) return true;
+        if (path.startsWith("/oauth2/")) return true;
+        if (path.startsWith("/error")) return true;
+
+        // Any other public pages you listed in SecurityConfig
+        if (path.startsWith("/register")) return true;
+        if (path.startsWith("/contact-us")) return true;
+        if (path.startsWith("/auth")) return true;
+        if (path.startsWith("/forgot-password")) return true;
+        if (path.startsWith("/reset-password")) return true;
+
+        // Your template endpoint
+        return path.startsWith("/assignments/v1/templates");
     }
 }

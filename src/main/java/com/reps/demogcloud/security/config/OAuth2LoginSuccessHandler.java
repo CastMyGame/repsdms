@@ -37,7 +37,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final Environment env;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final GoogleOAuthTokenStore tokenStore;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
