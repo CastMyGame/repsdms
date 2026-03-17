@@ -5,8 +5,8 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.5.5</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<version>3.5.11</version>
+		<relativePath/>
 	</parent>
 	<groupId>com.reps</groupId>
 	<artifactId>demo-gcloud</artifactId>
@@ -21,21 +21,21 @@
 			<dependency>
 				<groupId>com.google.cloud</groupId>
 				<artifactId>spring-cloud-gcp-dependencies</artifactId>
-				<version>5.10.0</version>
+				<version>7.3.0</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-vault-dependencies</artifactId>
-				<version>4.2.0</version>
+				<version>5.0.1</version>
 				<scope>import</scope>
 				<type>pom</type>
 			</dependency>
 			<dependency>
 				<groupId>com.google.cloud</groupId>
 				<artifactId>libraries-bom</artifactId>
-				<version>26.72.0</version> <!-- or latest -->
+				<version>26.72.0</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -121,12 +121,10 @@
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-vault-config</artifactId>
-			<version>4.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-vault-config-consul</artifactId>
-			<version>4.2.0</version> <!-- Use the latest compatible version -->
 		</dependency>
 		<dependency>
 			<groupId>com.google.cloud</groupId>
