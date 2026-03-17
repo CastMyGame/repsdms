@@ -35,7 +35,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final JwtUtils jwtUtils;
     private final UserService userService;
     private final Environment env;
-    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final java.util.Optional<OAuth2AuthorizedClientService> authorizedClientService;
     private final GoogleOAuthTokenStore tokenStore;
     private final ObjectMapper objectMapper;
     private final StudentRepository studentRepository;
@@ -158,8 +158,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private void storeGoogleTokens(Authentication authentication, UserModel userModel) {
         try {
+            if (authorizedClientService.isEmpty()) {
+                return;
+            }
+
             OAuth2AuthorizedClient authorizedClient =
-                    authorizedClientService.loadAuthorizedClient("google", authentication.getName());
+                    authorizedClientService.get().loadAuthorizedClient("google", authentication.getName());
 
             if (authorizedClient != null && authorizedClient.getAccessToken() != null) {
                 tokenStore.storeToken(

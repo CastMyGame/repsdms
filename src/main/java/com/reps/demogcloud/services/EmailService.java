@@ -34,10 +34,6 @@ public class EmailService {
         emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, languageCode);
     }
 
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
-        emailSenderService.sendHtmlEmail(templateName, toEmail, subject, templateModel);
-    }
-
     @Async
     public void sendEmail(String toEmail, String subject, String msg, String languageCode) throws MessagingException {
         emailSenderService.sendEmail(toEmail, subject, msg, languageCode);
@@ -73,11 +69,6 @@ public class EmailService {
     @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
         emailNotificationService.sendClassAnnouncement(request);
-    }
-
-    @Async
-    public void sendPositiveShoutOut(String toEmail, String studentName) {
-        emailNotificationService.sendPositiveShoutOut(toEmail, studentName);
     }
 
     public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService) throws MessagingException {

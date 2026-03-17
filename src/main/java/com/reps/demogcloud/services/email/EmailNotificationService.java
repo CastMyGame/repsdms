@@ -49,17 +49,6 @@ public class EmailNotificationService {
     }
 
     @Async
-    public void sendPositiveShoutOut(String toEmail, String studentName) {
-        try {
-            emailSenderService.sendHtmlEmail("positive-shout-out", toEmail,
-                    "Positive Shout out for " + studentName,
-                    java.util.Map.of("studentName", studentName));
-        } catch (Exception e) {
-            log.error("Failed to send positive shoutout: {}", e.getMessage());
-        }
-    }
-
-    @Async
     public void sendContactUsMail(ContactUsRequest request) {
         emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage(), request.getPreferredLanguage());
     }

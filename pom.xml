@@ -53,10 +53,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-log4j2</artifactId> <!-- or spring-boot-starter-logback -->
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		<dependency>
@@ -67,11 +63,6 @@
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
 			<version>0.11.1</version> <!-- Use the correct version -->
-		</dependency>
-		<dependency>
-			<groupId>joda-time</groupId>
-			<artifactId>joda-time</artifactId>
-			<version>2.12.5</version>
 		</dependency>
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -112,12 +103,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
-			<version>2.5.5</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>
-			<version>2.15.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.twilio.sdk</groupId>
@@ -140,18 +129,8 @@
 			<version>4.2.0</version> <!-- Use the latest compatible version -->
 		</dependency>
 		<dependency>
-			<groupId>org.thymeleaf</groupId>
-			<artifactId>thymeleaf-spring5</artifactId>
-			<version>3.0.15.RELEASE</version>
-		</dependency>
-		<dependency>
 			<groupId>com.google.cloud</groupId>
 			<artifactId>google-cloud-translate</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.google.cloud</groupId>
-			<artifactId>google-cloud-translate</artifactId>
-			<version>2.56.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.stripe</groupId>
