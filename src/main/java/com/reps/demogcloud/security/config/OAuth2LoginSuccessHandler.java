@@ -8,8 +8,9 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.AuthenticationResponse;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
+import com.reps.demogcloud.security.services.CustomUserDetailsService;
 import com.reps.demogcloud.security.services.GoogleOAuthTokenStore;
-import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
@@ -21,9 +22,9 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +34,8 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtils jwtUtils;
-    private final UserService userService;
+    private final UserAccountService userAccountService;
+    private final CustomUserDetailsService customUserDetailsService;
     private final Environment env;
     private final java.util.Optional<OAuth2AuthorizedClientService> authorizedClientService;
     private final GoogleOAuthTokenStore tokenStore;
@@ -53,7 +55,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         // Load user from database to get full user details
-        UserModel userModel = userService.loadUserModelByUsername(email);
+        UserModel userModel = userAccountService.loadUserModelByUsername(email);
         if (userModel == null) {
             // This will land in your failure handler
             throw new ServletException("No account found for " + email + ". Please contact your school/admin.");
@@ -105,7 +107,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             throw new ServletException("No valid role assigned for " + email + ".");
         }
 
-        UserDetails userDetails = userService.loadUserByUsername(email);
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
 
         // Persist Google OAuth tokens for Gmail PoC
         storeGoogleTokens(authentication, userModel);

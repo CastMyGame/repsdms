@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.email.ClassAnnouncementRequest;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
@@ -17,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.util.*;
 
 @Slf4j

@@ -12,10 +12,8 @@ import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
 import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
 
-import com.reps.demogcloud.utils.PunishmentUtils;
 import com.reps.demogcloud.utils.StudentUtils;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -30,7 +28,7 @@ import org.springframework.stereotype.Service;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 
 @Service
 @Slf4j

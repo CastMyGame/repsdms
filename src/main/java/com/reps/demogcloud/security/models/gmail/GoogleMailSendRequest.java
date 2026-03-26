@@ -1,7 +1,7 @@
 package com.reps.demogcloud.security.models.gmail;
 import java.util.List;
 import lombok.Data;
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class GoogleMailSendRequest {

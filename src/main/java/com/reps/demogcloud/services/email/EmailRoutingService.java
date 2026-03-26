@@ -10,15 +10,14 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Email routing service that can send emails via either Gmail SMTP or Gmail API
  * based on configuration, email type (user vs system), and availability of user OAuth tokens.
- * 
  * Routing Logic:
  * - User-initiated emails: Can use Gmail API if user has OAuth token and feature flag enabled
  * - System/scheduled emails: Always use SMTP (configurable)

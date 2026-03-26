@@ -6,7 +6,7 @@ import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.services.UserAccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,13 +15,13 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class UserContextService {
-    private final UserService userService;
+    private final UserAccountService userAccountService;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
     public String getCurrentUserSchool() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserModel user = userService.loadUserModelByUsername(auth.getName());
+        UserModel user = userAccountService.loadUserModelByUsername(auth.getName());
 
         if (user.getRoles().stream().anyMatch(r -> r.getRole().equals("STUDENT"))) {
             Student student = studentRepository.findByStudentEmailIgnoreCase(user.getUsername());
@@ -44,7 +44,7 @@ public class UserContextService {
 
     public boolean isCurrentUserStudent() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserModel user = userService.loadUserModelByUsername(auth.getName());
+        UserModel user = userAccountService.loadUserModelByUsername(auth.getName());
         return user.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getRole()));
     }
 

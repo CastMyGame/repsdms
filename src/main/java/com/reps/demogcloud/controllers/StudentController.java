@@ -2,18 +2,16 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
-import com.reps.demogcloud.models.guidance.GuidanceResponse;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.student.*;
 import com.reps.demogcloud.services.StudentService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.mail.MessagingException;
-import javax.validation.Valid;
+import jakarta.mail.MessagingException;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -216,7 +214,7 @@ public class StudentController {
     }
 
     @PutMapping("/notes/{id}")
-    public ResponseEntity<Student> updateGuidance(@PathVariable String id, @RequestBody ThreadEvent event) throws MessagingException, IOException, InterruptedException {
+    public ResponseEntity<Student> updateGuidance(@PathVariable String id, @RequestBody ThreadEvent event) {
         var message = studentService.updateStudentNotes(id,event);
 
         return ResponseEntity

@@ -1,20 +1,16 @@
 package com.reps.demogcloud.security.controllers;
 
-
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import com.reps.demogcloud.data.PasswordResetTokenRepository;
-import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.ResetPasswordRequest;
-import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.*;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
-import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.services.CustomUserDetailsService;
+import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.security.utils.TokenStatus;
 import com.reps.demogcloud.services.EmailService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,14 +21,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import javax.mail.MessagingException;
-import javax.servlet.http.HttpServletRequest;
-import java.awt.desktop.SystemEventListener;
+import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.*;
 
 @CrossOrigin(
@@ -44,26 +35,25 @@ import java.util.*;
 )
 
 @RestController
+@RequiredArgsConstructor
 public class AuthControllers {
 
-    @Autowired
-    EmailService emailService;
-    @Autowired
-    UserService userService;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtUtils jwtUtils;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private StudentRepository studentRepository;
 
-    @Autowired
-    private PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final UserAccountService userAccountService;
+
+    private final CustomUserDetailsService customUserDetailsService;
+
+    private final PasswordEncoder passwordEncoder;
+
+    private final JwtUtils jwtUtils;
+
+    private final UserRepository userRepository;
+
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+
+    private final AuthenticationManager authenticationManager;
 
 
 
@@ -130,11 +120,11 @@ public class AuthControllers {
         }catch (Exception e){
             return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username,null));
         }
-        UserDetails loadedUser = userService.loadUserByUsername(username);
+        UserDetails loadedUser = customUserDetailsService.loadUserByUsername(username);
         String generatedToken = jwtUtils.generateToken(loadedUser);
 
         // Fetch additional user-related details (e.g., UserModel) based on the username
-        UserModel userModel = userService.loadUserModelByUsername(username);
+        UserModel userModel = userAccountService.loadUserModelByUsername(username);
 
         // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
@@ -144,7 +134,7 @@ public class AuthControllers {
 
     @PostMapping("/users/create/{school}")
     private ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school){
-        List<UserModel> createdUsers = userService.createUsersForSchool(school);
+        List<UserModel> createdUsers = userAccountService.createUsersForSchool(school);
         return ResponseEntity.ok(createdUsers);
     }
 
@@ -249,7 +239,7 @@ public class AuthControllers {
 
     @PostMapping("/contact-us")
     public ResponseEntity<ContactUsResponse> contactUs (@RequestBody ContactUsRequest request) {
-       ContactUsResponse response = userService.contactUs(request);
+        ContactUsResponse response = userAccountService.contactUs(request);
 
         return ResponseEntity.ok(response);
     }

@@ -6,7 +6,7 @@ import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.services.UserService;
+import com.reps.demogcloud.security.services.UserAccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,13 +15,13 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class SchoolUtils {
-    private final UserService userService;
+    private final UserAccountService userAccountService;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
     public String fetchSchoolName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserModel userModel = userService.loadUserModelByUsername(authentication.getName());
+        UserModel userModel = userAccountService.loadUserModelByUsername(authentication.getName());
         if (authentication.getPrincipal() == null) {
             throw new IllegalArgumentException("Authentication or principal is missing.");
         }
