@@ -5,7 +5,14 @@ steps:
 
   - id: "Deploy"
     name: "gcr.io/cloud-builders/gcloud"
-    args: ["app", "deploy", "app.yaml", "--quiet"]
+    args:
+      [
+        "app",
+        "deploy",
+        "app.yaml",
+        "--project=repsdev31",
+        "--quiet"
+      ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
