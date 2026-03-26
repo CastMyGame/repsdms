@@ -6,11 +6,10 @@ import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.services.PunishmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.util.List;
 
 @Slf4j

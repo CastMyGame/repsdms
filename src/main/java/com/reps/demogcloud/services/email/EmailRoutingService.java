@@ -9,19 +9,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.context.Context;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * Email routing service that can send emails via either Gmail SMTP or Gmail API
  * based on configuration, email type (user vs system), and availability of user OAuth tokens.
- * 
  * Routing Logic:
  * - User-initiated emails: Can use Gmail API if user has OAuth token and feature flag enabled
  * - System/scheduled emails: Always use SMTP (configurable)
@@ -32,15 +28,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class EmailRoutingService {
 
-    private final Environment env;
-    private final JavaMailSender javaMailSender;
-    private final SpringTemplateEngine templateEngine;
-    private final GoogleMailService googleMailService;
-    private final GoogleOAuthTokenStore tokenStore;
-
     private static final String PROVIDER_SMTP = "smtp";
     private static final String PROVIDER_GMAIL_API = "gmail-api";
     private static final String PROVIDER_HYBRID = "hybrid";
+    private final Environment env;
+    private final JavaMailSender javaMailSender;
+    private final GoogleMailService googleMailService;
+    private final GoogleOAuthTokenStore tokenStore;
 
     /**
      * Get the configured email provider mode
@@ -147,26 +141,6 @@ public class EmailRoutingService {
         helper.setText(msg, true);
         javaMailSender.send(message);
         log.debug("Email sent via SMTP to {}", toEmail);
-    }
-
-    /**
-     * Send HTML email using template
-     */
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, 
-                             Map<String, Object> templateModel, String fromEmail, boolean isUserInitiated) throws MessagingException {
-        Context context = new Context();
-        context.setVariables(templateModel);
-        String htmlContent = templateEngine.process(templateName, context);
-        
-        sendEmail(toEmail, subject, htmlContent, fromEmail, isUserInitiated);
-    }
-
-    /**
-     * Send HTML email (defaults to system email)
-     */
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, 
-                             Map<String, Object> templateModel, String fromEmail) throws MessagingException {
-        sendHtmlEmail(templateName, toEmail, subject, templateModel, fromEmail, false);
     }
 
     /**

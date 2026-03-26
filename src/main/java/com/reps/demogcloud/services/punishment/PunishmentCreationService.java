@@ -1,9 +1,5 @@
 package com.reps.demogcloud.services.punishment;
 
-import com.reps.demogcloud.data.InfractionRepository;
-import com.reps.demogcloud.data.PunishRepository;
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.assignments.AssignmentTemplate;
 import com.reps.demogcloud.models.enums.InfractionType;
 import com.reps.demogcloud.models.infraction.Infraction;
@@ -18,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

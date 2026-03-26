@@ -15,7 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,17 +46,6 @@ public class EmailNotificationService {
         }
         List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
         emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters,sender, languageCode);
-    }
-
-    @Async
-    public void sendPositiveShoutOut(String toEmail, String studentName) {
-        try {
-            emailSenderService.sendHtmlEmail("positive-shout-out", toEmail,
-                    "Positive Shout out for " + studentName,
-                    java.util.Map.of("studentName", studentName));
-        } catch (Exception e) {
-            log.error("Failed to send positive shoutout: {}", e.getMessage());
-        }
     }
 
     @Async

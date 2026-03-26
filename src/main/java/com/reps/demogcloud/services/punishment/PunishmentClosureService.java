@@ -5,7 +5,7 @@ import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.punishment.StudentAnswer;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.util.List;
 
 public interface PunishmentClosureService {

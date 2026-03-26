@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.email.ClassAnnouncementRequest;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
@@ -17,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.util.*;
 
 @Slf4j
@@ -32,10 +31,6 @@ public class EmailService {
 
     public void createEmailAndSend(String parentEmail, String teacherEmail, String studentEmail, List<String> spotters, String msg, String subject, String languageCode) throws MessagingException {
         emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, languageCode);
-    }
-
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
-        emailSenderService.sendHtmlEmail(templateName, toEmail, subject, templateModel);
     }
 
     @Async
@@ -73,11 +68,6 @@ public class EmailService {
     @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
         emailNotificationService.sendClassAnnouncement(request);
-    }
-
-    @Async
-    public void sendPositiveShoutOut(String toEmail, String studentName) {
-        emailNotificationService.sendPositiveShoutOut(toEmail, studentName);
     }
 
     public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService) throws MessagingException {

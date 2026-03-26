@@ -15,7 +15,7 @@ import com.reps.demogcloud.utils.PunishmentUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
+import jakarta.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;

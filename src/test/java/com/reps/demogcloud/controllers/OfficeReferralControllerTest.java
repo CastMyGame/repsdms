@@ -5,29 +5,20 @@ import com.reps.demogcloud.exceptions.GlobalExceptionHandler;
 import com.reps.demogcloud.models.officeReferral.*;
 import com.reps.demogcloud.security.config.SecurityConfig;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
-import com.reps.demogcloud.security.services.UserService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.services.OfficeReferralService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -39,12 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(
         controllers = OfficeReferralController.class,
-        excludeAutoConfiguration = {
-                SecurityAutoConfiguration.class,
-                SecurityFilterAutoConfiguration.class,
-                OAuth2ClientAutoConfiguration.class,
-                OAuth2ResourceServerAutoConfiguration.class
-        },
         excludeFilters = {
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class),
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtFilterRequest.class)
@@ -55,16 +40,13 @@ class OfficeReferralControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private OfficeReferralService officeReferralService;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
-    private UserService userService;
-
-    @MockBean
+    @MockitoBean
     private JwtUtils jwtUtils;
 
     private OfficeReferral referral;

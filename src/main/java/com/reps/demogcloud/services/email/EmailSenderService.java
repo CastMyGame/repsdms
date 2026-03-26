@@ -1,21 +1,14 @@
 package com.reps.demogcloud.services.email;
 
-import com.reps.demogcloud.services.translation.TranslationService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.context.Context;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -23,24 +16,7 @@ import java.util.Map;
 public class EmailSenderService {
 
     private final JavaMailSender javaMailSender;
-    private final SpringTemplateEngine templateEngine;
     private final EmailRoutingService emailRoutingService;
-
-    public void sendHtmlEmail(String templateName, String toEmail, String subject, Map<String, Object> templateModel) throws MessagingException {
-        emailRoutingService.sendHtmlEmail(templateName, toEmail, subject, templateModel, null);
-    }
-
-    /**
-     * Send HTML email with optional sender email (for Gmail API)
-     */
-    public void sendHtmlEmail(String templateName, String toEmail, String subjectLocalized,
-                              Map<String, Object> templateModel, String fromEmail, String languageCode) throws MessagingException {
-        Context context = new Context();
-        context.setVariables(templateModel);
-        String htmlLocalized = templateEngine.process(templateName, context);
-
-        emailRoutingService.sendEmail(toEmail, subjectLocalized, htmlLocalized, fromEmail);
-    }
 
     public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
         emailRoutingService.sendEmail(toEmail, subject, msg, null);

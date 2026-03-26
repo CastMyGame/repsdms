@@ -1,10 +1,8 @@
 package com.reps.demogcloud.utils;
 
 import com.reps.demogcloud.data.EmployeeRepository;
-import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.Employee;
-import com.reps.demogcloud.security.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

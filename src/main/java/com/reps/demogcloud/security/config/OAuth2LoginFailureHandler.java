@@ -6,9 +6,9 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +21,7 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException, ServletException {
+                                        AuthenticationException exception) throws IOException {
         
         // Get error message
         String errorMessage = exception.getMessage() != null ? exception.getMessage() : 
@@ -32,7 +32,7 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
         
         if (redirectUrl != null && !redirectUrl.isEmpty()) {
             // Redirect to frontend with error message as query parameter
-            String encodedError = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8.toString());
+            String encodedError = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
             String redirectWithError = redirectUrl + "?error=" + encodedError + "&errorType=UNAUTHORIZED";
             getRedirectStrategy().sendRedirect(request, response, redirectWithError);
         } else {
