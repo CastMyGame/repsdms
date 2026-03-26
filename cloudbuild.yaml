@@ -9,7 +9,7 @@ steps:
       [
         "app",
         "deploy",
-        ""src/main/appengine/app.yaml"",
+        "src/main/appengine/app.yaml",
         "--project=repsdev31",
         "--quiet"
       ]
