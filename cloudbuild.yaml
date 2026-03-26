@@ -1,18 +1,7 @@
 steps:
-  - id: "Build"
-    name: "gcr.io/cloud-builders/mvn"
-    args: ["-DskipTests", "package"]
-
   - id: "Deploy"
     name: "gcr.io/cloud-builders/gcloud"
-    args:
-      [
-        "app",
-        "deploy",
-        "src/main/appengine/app.yaml",
-        "--project=repsdev31",
-        "--quiet"
-      ]
+    args: ["app", "deploy", "pom.xml", "--quiet"]
 
 options:
   logging: CLOUD_LOGGING_ONLY
