@@ -1,8 +1,11 @@
 package com.reps.demogcloud.models.trackedBehavior;
 
+import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.List;
 
+@Getter
 public enum TrackedBehaviorType {
 
     PHONE_OUT("PHONE_OUT", "Phone Out"),
@@ -34,11 +37,4 @@ public enum TrackedBehaviorType {
         return Arrays.asList(values());
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
 }
