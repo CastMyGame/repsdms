@@ -1,388 +1,465 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
+import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
-import com.reps.demogcloud.models.school.School;
-import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.punishment.PunishmentResponse;
+import com.reps.demogcloud.models.punishment.StudentAnswer;
+import com.reps.demogcloud.services.punishment.PunishmentClosureService;
+import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
-import com.reps.demogcloud.utils.PunishmentUtils;
-import org.junit.jupiter.api.Disabled;
+import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
+import com.reps.demogcloud.utils.StudentUtils;
+import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.mongodb.core.MongoTemplate;
 
-import java.util.*;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@Disabled
-public class PunishmentServiceTest {
+class PunishmentServiceTest {
+
     @Mock
-    private PunishRepository punishRepository;
+    private PunishmentCreationService punishmentCreationService;
+
+    @Mock
+    private PunishmentClosureService punishmentClosureService;
+
     @Mock
     private PunishmentQueryService punishmentQueryService;
+
+    @Mock
+    private PunishmentUpdateService punishmentUpdateService;
+
+    @Mock
+    private StudentRepository studentRepository;
+
+    @Mock
+    private PunishRepository punishRepository;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private EmployeeRepository employeeRepository;
+
+    @Mock
+    private StudentUtils studentUtils;
+
     @InjectMocks
     private PunishmentService punishmentService;
 
-    // Helper to create a base request
-    private PunishmentFormRequest getBaseRequest() {
-        PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setStudentEmail("student@example.com");
-        request.setTeacherEmail("teacher@example.com");
-        request.setInfractionName("Student Guidance Referral");
-        request.setInfractionDescription("Infraction description");
-        request.setInfractionPeriod("3");
-        request.setAdminReferral(true);
-        request.setGuidanceDescription("Guidance notes here");
-        request.setPhoneLogDescription("Phone call notes");
-        request.setCurrency(0);
-        return request;
-    }
+    @Test
+    void findByStudentEmailAndInfraction_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
 
-    // Helper to create a mock student with basic setup
-    private Student getMockStudent() {
-        Student student = new Student();
-        student.setStudentEmail("student@example.com");
-        student.setSchool("Test School");
-        student.setNotesArray(new java.util.ArrayList<>());
-        return student;
-    }
+        when(punishmentQueryService.findByStudentEmailAndInfraction("student@example.com", "INF-1"))
+                .thenReturn(punishments);
 
-    // Helper to create a mock school
-    private School getMockSchool() {
-        School school = new School();
-        school.setSchoolName("Test School");
-        school.setMaxPunishLevel(4);
-        return school;
-    }
+        List<Punishment> result =
+                punishmentService.findByStudentEmailAndInfraction("student@example.com", "INF-1");
 
-    private List<Punishment> getClosedPunishments() {
-        Punishment p = new Punishment();
-        p.setClosedTimes(3);
-        return List.of(p);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findByStudentEmailAndInfraction("student@example.com", "INF-1");
     }
 
     @Test
-    void testFindByStudentEmailAndInfraction_ReturnsFilteredList() {
-        String email = "student@example.com";
-        String infractionId = "inf123";
+    void findByStudentEmailAndInfraction_shouldPropagateResourceNotFoundException() {
+        when(punishmentQueryService.findByStudentEmailAndInfraction("student@example.com", "INF-1"))
+                .thenThrow(new ResourceNotFoundException("not found"));
 
-        Punishment p1 = new Punishment();
-        p1.setArchived(false);
-
-        Punishment p2 = new Punishment();
-        p2.setArchived(true); // should be excluded
-
-        when(punishRepository.findByStudentEmailAndInfractionId(email, infractionId))
-                .thenReturn(List.of(p1, p2));
-
-        List<Punishment> result = punishmentService.findByStudentEmailAndInfraction(email, infractionId);
-
-        assertEquals(1, result.size());
-        assertFalse(result.get(0).isArchived());
-
-        verify(punishRepository).findByStudentEmailAndInfractionId(email, infractionId);
-    }
-
-    @Test
-    void testFindByStudentEmailAndInfraction_ThrowsResourceNotFoundException() {
-        String email = "unknown@example.com";
-        String infractionId = "inf123";
-
-        when(punishRepository.findByStudentEmailAndInfractionId(email, infractionId))
-                .thenReturn(Collections.emptyList());
-
-        assertThrows(ResourceNotFoundException.class, () ->
-                punishmentService.findByStudentEmailAndInfraction(email, infractionId)
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> punishmentService.findByStudentEmailAndInfraction("student@example.com", "INF-1")
         );
 
-        verify(punishRepository).findByStudentEmailAndInfractionId(email, infractionId);
+        verify(punishmentQueryService).findByStudentEmailAndInfraction("student@example.com", "INF-1");
     }
 
     @Test
-    void testFindAll_ReturnsUnarchivedPunishments() {
-        Punishment p1 = new Punishment();
-        p1.setArchived(false);
+    void findByStatus_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
 
-        when(punishRepository.findByArchived(false)).thenReturn(List.of(p1));
+        when(punishmentQueryService.findByStatus("OPEN")).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.findByStatus("OPEN");
+
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findByStatus("OPEN");
+    }
+
+    @Test
+    void findByStatus_shouldPropagateResourceNotFoundException() {
+        when(punishmentQueryService.findByStatus("OPEN"))
+                .thenThrow(new ResourceNotFoundException("not found"));
+
+        assertThrows(ResourceNotFoundException.class, () -> punishmentService.findByStatus("OPEN"));
+        verify(punishmentQueryService).findByStatus("OPEN");
+    }
+
+    @Test
+    void findByPunishmentId_shouldDelegateToQueryService() {
+        Punishment punishment = new Punishment();
+
+        when(punishmentQueryService.findByPunishmentId("P-1")).thenReturn(punishment);
+
+        Punishment result = punishmentService.findByPunishmentId("P-1");
+
+        assertSame(punishment, result);
+        verify(punishmentQueryService).findByPunishmentId("P-1");
+    }
+
+    @Test
+    void findByPunishmentId_shouldPropagateResourceNotFoundException() {
+        when(punishmentQueryService.findByPunishmentId("P-1"))
+                .thenThrow(new ResourceNotFoundException("not found"));
+
+        assertThrows(ResourceNotFoundException.class, () -> punishmentService.findByPunishmentId("P-1"));
+        verify(punishmentQueryService).findByPunishmentId("P-1");
+    }
+
+    @Test
+    void findAll_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.findAll()).thenReturn(punishments);
 
         List<Punishment> result = punishmentService.findAll();
 
-        assertEquals(1, result.size());
-        assertFalse(result.get(0).isArchived());
-
-        verify(punishRepository).findByArchived(false);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findAll();
     }
 
     @Test
-    void testFindByStatus_ReturnsPunishments() {
-        String status = "IN_PROGRESS";
-        Punishment p1 = new Punishment();
+    void findAllPunishmentArchived_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.findAllPunishmentArchived(true)).thenReturn(punishments);
 
-        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status))
-                .thenReturn(List.of(p1));
+        List<Punishment> result = punishmentService.findAllPunishmentArchived(true);
 
-        List<Punishment> result = punishmentService.findByStatus(status);
-
-        assertEquals(1, result.size());
-        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findAllPunishmentArchived(true);
     }
 
     @Test
-    void testFindByStatus_ThrowsResourceNotFoundException() {
-        String status = "INVALID_STATUS";
+    void getAllOpenAssignments_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.getAllOpenAssignments()).thenReturn(punishments);
 
-        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status))
-                .thenReturn(Collections.emptyList());
+        List<Punishment> result = punishmentService.getAllOpenAssignments();
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                punishmentService.findByStatus(status)
-        );
-
-        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchoolAndStatus(false, status);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).getAllOpenAssignments();
     }
 
     @Test
-    void testFindByPunishmentId_ReturnsPunishment() {
-        String punishmentId = "pun123";
-        Punishment p = new Punishment();
-        p.setArchived(false);
+    void getAllPunishmentsForStudents_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.findAllForStudent("student@example.com")).thenReturn(punishments);
 
-        when(punishRepository.findByPunishmentId(punishmentId)).thenReturn(p);
+        List<Punishment> result = punishmentService.getAllPunishmentsForStudents("student@example.com");
 
-        Punishment result = punishmentService.findByPunishmentId(punishmentId);
-
-        assertEquals(p, result);
-        verify(punishRepository).findByPunishmentId(punishmentId);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findAllForStudent("student@example.com");
     }
 
     @Test
-    void testFindByPunishmentId_ThrowsWhenNotFound() {
-        String punishmentId = "missingId";
+    void getAllPunishmentByStudentEmail_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.getAllPunishmentByStudentEmail("student@example.com")).thenReturn(punishments);
 
-        when(punishRepository.findByPunishmentId(punishmentId)).thenReturn(null);
+        List<Punishment> result = punishmentService.getAllPunishmentByStudentEmail("student@example.com");
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                punishmentService.findByPunishmentId(punishmentId)
-        );
-
-        verify(punishRepository).findByPunishmentId(punishmentId);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).getAllPunishmentByStudentEmail("student@example.com");
     }
 
     @Test
-    void testFindByPunishmentId_ThrowsWhenArchived() {
-        String punishmentId = "archivedId";
-        Punishment p = new Punishment();
-        p.setArchived(true);
+    void getAllPunishmentForStudent_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.getAllPunishmentForStudent("student@example.com")).thenReturn(punishments);
 
-        when(punishRepository.findByPunishmentId(punishmentId)).thenReturn(p);
+        List<Punishment> result = punishmentService.getAllPunishmentForStudent("student@example.com");
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                punishmentService.findByPunishmentId(punishmentId)
-        );
-
-        verify(punishRepository).findByPunishmentId(punishmentId);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).getAllPunishmentForStudent("student@example.com");
     }
 
     @Test
-    void testFindAllSchool_ReturnsUnarchivedPunishments() {
-        Punishment p1 = new Punishment();
-        p1.setArchived(false);
+    void getTeacherResponse_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        List<TeacherDTO> response = List.of(mock(TeacherDTO.class));
 
-        when(punishmentQueryService.FetchPunishmentDataByArchivedAndSchool(false)).thenReturn(List.of(p1));
+        when(punishmentQueryService.getTeacherResponse(punishments)).thenReturn(response);
+
+        List<TeacherDTO> result = punishmentService.getTeacherResponse(punishments);
+
+        assertSame(response, result);
+        verify(punishmentQueryService).getTeacherResponse(punishments);
+    }
+
+    @Test
+    void findAllSchool_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.findAllSchool()).thenReturn(punishments);
 
         List<Punishment> result = punishmentService.findAllSchool();
 
-        assertEquals(1, result.size());
-        assertFalse(result.get(0).isArchived());
-        verify(punishmentQueryService).FetchPunishmentDataByArchivedAndSchool(false);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findAllSchool();
     }
 
     @Test
-    void testFindAllPunishmentsByStudentEmail_ReturnsUnarchivedPunishments() {
-        Punishment p1 = new Punishment();
-        p1.setArchived(false);
-
-        when(punishmentQueryService.LoggedInStudentFetchPunishmentDataByArchivedAndSchool(false))
-                .thenReturn(List.of(p1));
+    void findAllPunishmentsByStudentEmail_shouldDelegateToQueryService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentQueryService.findAllPunishmentsByStudentEmail()).thenReturn(punishments);
 
         List<Punishment> result = punishmentService.findAllPunishmentsByStudentEmail();
 
-        assertEquals(1, result.size());
-        assertFalse(result.get(0).isArchived());
-        verify(punishmentQueryService).LoggedInStudentFetchPunishmentDataByArchivedAndSchool(false);
+        assertSame(punishments, result);
+        verify(punishmentQueryService).findAllPunishmentsByStudentEmail();
     }
 
     @Test
-    void createNewPunishForm_ThrowsWhenNoDescription() {
+    void createNewPunishForm_shouldDelegateToCreationService() throws MessagingException {
         PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setInfractionDescription("");
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
-            punishmentService.createNewPunishForm(request);
-        });
-        assertEquals("Infraction description is required.", thrown.getMessage());
+        PunishmentResponse response = mock(PunishmentResponse.class);
+
+        when(punishmentCreationService.createNewPunishForm(request)).thenReturn(response);
+
+        PunishmentResponse result = punishmentService.createNewPunishForm(request);
+
+        assertSame(response, result);
+        verify(punishmentCreationService).createNewPunishForm(request);
     }
 
-//    @Test
-//    void createNewPunishForm_Level4_TriggersOfficeReferralAndClosesPunishment() throws MessagingException {
-//        // Arrange
-//        PunishmentFormRequest request = mockPunishRequest();
-//        request.setInfractionName("Some Infraction");
-//        request.setInfractionDescription("Some description");
-//        request.setStudentEmail("student@example.com");
-//
-//        Punishment closed1 = new Punishment();
-//        closed1.setClosedTimes(1);
-//        Punishment closed2 = new Punishment();
-//        closed2.setClosedTimes(2);
-//        Punishment closed3 = new Punishment();
-//        closed3.setClosedTimes(3);
-//
-//        Student student = new Student();
-//        student.setStudentEmail("student@example.com");
-//        student.setSchool("Test School");
-//        student.setFirstName("John");
-//        student.setLastName("Doe");
-//        student.setParentEmail("parent@example.com");
-//        student.setSpotters(List.of("spotter1@example.com"));
-//
-//        when(studentRepository.findByStudentEmailIgnoreCase(anyString())).thenReturn(student);
-//
-//        School school = new School();
-//        school.setMaxPunishLevel(4);
-//        school.setSchoolName("Test School");
-//        when(schoolRepository.findSchoolBySchoolName(anyString())).thenReturn(school);
-//
-//        // Simulate closed punishments so that levelCheck returns "4"
-//        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(anyString(), anyString(), eq("CLOSED")))
-//                .thenReturn(List.of(closed1, closed2, closed3));
-//
-//        // Mock infraction fetch for level 4
-//        Infraction infraction = new Infraction();
-//        infraction.setInfractionLevel("4");
-//        infraction.setInfractionName("Some Infraction");
-//        infraction.setInfractionId("1L");
-//        when(infractionRepository.findByInfractionNameAndInfractionLevel(eq("Some Infraction"), anyString()))
-//                .thenReturn(infraction);
-//        // No open punishments found
-//        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(anyString(), anyString(), eq("OPEN"))).thenReturn(Collections.emptyList());
-//        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(anyString(), anyString(), eq("PENDING"))).thenReturn(Collections.emptyList());
-//
-//        // Mock office referral service call
-//        when(officeReferralService.createNewOfficeReferral(any())).thenReturn(null);
-//
-//        // Mock punishRepository.save to return saved punishment
-//        when(punishRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
-//
-//        // Act
-//        PunishmentResponse response = punishmentService.createNewPunishForm(request);
-//
-//        // Assert
-//        assertNotNull(response);
-//        verify(officeReferralService, times(1)).createNewOfficeReferral(any());
-//        verify(punishRepository, atLeastOnce()).save(any());
-//        // Verify email service called (sendEmailBasedOnType or sendCFREmailBasedOnType)
-//        verify(emailService, atLeastOnce()).sendEmail(any(), any(), any());
-//    }
-
-//    @Test
-//    void createNewPunishForm_AdminReferral_SetsStatusOpenAndSendsEmail() throws MessagingException {
-//        PunishmentFormRequest request = mockPunishRequest();
-//        request.setAdminReferral(true);
-//        request.setInfractionDescription("Admin referral description");
-//        request.setInfractionName("Some Infraction");
-//
-//        Student student = new Student();
-//        student.setStudentEmail(request.getStudentEmail());
-//        student.setSchool("Test School");
-//        when(studentRepository.findByStudentEmailIgnoreCase(anyString())).thenReturn(student);
-//
-//        School school = new School();
-//        school.setMaxPunishLevel(3);
-//        school.setSchoolName("Test School");
-//        when(schoolRepository.findSchoolBySchoolName(anyString())).thenReturn(school);
-//
-//        Infraction infraction = new Infraction();
-//        infraction.setInfractionName("Some Infraction");
-//        infraction.setInfractionLevel("1");
-//        infraction.setInfractionId("1L");
-//        when(infractionRepository.findByInfractionName(anyString())).thenReturn(infraction);
-//
-//        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(anyString(), anyString(), eq("CLOSED")))
-//                .thenReturn(Collections.emptyList());
-//
-//        when(punishRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
-//
-//        // Act
-//        PunishmentResponse response = punishmentService.createNewPunishForm(request);
-//
-//        // Assert
-//        assertNotNull(response);
-//        verify(punishRepository, times(1)).save(any());
-//        verify(emailService, times(1)).sendEmail(any(), any(), any());
-//    }
-
-//    @Test
-//    void createNewPunishForm_PositiveBehaviorShoutOut_TransfersCurrencyAndSendsEmail() throws MessagingException {
-//        PunishmentFormRequest request = mockPunishRequest();
-//        request.setInfractionName("Positive Behavior Shout Out!");
-//        request.setCurrency(5);
-//        request.setInfractionDescription("Good job!");
-//
-//        Student student = new Student();
-//        student.setStudentEmail(request.getStudentEmail());
-//        student.setSchool("Test School");
-//        when(studentRepository.findByStudentEmailIgnoreCase(anyString())).thenReturn(student);
-//
-//        School school = new School();
-//        school.setMaxPunishLevel(3);
-//        school.setSchoolName("Test School");
-//        when(schoolRepository.findSchoolBySchoolName(anyString())).thenReturn(school);
-//
-//        Infraction infraction = new Infraction();
-//        infraction.setInfractionName("Positive Behavior Shout Out!");
-//        infraction.setInfractionLevel("1");
-//        infraction.setInfractionId("1L");
-////        when(infractionRepository.findByInfractionName(anyString())).thenReturn(infraction);
-//        when(infractionRepository.findByInfractionName(null)).thenReturn(infraction);
-//        when(infractionRepository.findByInfractionName("Positive Behavior Shout Out!")).thenReturn(infraction);
-//
-//
-//        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(anyString(), anyString(), eq("CLOSED")))
-//                .thenReturn(Collections.emptyList());
-//
-//        when(punishRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
-//
-//        // Act
-//        PunishmentResponse response = punishmentService.createNewPunishForm(request);
-//
-//        // Assert
-//        verify(employeeService, times(1)).transferCurrency(any());
-//        verify(punishRepository, times(1)).save(any());
-//        verify(emailService, times(1)).sendEmail(any(), any(), any());
-//        assertNotNull(response);
-//    }
-
-    // Utility method to create a mock request with common fields
-    private PunishmentFormRequest mockPunishRequest() {
+    @Test
+    void createNewPunishForm_shouldPropagateMessagingException() throws MessagingException {
         PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setStudentEmail("student@example.com");
-        request.setTeacherEmail("teacher@example.com");
-        request.setInfractionDescription("Test Infraction");
-        request.setInfractionName("Test Infraction");
-        request.setInfractionPeriod("2nd");
-        request.setCurrency(0);
-        request.setAdminReferral(false);
-        request.setGuidanceDescription("");
-        request.setPhoneLogDescription("");
-        return request;
+
+        when(punishmentCreationService.createNewPunishForm(request))
+                .thenThrow(new MessagingException("mail failed"));
+
+        assertThrows(MessagingException.class, () -> punishmentService.createNewPunishForm(request));
+        verify(punishmentCreationService).createNewPunishForm(request);
+    }
+
+    @Test
+    void createNewPunishFormBulk_shouldDelegateToCreationService() throws MessagingException {
+        List<PunishmentFormRequest> requests = List.of(new PunishmentFormRequest());
+        List<PunishmentResponse> responses = List.of(mock(PunishmentResponse.class));
+
+        when(punishmentCreationService.createNewPunishFormBulk(requests)).thenReturn(responses);
+
+        List<PunishmentResponse> result = punishmentService.createNewPunishFormBulk(requests);
+
+        assertSame(responses, result);
+        verify(punishmentCreationService).createNewPunishFormBulk(requests);
+    }
+
+    @Test
+    void closePunishment_shouldDelegateToClosureService() throws MessagingException {
+        List<StudentAnswer> answers = List.of(mock(StudentAnswer.class));
+        PunishmentResponse response = mock(PunishmentResponse.class);
+
+        when(punishmentClosureService.closePunishment("Tardy", "student@example.com", answers))
+                .thenReturn(response);
+
+        PunishmentResponse result = punishmentService.closePunishment("Tardy", "student@example.com", answers);
+
+        assertSame(response, result);
+        verify(punishmentClosureService).closePunishment("Tardy", "student@example.com", answers);
+    }
+
+    @Test
+    void rejectLevelThree_shouldDelegateToClosureService() throws MessagingException {
+        Punishment punishment = new Punishment();
+        when(punishmentClosureService.rejectLevelThree("P-1")).thenReturn(punishment);
+
+        Punishment result = punishmentService.rejectLevelThree("P-1");
+
+        assertSame(punishment, result);
+        verify(punishmentClosureService).rejectLevelThree("P-1");
+    }
+
+    @Test
+    void closeByPunishmentId_shouldDelegateToClosureService() throws MessagingException {
+        PunishmentResponse response = mock(PunishmentResponse.class);
+        when(punishmentClosureService.closeByPunishmentId("P-1")).thenReturn(response);
+
+        PunishmentResponse result = punishmentService.closeByPunishmentId("P-1");
+
+        assertSame(response, result);
+        verify(punishmentClosureService).closeByPunishmentId("P-1");
+    }
+
+    @Test
+    void archiveRecord_shouldDelegateToClosureService() throws MessagingException {
+        Punishment punishment = new Punishment();
+        when(punishmentClosureService.archiveRecord("P-1", "user1", "reason")).thenReturn(punishment);
+
+        Punishment result = punishmentService.archiveRecord("P-1", "user1", "reason");
+
+        assertSame(punishment, result);
+        verify(punishmentClosureService).archiveRecord("P-1", "user1", "reason");
+    }
+
+    @Test
+    void restoreRecord_shouldDelegateToClosureService() throws MessagingException {
+        Punishment punishment = new Punishment();
+        when(punishmentClosureService.restoreRecord("P-1")).thenReturn(punishment);
+
+        Punishment result = punishmentService.restoreRecord("P-1");
+
+        assertSame(punishment, result);
+        verify(punishmentClosureService).restoreRecord("P-1");
+    }
+
+    @Test
+    void deletePunishment_shouldDeleteAndReturnMessage() {
+        Punishment punishment = new Punishment();
+
+        doNothing().when(punishRepository).delete(punishment);
+
+        String result = punishmentService.deletePunishment(punishment);
+
+        assertEquals("Punishment has been deleted", result);
+        verify(punishRepository).delete(punishment);
+    }
+
+    @Test
+    void deletePunishment_shouldThrowResourceNotFoundException_whenDeleteFails() {
+        Punishment punishment = new Punishment();
+
+        doThrow(new RuntimeException("delete failed")).when(punishRepository).delete(punishment);
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> punishmentService.deletePunishment(punishment)
+        );
+
+        assertEquals("That infraction does not exist", exception.getMessage());
+        verify(punishRepository).delete(punishment);
+    }
+
+    @Test
+    void updateMapIndex_shouldDelegateToUpdateService() {
+        Punishment punishment = new Punishment();
+        when(punishmentUpdateService.updateMapIndex("P-1", 3)).thenReturn(punishment);
+
+        Punishment result = punishmentService.updateMapIndex("P-1", 3);
+
+        assertSame(punishment, result);
+        verify(punishmentUpdateService).updateMapIndex("P-1", 3);
+    }
+
+    @Test
+    void updateTimeCreated_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateTimeCreated()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateTimeCreated();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateTimeCreated();
+    }
+
+    @Test
+    void updateDescriptions_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateDescriptions()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateDescriptions();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateDescriptions();
+    }
+
+    @Test
+    void updateStudentEmails_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateStudentEmails()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateStudentEmails();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateStudentEmails();
+    }
+
+    @Test
+    void updateInfractionName_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateInfractionName()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateInfractionName();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateInfractionName();
+    }
+
+    @Test
+    void updateInfractionLevel_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateInfractionLevel()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateInfractionLevel();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateInfractionLevel();
+    }
+
+    @Test
+    void updateSchools_shouldDelegateToUpdateService() {
+        List<Punishment> punishments = List.of(new Punishment());
+        when(punishmentUpdateService.updateSchools()).thenReturn(punishments);
+
+        List<Punishment> result = punishmentService.updateSchools();
+
+        assertSame(punishments, result);
+        verify(punishmentUpdateService).updateSchools();
+    }
+
+    @Test
+    void alertIssAndDetention_shouldSendDetentionWhenWorkDaysEqualOne_andIssOtherwise() throws MessagingException {
+        Punishment detentionPunishment = new Punishment();
+        detentionPunishment.setTimeCreated(LocalDate.of(2026, 1, 10));
+
+        Punishment issPunishment = new Punishment();
+        issPunishment.setTimeCreated(LocalDate.of(2026, 1, 5));
+
+        when(punishRepository.findByArchivedAndStatus(false, "OPEN"))
+                .thenReturn(List.of(detentionPunishment, issPunishment));
+
+        when(studentUtils.getWorkDaysBetweenTwoDates(eq(LocalDate.of(2026, 1, 10)), any(LocalDate.class)))
+                .thenReturn(1);
+        when(studentUtils.getWorkDaysBetweenTwoDates(eq(LocalDate.of(2026, 1, 5)), any(LocalDate.class)))
+                .thenReturn(2);
+
+        punishmentService.alertIssAndDetention();
+
+        verify(emailService).sendAlertEmail("DETENTION", detentionPunishment, "en");
+        verify(emailService).sendAlertEmail("ISS", issPunishment, "en");
+        verify(punishRepository).findByArchivedAndStatus(false, "OPEN");
+    }
+
+    @Test
+    void alertIssAndDetention_shouldDoNothingWhenNoOpenPunishments() throws MessagingException {
+        when(punishRepository.findByArchivedAndStatus(false, "OPEN")).thenReturn(List.of());
+
+        punishmentService.alertIssAndDetention();
+
+        verify(punishRepository).findByArchivedAndStatus(false, "OPEN");
+        verifyNoInteractions(emailService);
     }
 }
 

@@ -1,20 +1,31 @@
 package com.reps.demogcloud.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.EmployeeRepository;
+import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.TeacherDTO;
 import com.reps.demogcloud.models.employee.Employee;
-import com.reps.demogcloud.models.punishment.*;
+import com.reps.demogcloud.models.punishment.FieldOptionElement;
+import com.reps.demogcloud.models.punishment.Punishment;
+import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
+import com.reps.demogcloud.models.punishment.PunishmentResponse;
+import com.reps.demogcloud.models.punishment.StateFileRequest;
+import com.reps.demogcloud.models.punishment.StateFormBooleanElement;
+import com.reps.demogcloud.models.punishment.StateFormIntElement;
+import com.reps.demogcloud.models.punishment.StateTimeElement;
+import com.reps.demogcloud.models.punishment.StudentAnswer;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.punishment.PunishmentClosureService;
 import com.reps.demogcloud.services.punishment.PunishmentCreationService;
 import com.reps.demogcloud.services.punishment.PunishmentQueryService;
 import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
-
 import com.reps.demogcloud.utils.StudentUtils;
-import lombok.AllArgsConstructor;
+import jakarta.mail.MessagingException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,17 +33,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
-
-import org.springframework.stereotype.Service;
-
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-
-import jakarta.mail.MessagingException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class PunishmentService {
 
     private final PunishmentCreationService punishmentCreationService;
@@ -45,9 +52,8 @@ public class PunishmentService {
     private final EmployeeRepository employeeRepository;
     private final StudentUtils studentUtils;
 
+    // ----------------------------------------- FIND BY METHODS -----------------------------------------
 
-
-    // -----------------------------------------FIND BY METHODS-----------------------------------------
     public List<Punishment> findByStudentEmailAndInfraction(String email, String infractionId) throws ResourceNotFoundException {
         return punishmentQueryService.findByStudentEmailAndInfraction(email, infractionId);
     }
@@ -96,10 +102,8 @@ public class PunishmentService {
         return punishmentQueryService.findAllPunishmentsByStudentEmail();
     }
 
+    // ----------------------------------------------- CREATE METHODS -------------------------------------------
 
-    //-----------------------------------------------CREATE METHODS-------------------------------------------
-
-    // Methods that Need Global Filters Due for schools
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
         return punishmentCreationService.createNewPunishForm(formRequest);
     }
@@ -108,7 +112,7 @@ public class PunishmentService {
         return punishmentCreationService.createNewPunishFormBulk(requests);
     }
 
-    //--------------------------------------------------CLOSE AND DELETE PUNISHMENTS--------------------------------------
+    // ------------------------------------------ CLOSE / ARCHIVE / DELETE --------------------------------------
 
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws MessagingException {
         return punishmentClosureService.closePunishment(infractionName, studentEmail, studentAnswers);
@@ -133,12 +137,13 @@ public class PunishmentService {
     public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
         try {
             punishRepository.delete(punishment);
-
         } catch (Exception e) {
             throw new ResourceNotFoundException("That infraction does not exist");
         }
         return "Punishment has been deleted";
     }
+
+    // ----------------------------------------------- UPDATE METHODS -------------------------------------------
 
     public Punishment updateMapIndex(String id, int index) {
         return punishmentUpdateService.updateMapIndex(id, index);
@@ -147,19 +152,6 @@ public class PunishmentService {
     public List<Punishment> updateTimeCreated() {
         return punishmentUpdateService.updateTimeCreated();
     }
-
-//    public List<Punishment> updateInfractions() {
-//        List<Punishment> all = punishRepository.findAll();
-//        List<Punishment> saved = new ArrayList<>();
-//        for(Punishment punishment : all) {
-//            Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfraction().getInfractionId());
-//            String id = infraction.getInfractionId();
-//            punishment.setInfractionId(id);
-//            punishRepository.save(punishment);
-//            saved.add(punishment);
-//        }
-//        return saved;
-//    }
 
     public List<Punishment> updateDescriptions() {
         return punishmentUpdateService.updateDescriptions();
@@ -182,7 +174,6 @@ public class PunishmentService {
     }
 
     private void filePositiveWithState(PunishmentFormRequest formRequest) throws IOException, InterruptedException {
-        //Get Student and Teacher Details
         Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
 
@@ -192,7 +183,7 @@ public class PunishmentService {
         StateFileRequest stateRequest = new StateFileRequest();
         List<String> parties = new ArrayList<>();
         stateRequest.setParties(parties);
-        // Set all the pieces of the State Request
+
         StateFormIntElement incidentTypeId = new StateFormIntElement(40, "Positive Behavior Achievement");
         stateRequest.setIncidentTypeId(incidentTypeId);
         stateRequest.setIncidentConfigurationGroupId(207);
@@ -209,14 +200,14 @@ public class PunishmentService {
         StateFormIntElement incidentParty = new StateFormIntElement(1, "");
         stateRequest.setIncidentPartyTypeId(incidentParty);
 
-        StateFormIntElement student = new StateFormIntElement(writeUp.getStateStudentId(), (writeUp.getLastName() + ", " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"));
+        StateFormIntElement student = new StateFormIntElement(
+                writeUp.getStateStudentId(),
+                writeUp.getLastName() + ", " + writeUp.getFirstName() + " (" + writeUp.getStudentIdNumber() + ")"
+        );
         stateRequest.setStudentId(student);
 
         StateFormIntElement school = new StateFormIntElement(5672, "Burke High School");
-
-        //This is studuent org id
         stateRequest.setOrganizationId(school);
-
         stateRequest.setOccurredAtOrganizationId(school);
 
         StateFormIntElement location = new StateFormIntElement(52, "Classroom");
@@ -226,7 +217,9 @@ public class PunishmentService {
         FieldOptionElement positive = new FieldOptionElement(166470, "Other Positive Behavior", "", null, false);
         fieldElements.add(positive);
         stateRequest.setIncidentBehavior(fieldElements);
+
         stateRequest.setDescription(formRequest.getInfractionDescription());
+
         List<StateFormIntElement> staffResponse = new ArrayList<>();
         if (formRequest.getCurrency() > 0) {
             staffResponse.add(new StateFormIntElement(166485, "Reward"));
@@ -235,6 +228,7 @@ public class PunishmentService {
         staffResponse.add(new StateFormIntElement(166486, "Other positive staff response"));
         staffResponse.add(new StateFormIntElement(166487, "Parent Contact - Email"));
         stateRequest.setStaffResponse(staffResponse);
+
         stateRequest.setIncidentRoleId(1);
         stateRequest.setReadyToAssignActions(false);
         stateRequest.setBehaviorRequiredForActions(true);
@@ -252,7 +246,6 @@ public class PunishmentService {
         stateRequest.setIsHomeless(homeless);
         stateRequest.setRuleInstanceToken(null);
 
-
         ObjectMapper mapper = new ObjectMapper();
         String jsonRequest = mapper.writeValueAsString(stateRequest);
 
@@ -261,35 +254,12 @@ public class PunishmentService {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
-                .header("Content-Type", "application/json") // Set the Content-Type header
+                .header("Content-Type", "application/json")
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-//    //Scheduler for Dormant Guidance Files
-//    @Scheduled(cron = "0 0 0 * * ?") // This cron expression means the method will run at midnight every day
-//@Transactional
-//    public void updateDormantGuidanceReferrals (){
-//        LocalDate today = LocalDate.now();
-//        System.out.println(today);
-//        List<Punishment> punishments = punishRepository.findByFollowUpDateAndGuidanceStatus(today, "DORMANT");
-//        System.out.println(punishments);
-//        for (Punishment punishment : punishments) {
-////            punishment.setGuidanceStatus("OPEN");
-//            punishRepository.save(punishment);
-//            logger.info("Updated punishment with id: " + punishment.getPunishmentId());
-//
-//        }
-//
-//    }
-
-    //    @Scheduled(cron = "0 10 22 * * MON-FRI") // This cron job operates every night at
-//    @Bean
-//    @Transactional
-
-    // TO DO
-    // Need to find way to get student's preferred language
     public void alertIssAndDetention() throws MessagingException {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
@@ -300,24 +270,7 @@ public class PunishmentService {
             } else {
                 emailService.sendAlertEmail("ISS", punishment, "en");
             }
-
-
         }
     }
-
-//    public List<PunishmentResponse> createNewAdminReferralBulk(List<PunishmentFormRequest> adminReferralListRequest) throws MessagingException, IOException, InterruptedException {
-//        List<PunishmentResponse> punishmentResponse = new ArrayList<>();
-//        for(PunishmentFormRequest punishmentFormRequest : adminReferralListRequest) {
-//            punishmentResponse.add(createNewAdminReferral(punishmentFormRequest));
-//        } return  punishmentResponse;
-//    }
-
-//    private PunishmentResponse createNewAdminReferral(PunishmentFormRequest punishmentFormRequest) {
-//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss");
-//        LocalDate now = LocalDate.now();
-//
-//        Student findMe = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
-//        School ourSchool = schoolRepository.findSchoolBySchoolName(findMe.getSchool());
-//    }
 }
 

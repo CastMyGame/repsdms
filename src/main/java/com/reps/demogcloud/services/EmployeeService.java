@@ -1,6 +1,5 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
@@ -16,8 +15,6 @@ import com.reps.demogcloud.services.employee.EmployeeQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
