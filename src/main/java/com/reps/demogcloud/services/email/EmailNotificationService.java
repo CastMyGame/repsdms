@@ -18,11 +18,12 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class EmailNotificationService {
 
@@ -30,32 +31,47 @@ public class EmailNotificationService {
     private final EmailTemplateBuilderService templateBuilderService;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
-    private final EmailTemplateBuilderService emailTemplateBuilderService;
 
     @Async
     public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject, String languageCode) throws MessagingException {
 
-        String sender = ( getCurrentUserEmail() !=null && !getCurrentUserEmail().isEmpty()) ? getCurrentUserEmail():null;
-
-        System.out.println("Sending Email using " + sender);
-
+        String sender = getCurrentUserEmail();
+        log.debug("Sending Email using {}", sender);
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
         if (student == null) {
             throw new IllegalArgumentException("Student not found for email: " + studentEmail);
         }
+
         List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
-        emailSenderService.sendBulkEmail(parentEmail, List.of(teacherEmail, studentEmail), subject, msg, spotters,sender, languageCode);
+
+        emailSenderService.sendBulkEmail(
+                parentEmail,
+                List.of(teacherEmail, studentEmail),
+                subject,
+                msg,
+                spotters,
+                sender,
+                languageCode
+        );
     }
 
     @Async
     public void sendContactUsMail(ContactUsRequest request) {
-        emailSenderService.sendContactEmail(request.getEmail(), request.getSubject(), request.getMessage(), request.getPreferredLanguage());
+        emailSenderService.sendContactEmail(
+                request.getEmail(),
+                request.getSubject(),
+                request.getMessage(),
+                request.getPreferredLanguage()
+        );
     }
 
     @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
         var teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
+
+        if (teacher == null || teacher.getClasses() == null) return;
+
         var optionalClass = teacher.getClasses().stream()
                 .filter(c -> c.getClassName().equals(request.getClassName()))
                 .findFirst();
@@ -65,39 +81,32 @@ public class EmailNotificationService {
         List<String> rosterEmails = optionalClass.get().getClassRoster();
         if (rosterEmails == null || rosterEmails.isEmpty()) return;
 
-        // 1) Group recipients by preferred language
-        // NOTE: decide whether rosterEmails are student emails or parent emails.
-        // If rosterEmails are student emails:
-        //   Student s = studentRepository.findByStudentEmailIgnoreCase(email)
-        // If rosterEmails are parent emails:
-        //   Student s = studentRepository.findByParentEmailIgnoreCase(email) (if you have it)
-        Map<String, List<String>> recipientsByLang = new java.util.HashMap<>();
+        Map<String, List<String>> recipientsByLang = new HashMap<>();
 
         for (String email : rosterEmails) {
             if (email == null || email.isBlank()) continue;
 
-            Student s = studentRepository.findByStudentEmailIgnoreCase(email); // adjust if needed
-            String lang = (s == null) ? "en" : emailTemplateBuilderService.normalizeLanguage(s.getPreferredLanguage());
+            Student s = studentRepository.findByStudentEmailIgnoreCase(email);
+            String lang = (s == null)
+                    ? "en"
+                    : templateBuilderService.normalizeLanguage(s.getPreferredLanguage());
 
-            recipientsByLang.computeIfAbsent(lang, k -> new java.util.ArrayList<>()).add(email);
+            recipientsByLang.computeIfAbsent(lang, k -> new ArrayList<>()).add(email);
         }
 
-        // 2) Translate ONCE per language (only user input fields)
-        Map<String, String> subjectByLang = new java.util.HashMap<>();
-        Map<String, String> bodyByLang = new java.util.HashMap<>();
+        Map<String, String> subjectByLang = new HashMap<>();
+        Map<String, String> bodyByLang = new HashMap<>();
 
         for (String lang : recipientsByLang.keySet()) {
             if ("en".equals(lang)) {
                 subjectByLang.put(lang, request.getSubject());
                 bodyByLang.put(lang, request.getMsg());
             } else {
-                // Translate only teacher-entered fields
-                subjectByLang.put(lang, emailTemplateBuilderService.translateUserInput(request.getSubject(), lang));
-                bodyByLang.put(lang, emailTemplateBuilderService.translateUserInput(request.getMsg(), lang));
+                subjectByLang.put(lang, templateBuilderService.translateUserInput(request.getSubject(), lang));
+                bodyByLang.put(lang, templateBuilderService.translateUserInput(request.getMsg(), lang));
             }
         }
 
-        // 3) Send one bulk email per language group
         for (var entry : recipientsByLang.entrySet()) {
             String lang = entry.getKey();
             List<String> recipients = entry.getValue();
@@ -116,25 +125,34 @@ public class EmailNotificationService {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         if (student == null) return;
 
-        String intro = "Hello, This message is to inform you that ";
-        String action = " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow they will receive ";
-        String followup = " and must complete it during that time. If the assignment is completed before then you will receive a confirmation email and can disregard this message. If you have any questions you can hit REPLY ALL and communicate with the teacher who created the original parent contact.";
-
         String detentionType = alertType.equals("ISS") ? "ISS" : "lunch detention";
-        String subject = alertType + " REMINDER";
-        String message = intro + student.getFirstName() + " " + student.getLastName() + action + detentionType + followup;
 
-        sendPtsEmail(student.getParentEmail(), punishment.getTeacherEmail(), student.getStudentEmail(), message, subject, languageCode);
+        String message = "Hello, This message is to inform you that "
+                + student.getFirstName() + " " + student.getLastName()
+                + " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow they will receive "
+                + detentionType
+                + " and must complete it during that time.";
+
+        sendPtsEmail(
+                student.getParentEmail(),
+                punishment.getTeacherEmail(),
+                student.getStudentEmail(),
+                message,
+                alertType + " REMINDER",
+                languageCode
+        );
     }
 
     public void notifyParentViaTextAndEmail(Punishment punishment, Student student, Infraction infraction, PunishmentResponse response) throws MessagingException {
+
         String message = templateBuilderService.createEmailText(
                 student.getFirstName(),
                 student.getLastName(),
                 infraction.getInfractionLevel(),
                 infraction.getInfractionName(),
                 templateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
-                student.getStudentEmail(), student.getPreferredLanguage()
+                student.getStudentEmail(),
+                student.getPreferredLanguage()
         );
 
         response.setMessage(message);
@@ -149,24 +167,8 @@ public class EmailNotificationService {
         );
     }
 
-
     public String getCurrentUserEmail() {
-        // 1. Get the Authentication object from the SecurityContext
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated()) {
-            // 2. The principal is typically the UserDetails object (or a custom user object)
-            Object principal = authentication.getPrincipal();
-
-            // Check if the principal is the standard Spring User object
-            if (principal instanceof org.springframework.security.core.userdetails.User userDetails) {
-                // Spring's default UserDetails doesn't have an email field, but the
-                // username field is often used for the email address.
-                return userDetails.getUsername();
-            }
-
-        }
-        return null; // No user logged in or authentication failed
+        return authentication != null ? authentication.getName() : null;
     }
-
 }

@@ -1,31 +1,43 @@
-package com.reps.demogcloud.services;
+package com.reps.demogcloud.services.punishment;
 
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.TeacherDTO;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.punishment.StudentAnswer;
-import com.reps.demogcloud.services.punishment.PunishmentClosureService;
-import com.reps.demogcloud.services.punishment.PunishmentCreationService;
-import com.reps.demogcloud.services.punishment.PunishmentQueryService;
-import com.reps.demogcloud.services.punishment.PunishmentUpdateService;
+import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.services.EmailService;
+import com.reps.demogcloud.services.PunishmentService;
 import com.reps.demogcloud.utils.StudentUtils;
 import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Method;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentServiceTest {
@@ -348,7 +360,7 @@ class PunishmentServiceTest {
                 () -> punishmentService.deletePunishment(punishment)
         );
 
-        assertEquals("That infraction does not exist", exception.getMessage());
+        assertEquals("That punishment does not exist", exception.getMessage());
         verify(punishRepository).delete(punishment);
     }
 
@@ -460,6 +472,135 @@ class PunishmentServiceTest {
 
         verify(punishRepository).findByArchivedAndStatus(false, "OPEN");
         verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void filePositiveWithState_shouldIncludeReward_whenCurrencyGreaterThanZero() throws Exception {
+        Student student = new Student();
+        student.setStudentEmail("student@example.com");
+        student.setFirstName("John");
+        student.setLastName("Doe");
+        student.setStudentIdNumber("12345");
+        student.setStateStudentId(999);
+
+        Employee employee = new Employee();
+        employee.setEmail("teacher@example.com");
+
+        PunishmentFormRequest request = new PunishmentFormRequest();
+        request.setStudentEmail("student@example.com");
+        request.setTeacherEmail("teacher@example.com");
+        request.setInfractionDescription("Great job today");
+        request.setCurrency(5);
+
+        HttpClient client = mock(HttpClient.class);
+        @SuppressWarnings("unchecked")
+        HttpResponse<String> response = mock(HttpResponse.class);
+
+        when(studentRepository.findByStudentEmailIgnoreCase("student@example.com")).thenReturn(student);
+        when(employeeRepository.findByEmailIgnoreCase("teacher@example.com")).thenReturn(employee);
+        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+
+        invokeFilePositiveWithState(request, client);
+
+        verify(studentRepository).findByStudentEmailIgnoreCase("student@example.com");
+        verify(employeeRepository).findByEmailIgnoreCase("teacher@example.com");
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+
+        HttpRequest sentRequest = requestCaptor.getValue();
+        assertEquals("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident", sentRequest.uri().toString());
+        assertEquals("application/json", sentRequest.headers().firstValue("Content-Type").orElse(null));
+
+        String body = bodyPublisherToString(sentRequest.bodyPublisher().orElseThrow());
+        assertTrue(body.contains("Great job today"));
+        assertTrue(body.contains("Reward"));
+        assertTrue(body.contains("Recognition"));
+        assertTrue(body.contains("Parent Contact - Email"));
+        assertTrue(body.contains("John"));
+        assertTrue(body.contains("Doe"));
+        assertTrue(body.contains("12345"));
+    }
+
+    @Test
+    void filePositiveWithState_shouldNotIncludeReward_whenCurrencyIsZero() throws Exception {
+        Student student = new Student();
+        student.setStudentEmail("student@example.com");
+        student.setFirstName("Jane");
+        student.setLastName("Smith");
+        student.setStudentIdNumber("67890");
+        student.setStateStudentId(111);
+
+        Employee employee = new Employee();
+        employee.setEmail("teacher@example.com");
+
+        PunishmentFormRequest request = new PunishmentFormRequest();
+        request.setStudentEmail("student@example.com");
+        request.setTeacherEmail("teacher@example.com");
+        request.setInfractionDescription("Excellent participation");
+        request.setCurrency(0);
+
+        HttpClient client = mock(HttpClient.class);
+        @SuppressWarnings("unchecked")
+        HttpResponse<String> response = mock(HttpResponse.class);
+
+        when(studentRepository.findByStudentEmailIgnoreCase("student@example.com")).thenReturn(student);
+        when(employeeRepository.findByEmailIgnoreCase("teacher@example.com")).thenReturn(employee);
+        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+
+        invokeFilePositiveWithState(request, client);
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+
+        String body = bodyPublisherToString(requestCaptor.getValue().bodyPublisher().orElseThrow());
+        assertTrue(body.contains("Excellent participation"));
+        assertFalse(body.contains("Reward"));
+        assertTrue(body.contains("Recognition"));
+        assertTrue(body.contains("Parent Contact - Email"));
+    }
+
+    private void invokeFilePositiveWithState(PunishmentFormRequest request, HttpClient client) throws Exception {
+        Method method = PunishmentService.class.getDeclaredMethod(
+                "filePositiveWithState",
+                PunishmentFormRequest.class,
+                HttpClient.class
+        );
+        method.setAccessible(true);
+        method.invoke(punishmentService, request, client);
+    }
+
+    private String bodyPublisherToString(HttpRequest.BodyPublisher bodyPublisher) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        bodyPublisher.subscribe(new Flow.Subscriber<>() {
+            @Override
+            public void onSubscribe(Flow.Subscription subscription) {
+                subscription.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(ByteBuffer item) {
+                byte[] bytes = new byte[item.remaining()];
+                item.get(bytes);
+                outputStream.write(bytes, 0, bytes.length);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                latch.countDown();
+                fail(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+                latch.countDown();
+            }
+        });
+
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        return outputStream.toString(StandardCharsets.UTF_8);
     }
 }
 

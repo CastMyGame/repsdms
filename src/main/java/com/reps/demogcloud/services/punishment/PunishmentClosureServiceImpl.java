@@ -11,7 +11,6 @@ import com.reps.demogcloud.models.punishment.StudentAnswer;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.EmailService;
 import com.reps.demogcloud.services.email.EmailTemplateBuilderService;
-import com.reps.demogcloud.utils.PunishmentUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +24,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
-    private final PunishmentUtils punishmentUtils;
     private final PunishRepository punishRepository;
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
@@ -47,7 +45,6 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         Punishment punishmentToClose = activeOpenPunishments.get(0);
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishmentToClose.getStudentEmail());
-        Infraction infraction = infractionRepository.findByInfractionId(punishmentToClose.getInfractionId());
 
         if (!studentAnswers.isEmpty()) {
             // Add student answers to the infraction description
@@ -222,7 +219,6 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
         if (punishment == null) throw new ResourceNotFoundException("Archived punishment not found");
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-        Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
 
         punishment.setArchived(false);
         punishment.setArchivedOn(null);

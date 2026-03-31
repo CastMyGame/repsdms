@@ -1,26 +1,34 @@
 package com.reps.demogcloud.services.email;
 
 import com.reps.demogcloud.services.translation.TranslationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import static com.reps.demogcloud.models.email.EmailTemplates.*;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class EmailTemplateBuilderService {
 
     private final TranslationService translationService;
 
-    public EmailTemplateBuilderService(TranslationService translationService) {
-        this.translationService = translationService;
-    }
-
-    public String createEmailText(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String studentEmail, String targetLanguageCode) {
+    public String createEmailText(
+            String studentFirstName,
+            String studentLastName,
+            String infractionLevel,
+            String infractionName,
+            String description,
+            String studentEmail,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
         String template = switch (language) {
             case "es" -> EMAIL_ES;
-                    default -> EMAIL_EN;
+            default -> EMAIL_EN;
         };
 
         String translatedDescription = translateDescriptionIfNeeded(description, language);
@@ -34,12 +42,18 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String createTextMessage(String studentFirstName, String studentLastName, String infractionLevel, String infractionName, String description, String targetLanguageCode) {
+    public String createTextMessage(
+            String studentFirstName,
+            String studentLastName,
+            String infractionLevel,
+            String infractionName,
+            String description,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
         String template = "es".equals(language) ? TEXT_ES : TEXT_EN;
-
         String translatedDescription = translateDescriptionIfNeeded(description, language);
 
         return fillTemplate(template, java.util.Map.of(
@@ -50,7 +64,14 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String createCFRMessage(String studentFirstName, String studentLastName, String infractionName, String teacherEmail, String studentEmail, String targetLanguageCode) {
+    public String createCFRMessage(
+            String studentFirstName,
+            String studentLastName,
+            String infractionName,
+            String teacherEmail,
+            String studentEmail,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -71,6 +92,7 @@ public class EmailTemplateBuilderService {
     public String adjustString(String input) {
         return input.replaceAll("(.*?)(\\d+)$", "$1 $2").trim();
     }
+
     public String normalizeLanguage(String lang) {
         if (lang == null || lang.isBlank()) {
             return "en";
@@ -79,15 +101,17 @@ public class EmailTemplateBuilderService {
     }
 
     private String translateDescriptionIfNeeded(String descriptionEn, String lang) {
-        if (descriptionEn == null || descriptionEn.isBlank()) return descriptionEn;
-        if ("en".equals(lang)) return descriptionEn;
+        if (descriptionEn == null || descriptionEn.isBlank()) {
+            return descriptionEn;
+        }
+        if ("en".equals(lang)) {
+            return descriptionEn;
+        }
 
         try {
-            // IMPORTANT: only translate THIS field
             return translationService.translate(descriptionEn, "en", lang);
         } catch (Exception ex) {
-            org.slf4j.LoggerFactory.getLogger(EmailTemplateBuilderService.class)
-                    .error("translateDescriptionIfNeeded failed for lang {}: {}", lang, ex.getMessage());
+            log.error("translateDescriptionIfNeeded failed for lang {}: {}", lang, ex.getMessage());
             return descriptionEn;
         }
     }
@@ -95,14 +119,21 @@ public class EmailTemplateBuilderService {
     private String fillTemplate(String template, java.util.Map<String, String> values) {
         String result = template;
         for (var entry : values.entrySet()) {
-            result = result.replace("{{" + entry.getKey() + "}}",
-                    entry.getValue() == null ? "" : entry.getValue());
+            result = result.replace(
+                    "{{" + entry.getKey() + "}}",
+                    entry.getValue() == null ? "" : entry.getValue()
+            );
         }
         return replaceString(result);
     }
 
-    public String buildSubject(String schoolName, String studentFirstName, String studentLastName,
-                               String targetLanguageCode, boolean officeReferral) {
+    public String buildSubject(
+            String schoolName,
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode,
+            boolean officeReferral
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -121,11 +152,16 @@ public class EmailTemplateBuilderService {
 
     public String translateUserInput(String text, String targetLanguageCode) {
         String language = normalizeLanguage(targetLanguageCode);
-        return translateDescriptionIfNeeded(text, language); // reuse your existing safe logic
+        return translateDescriptionIfNeeded(text, language);
     }
 
-    public String buildOfficeReferralMessage(String studentFirstName, String studentLastName,
-                                             String infractionName, String summary, String targetLanguageCode) {
+    public String buildOfficeReferralMessage(
+            String studentFirstName,
+            String studentLastName,
+            String infractionName,
+            String summary,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String template = "es".equals(language) ? OFFICE_REFERRAL_MSG_ES : OFFICE_REFERRAL_MSG_EN;
 
@@ -136,11 +172,13 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildCompletionSubject(String schoolName,
-                                         String studentFirstName,
-                                         String studentLastName,
-                                         String targetLanguageCode,
-                                         boolean keepSchoolInSubject) {
+    public String buildCompletionSubject(
+            String schoolName,
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode,
+            boolean keepSchoolInSubject
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -151,22 +189,19 @@ public class EmailTemplateBuilderService {
             template = "es".equals(language) ? SUBJECT_COMPLETION_ES : SUBJECT_COMPLETION_EN;
         }
 
-        // schoolName placeholder is only used in the WITH_SCHOOL template, but harmless to always pass it
         return fillTemplate(template, java.util.Map.of(
                 "schoolName", schoolName == null ? "" : schoolName,
                 "studentFullName", studentFullName
         ));
     }
 
-    /**
-     * Build completion email body.
-     * No user input in this message today -> no translation calls needed.
-     */
-    public String buildCompletionMessage(String studentFirstName,
-                                         String studentLastName,
-                                         String infractionName,
-                                         String teacherEmail,
-                                         String targetLanguageCode) {
+    public String buildCompletionMessage(
+            String studentFirstName,
+            String studentLastName,
+            String infractionName,
+            String teacherEmail,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -179,9 +214,11 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildLevelThreeRejectSubject(String studentFirstName,
-                                               String studentLastName,
-                                               String targetLanguageCode) {
+    public String buildLevelThreeRejectSubject(
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -192,13 +229,9 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildLevelThreeRejectMessage(String feedbackRaw,
-                                               String targetLanguageCode) {
+    public String buildLevelThreeRejectMessage(String feedbackRaw, String targetLanguageCode) {
         String language = normalizeLanguage(targetLanguageCode);
-
-        // translate ONLY the user input portion
         String feedbackTranslated = translateUserInput(feedbackRaw, language);
-
         String template = "es".equals(language) ? L3_REJECT_MSG_ES : L3_REJECT_MSG_EN;
 
         return fillTemplate(template, java.util.Map.of(
@@ -206,10 +239,12 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildPunishmentDeletedSubject(String schoolName,
-                                                String studentFirstName,
-                                                String studentLastName,
-                                                String targetLanguageCode) {
+    public String buildPunishmentDeletedSubject(
+            String schoolName,
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -223,16 +258,16 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildPunishmentDeletedMessage(String studentFirstName,
-                                                String studentLastName,
-                                                String infractionName,
-                                                String infractionLevel,
-                                                String explanationUserInput,
-                                                String targetLanguageCode) {
+    public String buildPunishmentDeletedMessage(
+            String studentFirstName,
+            String studentLastName,
+            String infractionName,
+            String infractionLevel,
+            String explanationUserInput,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
-
-        // Translate ONLY the user-input explanation (if you include it)
         String explanation = translateUserInput(explanationUserInput, language);
 
         String template = "es".equals(language)
@@ -247,10 +282,12 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildPunishmentRestoredSubject(String schoolName,
-                                                 String studentFirstName,
-                                                 String studentLastName,
-                                                 String targetLanguageCode) {
+    public String buildPunishmentRestoredSubject(
+            String schoolName,
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 
@@ -264,9 +301,11 @@ public class EmailTemplateBuilderService {
         ));
     }
 
-    public String buildPunishmentRestoredMessage(String studentFirstName,
-                                                 String studentLastName,
-                                                 String targetLanguageCode) {
+    public String buildPunishmentRestoredMessage(
+            String studentFirstName,
+            String studentLastName,
+            String targetLanguageCode
+    ) {
         String language = normalizeLanguage(targetLanguageCode);
         String studentFullName = studentFirstName + " " + studentLastName;
 

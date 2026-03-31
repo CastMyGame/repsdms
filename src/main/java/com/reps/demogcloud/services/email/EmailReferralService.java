@@ -1,6 +1,9 @@
 package com.reps.demogcloud.services.email;
 
-import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.InfractionRepository;
+import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.SchoolRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentFormRequest;
@@ -8,10 +11,10 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.EmailService;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,14 +24,17 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class EmailReferralService {
 
-    private final EmailNotificationService emailNotificationService;
     private final EmailTemplateBuilderService emailTemplateBuilderService;
     private final PunishRepository punishRepository;
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
     private final SchoolRepository schoolRepository;
 
-    public PunishmentResponse sendEmailBasedOnType(PunishmentFormRequest formRequest, Punishment punishment, EmailService emailService) throws MessagingException {
+    public PunishmentResponse sendEmailBasedOnType(
+            PunishmentFormRequest formRequest,
+            Punishment punishment,
+            EmailService emailService
+    ) throws MessagingException {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());
@@ -46,28 +52,31 @@ public class EmailReferralService {
             punishRepository.save(punishment);
 
             List<Punishment> history = new ArrayList<>();
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "CLOSED", false));
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false));
-            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(student.getStudentEmail(), infraction.getInfractionName(), "CFR", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(
+                    student.getStudentEmail(), infraction.getInfractionName(), "CLOSED", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(
+                    student.getStudentEmail(), infraction.getInfractionName(), "REFERRAL", false));
+            history.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionIdAndStatusAndArchived(
+                    student.getStudentEmail(), infraction.getInfractionName(), "CFR", false));
 
             List<String> summaryLines = new ArrayList<>();
             for (Punishment past : history) {
                 String timeCreated = String.valueOf(past.getTimeCreated());
                 String timeClosed = String.valueOf(past.getTimeClosed());
 
-                // teacher/student entered content (user input)
                 String rawDescription = String.valueOf(past.getInfractionDescription());
-                String translatedDescription = emailTemplateBuilderService.translateUserInput(rawDescription, student.getPreferredLanguage());
+                String translatedDescription = emailTemplateBuilderService.translateUserInput(
+                        rawDescription,
+                        student.getPreferredLanguage()
+                );
 
-                String line =
-                        "Infraction took place on " + timeCreated +
-                                ", Description: " + translatedDescription +
-                                ". Assignment completed on " + timeClosed;
+                String line = "Infraction took place on " + timeCreated
+                        + ", Description: " + translatedDescription
+                        + ". Assignment completed on " + timeClosed;
 
                 summaryLines.add(emailTemplateBuilderService.replaceString(line));
             }
 
-// join lines so the template can insert it nicely
             String summary = String.join("\n", summaryLines);
 
             response.setSubject(emailTemplateBuilderService.buildSubject(
@@ -85,7 +94,12 @@ public class EmailReferralService {
                     student.getPreferredLanguage()
             ));
 
-            emailService.sendEmail(response.getTeacherToEmail(), response.getSubject(), response.getMessage(),student.getPreferredLanguage());
+            emailService.sendEmail(
+                    response.getTeacherToEmail(),
+                    response.getSubject(),
+                    response.getMessage(),
+                    student.getPreferredLanguage()
+            );
         } else {
             sendInfractionNotification(punishment, emailService, student, infraction, response);
         }
@@ -93,11 +107,18 @@ public class EmailReferralService {
         return response;
     }
 
-    public void sendInfractionNotification(Punishment punishment, EmailService emailService, Student student, Infraction infraction, PunishmentResponse response) throws MessagingException {
+    public void sendInfractionNotification(
+            Punishment punishment,
+            EmailService emailService,
+            Student student,
+            Infraction infraction,
+            PunishmentResponse response
+    ) throws MessagingException {
         String description0 = "";
         if (punishment.getInfractionDescription() != null && !punishment.getInfractionDescription().isEmpty()) {
             description0 = punishment.getInfractionDescription().get(0);
         }
+
         String msg = emailTemplateBuilderService.createEmailText(
                 student.getFirstName(),
                 student.getLastName(),
@@ -107,6 +128,7 @@ public class EmailReferralService {
                 student.getStudentEmail(),
                 student.getPreferredLanguage()
         );
+
         String subject = emailTemplateBuilderService.buildSubject(
                 student.getSchool(),
                 student.getFirstName(),
@@ -114,9 +136,18 @@ public class EmailReferralService {
                 student.getPreferredLanguage(),
                 false
         );
+
         response.setMessage(msg);
         response.setSubject(subject);
-        emailService.sendPtsEmail(response.getParentToEmail(), response.getTeacherToEmail(), response.getStudentToEmail(), msg, subject, student.getPreferredLanguage());
+
+        emailService.sendPtsEmail(
+                response.getParentToEmail(),
+                response.getTeacherToEmail(),
+                response.getStudentToEmail(),
+                msg,
+                subject,
+                student.getPreferredLanguage()
+        );
     }
 
     public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
@@ -136,11 +167,16 @@ public class EmailReferralService {
                 student.getPreferredLanguage(),
                 false
         ));
+
         punishment.setTimeClosed(LocalDate.now());
 
         String message = emailTemplateBuilderService.createCFRMessage(
-                student.getFirstName(), student.getLastName(),
-                infraction.getInfractionName(), response.getTeacherToEmail(), student.getStudentEmail(), student.getPreferredLanguage()
+                student.getFirstName(),
+                student.getLastName(),
+                infraction.getInfractionName(),
+                response.getTeacherToEmail(),
+                student.getStudentEmail(),
+                student.getPreferredLanguage()
         );
 
         response.setMessage(message);

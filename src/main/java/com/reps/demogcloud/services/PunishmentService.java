@@ -138,7 +138,7 @@ public class PunishmentService {
         try {
             punishRepository.delete(punishment);
         } catch (Exception e) {
-            throw new ResourceNotFoundException("That infraction does not exist");
+            throw new ResourceNotFoundException("That punishment does not exist");
         }
         return "Punishment has been deleted";
     }
@@ -174,6 +174,10 @@ public class PunishmentService {
     }
 
     private void filePositiveWithState(PunishmentFormRequest formRequest) throws IOException, InterruptedException {
+        filePositiveWithState(formRequest, HttpClient.newHttpClient());
+    }
+
+    private void filePositiveWithState(PunishmentFormRequest formRequest, HttpClient client) throws IOException, InterruptedException {
         Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
 
@@ -248,8 +252,6 @@ public class PunishmentService {
 
         ObjectMapper mapper = new ObjectMapper();
         String jsonRequest = mapper.writeValueAsString(stateRequest);
-
-        HttpClient client = HttpClient.newHttpClient();
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://calendar-service-mygto2ljcq-wn.a.run.app/sendincident"))
