@@ -72,3 +72,4 @@ public class StudentSpotterService {
         return studentRepository.findBySpottersContainsIgnoreCase(spotterEmail);
     }
 }
+

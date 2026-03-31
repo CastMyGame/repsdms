@@ -8,21 +8,23 @@ import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.models.student.StudentRequest;
 import com.reps.demogcloud.models.student.StudentResponse;
 import com.reps.demogcloud.models.student.UpdateSpottersRequest;
-import com.reps.demogcloud.services.student.*;
+import com.reps.demogcloud.services.student.StudentAdminService;
+import com.reps.demogcloud.services.student.StudentMutationService;
+import com.reps.demogcloud.services.student.StudentPointService;
+import com.reps.demogcloud.services.student.StudentQueryService;
+import com.reps.demogcloud.services.student.StudentSpotterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class StudentService {
+
     private final StudentQueryService studentQueryService;
     private final StudentMutationService studentMutationService;
     private final StudentPointService studentPointService;
@@ -32,6 +34,7 @@ public class StudentService {
     public List<Student> findStudentByParentEmail(String parentEmail) throws ResourceNotFoundException {
         return studentQueryService.findStudentByParentEmail(parentEmail);
     }
+
     public List<Student> findByStudentLastName(String lastName) throws ResourceNotFoundException {
         return studentQueryService.findByStudentLastName(lastName);
     }
@@ -72,11 +75,11 @@ public class StudentService {
         return studentQueryService.findBySchool(school);
     }
 
-    public StudentResponse createNewStudent (Student studentRequest ) {
+    public StudentResponse createNewStudent(Student studentRequest) {
         return studentMutationService.createNewStudent(studentRequest);
     }
 
-    public String deleteStudent ( StudentRequest studentRequest ) throws Exception {
+    public String deleteStudent(StudentRequest studentRequest) throws Exception {
         return studentMutationService.deleteStudent(studentRequest);
     }
 
@@ -84,8 +87,7 @@ public class StudentService {
         return studentMutationService.archiveRecord(studentId);
     }
 
-    // POINTS SERVICES
-    public Student addPoints(String studentEmail, Integer points) throws ResourceNotFoundException{
+    public Student addPoints(String studentEmail, Integer points) throws ResourceNotFoundException {
         return studentPointService.addPoints(studentEmail, points);
     }
 
@@ -93,7 +95,8 @@ public class StudentService {
         return studentPointService.deletePoints(studentEmail, points);
     }
 
-    public List<Student> transferPoints(String givingStudentEmail, String receivingStudentEmail, Integer pointsGiven) throws ResourceNotFoundException {
+    public List<Student> transferPoints(String givingStudentEmail, String receivingStudentEmail, Integer pointsGiven)
+            throws ResourceNotFoundException {
         return studentPointService.transferPoints(givingStudentEmail, receivingStudentEmail, pointsGiven);
     }
 
