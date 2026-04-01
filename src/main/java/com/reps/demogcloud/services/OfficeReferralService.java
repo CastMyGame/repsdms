@@ -97,11 +97,11 @@ public class OfficeReferralService {
         //get punishment
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
         Student studentReject = studentRepository.findByStudentEmailIgnoreCase(referral.getStudentEmail());
-        ArrayList<String> infractionContext = referral.getReferralDescription();
+        List<String> infractionContext = referral.getReferralDescription();
         String resetContext = infractionContext.get(0);
         List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
 
-        ArrayList<String> studentAnswer = new ArrayList<>();
+        List<String> studentAnswer = new ArrayList<>();
         studentAnswer.add(resetContext);
         Date currentDate = new Date();
         if(referral.getAnswerHistory() !=null){
@@ -260,7 +260,7 @@ public class OfficeReferralService {
 
         // Add comment if one is there
         if (!request.getComment().isEmpty()) {
-            ArrayList<String> description = new ArrayList<>(findMe.getReferralDescription());
+            List<String> description = new ArrayList<>(findMe.getReferralDescription());
             description.add(request.getComment());
             findMe.setReferralDescription(description);
         }

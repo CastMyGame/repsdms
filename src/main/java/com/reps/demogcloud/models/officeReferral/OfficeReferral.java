@@ -37,7 +37,7 @@ private String infractionLevel;
     private LocalDate archivedOn;
     private int mapIndex = 0;
     private Map<Date, List<String>> answerHistory;
-    private ArrayList<String> referralDescription;
+    private List<String> referralDescription;
 
 
 

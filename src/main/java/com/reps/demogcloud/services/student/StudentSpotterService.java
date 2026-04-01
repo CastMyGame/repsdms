@@ -23,7 +23,7 @@ public class StudentSpotterService {
         List<Student> studentsSpotted = new ArrayList<>();
         for (String studentEmail : request.getStudentEmail()) {
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-            ArrayList<String> spotters = new ArrayList<>();
+            List<String> spotters = new ArrayList<>();
             if (findMe.getSpotters() != null) {
                 spotters.addAll(findMe.getSpotters());
             }
@@ -41,7 +41,7 @@ public class StudentSpotterService {
         List<Student> studentsSpotted = new ArrayList<>();
         for (String studentEmail : request.getStudentEmail()) {
             Student findMe = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-            ArrayList<String> spotters = new ArrayList<>();
+            List<String> spotters = new ArrayList<>();
             if (findMe.getSpotters() != null) {
                 spotters.addAll(findMe.getSpotters());
             }

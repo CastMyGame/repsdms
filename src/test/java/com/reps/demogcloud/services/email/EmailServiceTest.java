@@ -243,7 +243,7 @@ class EmailServiceTest {
 
     @Test
     void sendEmailGeneric_shouldDelegateToEmailSenderService() throws MessagingException {
-        ArrayList<String> ccEmails = new ArrayList<>(List.of("cc1@test.com", "cc2@test.com"));
+        List<String> ccEmails = new ArrayList<>(List.of("cc1@test.com", "cc2@test.com"));
 
         doNothing().when(emailSenderService).sendGenericEmail(ccEmails, "to@test.com", "subject", "message", "en");
 
@@ -257,7 +257,7 @@ class EmailServiceTest {
 
     @Test
     void sendEmailGeneric_shouldPropagateMessagingException() throws MessagingException {
-        ArrayList<String> ccEmails = new ArrayList<>(List.of("cc@test.com"));
+        List<String> ccEmails = new ArrayList<>(List.of("cc@test.com"));
 
         doThrow(new MessagingException("generic failed"))
                 .when(emailSenderService).sendGenericEmail(ccEmails, "to@test.com", "subject", "message", "en");

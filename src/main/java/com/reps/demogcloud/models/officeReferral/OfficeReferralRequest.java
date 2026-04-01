@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ import java.util.ArrayList;
 public class OfficeReferralRequest {
     private String studentEmail;
     private OfficeReferralCode referralCode;
-    private ArrayList<String> referralDescription;
+    private List<String> referralDescription;
     private String teacherEmail;
     private String classPeriod;
     private int currency;

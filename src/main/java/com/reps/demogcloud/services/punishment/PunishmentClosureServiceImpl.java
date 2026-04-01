@@ -48,7 +48,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         if (!studentAnswers.isEmpty()) {
             // Add student answers to the infraction description
-            ArrayList<String> updatedDescriptions = new ArrayList<>(punishmentToClose.getInfractionDescription());
+            List<String> updatedDescriptions = new ArrayList<>(punishmentToClose.getInfractionDescription());
             for (StudentAnswer answer : studentAnswers) {
                 updatedDescriptions.add(answer.toString());
             }
@@ -139,11 +139,11 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
         if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-        ArrayList<String> infractionContext = punishment.getInfractionDescription();
+        List<String> infractionContext = punishment.getInfractionDescription();
         String resetContext = infractionContext.get(1);
         List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
 
-        ArrayList<String> newDescription = new ArrayList<>();
+        List<String> newDescription = new ArrayList<>();
         newDescription.add("");
         newDescription.add(resetContext);
 

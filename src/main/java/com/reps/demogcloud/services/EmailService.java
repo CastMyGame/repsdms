@@ -73,7 +73,7 @@ public class EmailService {
 
     @Async
     public void sendEmailGeneric(
-            ArrayList<String> ccEmails,
+            List<String> ccEmails,
             String recipientEmail,
             String subject,
             String msg,

@@ -28,6 +28,11 @@ public class StudentDtoService {
         List<Punishment> punishmentList = punishmentService.findAllPunishmentsByStudentEmail();
         List<OfficeReferral> referralList = officeReferralService.findByLoggedInStudent();
         Student student = studentService.findByLoggedInStudent();
+
+        if (student == null) {
+            throw new IllegalStateException("Logged in student not found");
+        }
+
         Optional<School> schoolOpt = studentService.getStudentSchool();
 
         School school = schoolOpt.orElseThrow(() ->
@@ -41,6 +46,11 @@ public class StudentDtoService {
         List<Punishment> punishmentList = punishmentService.getAllPunishmentByStudentEmail(studentEmail);
         List<OfficeReferral> referralList = officeReferralService.findByStudentEmail(studentEmail);
         Student student = studentService.findByStudentEmail(studentEmail);
+
+        if (student == null) {
+            throw new IllegalStateException("Student not found: " + studentEmail);
+        }
+
         Optional<School> schoolOpt = schoolService.findSchoolByName(student.getSchool());
 
         School ourSchool = schoolOpt.orElseThrow(() ->

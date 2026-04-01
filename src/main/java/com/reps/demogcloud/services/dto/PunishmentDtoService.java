@@ -21,20 +21,26 @@ public class PunishmentDtoService {
     public List<PunishmentDTO> getDTOPunishments() throws Exception {
         List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
         List<Punishment> punishments = punishmentService.findAllSchool();
+
         for (Punishment punishment : punishments) {
             PunishmentDTO punishmentDTO = new PunishmentDTO();
+
             punishmentDTO.setPunishment(punishment);
             punishmentDTO.setStudentEmail(punishment.getStudentEmail());
 
             //get student info
-            Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
-            punishmentDTO.setStudentFirstName(student.getFirstName());
-            punishmentDTO.setStudentLastName(student.getLastName());
-            punishmentDTOList.add(punishmentDTO);
+            if (punishment.getStudentEmail() != null) {
+                Student student = studentService.findByStudentEmail(punishment.getStudentEmail());
 
+                if (student != null) {
+                    punishmentDTO.setStudentFirstName(student.getFirstName());
+                    punishmentDTO.setStudentLastName(student.getLastName());
+                }
+            }
+
+            punishmentDTOList.add(punishmentDTO);
         }
 
         return punishmentDTOList;
-
     }
 }
