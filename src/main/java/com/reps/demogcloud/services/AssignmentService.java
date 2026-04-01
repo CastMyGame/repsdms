@@ -1,28 +1,28 @@
 package com.reps.demogcloud.services;
 
-import com.reps.demogcloud.data.*;
+import com.reps.demogcloud.data.AssignmentRepository;
+import com.reps.demogcloud.data.AssignmentTemplateBindingRepository;
+import com.reps.demogcloud.data.AssignmentTemplateRepository;
+import com.reps.demogcloud.data.PunishRepository;
+import com.reps.demogcloud.data.StudentRepository;
 import com.reps.demogcloud.models.assignments.Assignment;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.NoSuchElementException;
-
 import com.reps.demogcloud.models.assignments.AssignmentConverter;
 import com.reps.demogcloud.models.assignments.AssignmentTemplate;
 import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
 import com.reps.demogcloud.models.dto.AssignmentTemplateSummaryDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
@@ -32,41 +32,30 @@ public class AssignmentService {
     private final PunishRepository punishRepository;
 
     // -------- LEGACY METHODS (still operate on old Assignment model) --------
+
     public List<Assignment> getAllAssignments() {
-        List<Assignment> assignments = new ArrayList<>();
-        try {
-            assignments = assignmentRepository.findAll();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-       return assignments;
+        return assignmentRepository.findAll();
     }
-    public  Assignment createNewAssignment(Assignment assignments){
-        return assignmentRepository.save(assignments);
+
+    public Assignment createNewAssignment(Assignment assignment) {
+        return assignmentRepository.save(assignment);
     }
-    public  Assignment deleteAssignment(String assignmentName){
+
+    public Assignment deleteAssignment(String assignmentName) {
         return assignmentRepository.deleteByInfractionName(assignmentName);
     }
+
     public Assignment updateNewAssignment(Assignment assignment, String id) throws Exception {
-        try {
-            Assignment existingAssignment = assignmentRepository.findById(id).orElseThrow();
+        Assignment existingAssignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new Exception("Assignment with ID " + id + " not found"));
 
-            // Update fields of existingAssignment with the values from the provided assignment
-            existingAssignment.setInfractionName(assignment.getInfractionName());
-            existingAssignment.setLevel(assignment.getLevel());
-            existingAssignment.setQuestions(assignment.getQuestions());
+        existingAssignment.setInfractionName(assignment.getInfractionName());
+        existingAssignment.setLevel(assignment.getLevel());
+        existingAssignment.setQuestions(assignment.getQuestions());
 
-            // Update other fields as needed
-
-            // Save the updated assignment
-            return assignmentRepository.save(existingAssignment);
-
-        } catch (NoSuchElementException e) {
-            // Handle the case when the assignment with the given id is not found
-            // You can throw a custom exception or return null depending on your requirements
-            throw new Exception("Assignment with ID " + id + " not found");
-        }
+        return assignmentRepository.save(existingAssignment);
     }
+
     // -------- NEW METHOD: MIGRATE LEGACY -> TEMPLATES --------
 
     /**
@@ -138,11 +127,9 @@ public class AssignmentService {
         AssignmentTemplate existing = assignmentTemplateRepository.findById(id)
                 .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
 
-        // Fields you want to allow updating:
         existing.setInfractionName(updated.getInfractionName());
         existing.setLevel(updated.getLevel());
         existing.setQuestions(updated.getQuestions());
-        // you might NOT want to update createdBySystem / createdByUserId here
         existing.setUpdatedAt(Instant.now());
 
         return assignmentTemplateRepository.save(existing);
@@ -193,13 +180,12 @@ public class AssignmentService {
         }
 
         // 3) System default fallback
-        var systemTemplates =
-                assignmentTemplateRepository
-                        .findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                                infractionName,
-                                level,
-                                AssignmentTemplate.Scope.SYSTEM_DEFAULT
-                        );
+        List<AssignmentTemplate> systemTemplates =
+                assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
+                        infractionName,
+                        level,
+                        AssignmentTemplate.Scope.SYSTEM_DEFAULT
+                );
 
         if (!systemTemplates.isEmpty()) {
             return systemTemplates.get(0);
@@ -223,7 +209,9 @@ public class AssignmentService {
             if (s != null) {
                 schoolId = s.getSchool();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // intentionally ignored to preserve prior behavior
+        }
 
         // 1) Teacher-specific binding
         AssignmentTemplateBinding teacherBinding =
@@ -349,7 +337,6 @@ public class AssignmentService {
         List<AssignmentTemplate> all = assignmentTemplateRepository.findAll();
 
         if (all.isEmpty()) {
-            // No templates at all → just return empty list of DTOs
             return List.of();
         }
 
@@ -359,7 +346,6 @@ public class AssignmentService {
 
         List<AssignmentTemplate> filtered = all.stream()
                 .filter(t -> {
-                    // infractionName filter
                     if (infractionFilter != null) {
                         if (t.getInfractionName() == null ||
                                 !t.getInfractionName().trim().toLowerCase().equals(infractionFilter)) {
@@ -367,12 +353,10 @@ public class AssignmentService {
                         }
                     }
 
-                    // level filter
                     if (level != null && t.getLevel() != level) {
                         return false;
                     }
 
-                    // creator email filter (using createdByUserId as email)
                     if (creatorFilter != null) {
                         String creator = t.getCreatedByUserId();
                         if (creator == null || !creator.trim().toLowerCase().equals(creatorFilter)) {
@@ -380,14 +364,12 @@ public class AssignmentService {
                         }
                     }
 
-                    // createdBySystem filter
                     if (createdBySystem != null) {
                         if (t.isCreatedBySystem() != createdBySystem) {
                             return false;
                         }
                     }
 
-                    // text query filter: look in title/body/prompt of any question
                     if (textFilter != null) {
                         return matchesTextQuery(t, textFilter);
                     }
@@ -407,22 +389,21 @@ public class AssignmentService {
         }
 
         for (AssignmentTemplate.TemplateQuestion q : template.getQuestions()) {
-            // Check Name
             if (template.getName() != null &&
                     template.getName().toLowerCase().contains(textFilter)) {
                 return true;
             }
-            // Check title
+
             if (StringUtils.hasText(q.getTitle()) &&
                     q.getTitle().toLowerCase().contains(textFilter)) {
                 return true;
             }
-            // Check prompt
+
             if (StringUtils.hasText(q.getPrompt()) &&
                     q.getPrompt().toLowerCase().contains(textFilter)) {
                 return true;
             }
-            // Check passage body
+
             if (StringUtils.hasText(q.getPassageBody()) &&
                     q.getPassageBody().toLowerCase().contains(textFilter)) {
                 return true;
@@ -433,10 +414,9 @@ public class AssignmentService {
     }
 
     private AssignmentTemplateSummaryDTO toSummaryDTO(AssignmentTemplate t) {
-
         String preview = null;
         if (t.getQuestions() != null && !t.getQuestions().isEmpty()) {
-            var q = t.getQuestions().get(0);
+            AssignmentTemplate.TemplateQuestion q = t.getQuestions().get(0);
             if (q.getPrompt() != null && !q.getPrompt().isBlank()) {
                 preview = q.getPrompt();
             } else if (q.getTitle() != null && !q.getTitle().isBlank()) {
@@ -465,7 +445,6 @@ public class AssignmentService {
         Punishment punishment = punishRepository.findById(punishmentId)
                 .orElseThrow(() -> new Exception("Punishment not found: " + punishmentId));
 
-        // ✅ THIS is the key: use your binding-aware resolver
         return resolveTemplateForPunishment(punishment);
     }
 }

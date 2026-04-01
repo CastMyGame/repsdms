@@ -12,10 +12,9 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.utils.OfficeReferralUtils;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
@@ -24,9 +23,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
@@ -41,21 +43,24 @@ public class OfficeReferralService {
     private final OfficeReferralRepository officeReferralRepository;
     private final EmailService emailService;
     private final OfficeReferralUtils officeReferralUtils;
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
     private final MongoTemplate mongoTemplate;
 
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
-        for(OfficeReferralRequest officeReferralRequest : officeReferralRequests) {
+        for (OfficeReferralRequest officeReferralRequest : officeReferralRequests) {
             punishmentResponse.add(createNewOfficeReferral(officeReferralRequest));
-        } return  punishmentResponse;
+        }
+        return punishmentResponse;
     }
 
     public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
+        if (findMe == null) {
+            throw new IllegalStateException("Student not found: " + officeReferralRequest.getStudentEmail());
+        }
+
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
 
         School ourSchool = ourSchoolOpt.orElseThrow(() ->
@@ -79,43 +84,51 @@ public class OfficeReferralService {
 
     public OfficeReferral updateMapIndex(String id, int index) {
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(id);
-        if(referral !=null){
+        if (referral != null) {
             referral.setMapIndex(index);
             officeReferralRepository.save(referral);
             return referral;
-
-        }else{
-            throw new ResourceNotFoundException("No Punishment with Id " +id +" number exist");
-
+        } else {
+            throw new ResourceNotFoundException("No Punishment with Id " + id + " number exist");
         }
-
-
     }
 
     public OfficeReferral rejectAnswers(String referralId) throws MessagingException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        //get punishment
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
+        if (referral == null) {
+            throw new ResourceNotFoundException("Office Referral not found for ID: " + referralId);
+        }
+
         Student studentReject = studentRepository.findByStudentEmailIgnoreCase(referral.getStudentEmail());
+        if (studentReject == null) {
+            throw new IllegalStateException("Student not found: " + referral.getStudentEmail());
+        }
+
         List<String> infractionContext = referral.getReferralDescription();
+        if (infractionContext == null || infractionContext.isEmpty()) {
+            throw new IllegalStateException("Referral description is missing for referral: " + referralId);
+        }
+
         String resetContext = infractionContext.get(0);
-        List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
+        List<String> contextToStore = infractionContext.size() > 1
+                ? new ArrayList<>(infractionContext.subList(1, infractionContext.size()))
+                : new ArrayList<>();
 
         List<String> studentAnswer = new ArrayList<>();
         studentAnswer.add(resetContext);
         Date currentDate = new Date();
-        if(referral.getAnswerHistory() !=null){
-            Map<Date,List<String>> answers = referral.getAnswerHistory();
-            answers.put(currentDate,new ArrayList<>(contextToStore));
-        }else {
+
+        if (referral.getAnswerHistory() != null) {
+            Map<Date, List<String>> answers = referral.getAnswerHistory();
+            answers.put(currentDate, new ArrayList<>(contextToStore));
+        } else {
             referral.setAnswerHistory(currentDate, new ArrayList<>(contextToStore));
-
         }
-        referral.setReferralDescription(studentAnswer);
 
+        referral.setReferralDescription(studentAnswer);
         referral.setStatus("OPEN");
 
-        String message =  "Hello, \n" +
+        String message = "Hello, \n" +
                 "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
                 " \n" +
                 contextToStore + " \n" +
@@ -123,11 +136,15 @@ public class OfficeReferralService {
 
         String subject = "Level Three Answers not accepted for " + studentReject.getFirstName() + " " + studentReject.getLastName();
 
-        emailService.sendPtsEmail(studentReject.getParentEmail(),
+        emailService.sendPtsEmail(
+                studentReject.getParentEmail(),
                 referral.getTeacherEmail(),
                 studentReject.getStudentEmail(),
                 message,
-                subject, studentReject.getPreferredLanguage());
+                subject,
+                studentReject.getPreferredLanguage()
+        );
+
         referral.setMapIndex(0);
         officeReferralRepository.save(referral);
 
@@ -153,96 +170,29 @@ public class OfficeReferralService {
 
     public List<OfficeReferral> findByLoggedInStudent() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+        if (authentication == null || authentication.getName() == null) {
+            throw new IllegalStateException("No authenticated user found");
+        }
+
+        Student findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+        if (findMe == null) {
+            throw new IllegalStateException("Student not found: " + authentication.getName());
+        }
 
         return officeReferralRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
     }
 
     public OfficeReferral findByReferralId(String referralId) throws ResourceNotFoundException {
-        var fetchData = officeReferralRepository.findByOfficeReferralId(referralId);
-        if (fetchData == null) {
+        OfficeReferral fetchData = officeReferralRepository.findByOfficeReferralId(referralId);
+        if (fetchData == null || fetchData.isArchived()) {
             throw new ResourceNotFoundException("No referrals with that ID exist");
         }
 
-        if(fetchData.isArchived()){
-            throw new ResourceNotFoundException("No referrals with that ID exist");
-
-        }
-
-        logger.debug(String.valueOf(fetchData));
+        log.debug(String.valueOf(fetchData));
         return fetchData;
     }
 
-//    public OfficeReferralResponse closeReferral(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws ResourceNotFoundException, MessagingException {
-////        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-//        List<OfficeReferral> fetchPunishmentData = officeReferralRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail,
-//                infractionName, "OPEN");
-//
-//        var findOpen = fetchPunishmentData.stream()
-//                .filter(x-> !x.isArchived()) // Filter out punishments where isArchived is true
-//                .toList();  // Collect the filtered punishments into a list
-//
-//
-//
-//        Punishment findMe = null;
-//        if (!findOpen.isEmpty()) {
-//            findMe = findOpen.get(0);
-//
-//        } else {
-//            // Handle the case where findOpen is empty
-//            throw new ResourceNotFoundException("No open punishments found for the given criteria.");
-//        }
-//
-//        Student studentClose = studentRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
-//        Infraction infractionClose = infractionRepository.findByInfractionId(findMe.getInfractionId());
-//
-//        if(!studentAnswers.isEmpty()) {
-//            System.out.println(studentAnswers + " Not Null");
-//            ArrayList<String> answers = findMe.getInfractionDescription();
-//            for (StudentAnswer answer:studentAnswers
-//            ) {
-//                answers.add(answer.toString());
-//            }
-//
-//            findMe.setInfractionDescription(answers);
-//            findMe.setStatus("PENDING");
-//
-//            punishRepository.save(findMe);
-//
-//            PunishmentResponse response = new PunishmentResponse();
-//            response.setPunishment(findMe);
-//            return response;
-//        } else {
-//            findMe.setStatus("CLOSED");
-//            findMe.setClosedTimes(findMe.getClosedTimes() + 1);
-//            findMe.setTimeClosed(LocalDate.now());
-//            punishRepository.save(findMe);
-//            PunishmentResponse punishmentResponse = new PunishmentResponse();
-//            punishmentResponse.setPunishment(findMe);
-//            punishmentResponse.setMessage(" Hello, \n" +
-//                    " Your child, " + studentClose.getFirstName() + " " + studentClose.getLastName() +
-//                    " has successfully completed the assignment given to them in response to the infraction: " + infractionClose.getInfractionName() + ". As a result, no further action is required. Thank you for your support during this process and we appreciate " +
-//                    studentClose.getFirstName() + " " + studentClose.getLastName() + "'s effort in completing the assignment. \n" +
-//                    "Do not respond to this message. Call the school at (843) 579-4815 or email the teacher directly at " + findMe.getTeacherEmail() + " if you have any questions or concerns.");
-//            punishmentResponse.setSubject("Burke High School referral for " + studentClose.getFirstName() + " " + studentClose.getLastName());
-//            punishmentResponse.setParentToEmail(studentClose.getParentEmail());
-//            punishmentResponse.setStudentToEmail(studentClose.getStudentEmail());
-//            punishmentResponse.setTeacherToEmail(findMe.getTeacherEmail());
-//
-//            emailService.sendPtsEmail(punishmentResponse.getParentToEmail(),
-//                    punishmentResponse.getTeacherToEmail(),
-//                    punishmentResponse.getStudentToEmail(),
-//                    punishmentResponse.getSubject(),
-//                    punishmentResponse.getMessage());
-//
-////            Message.creator(new PhoneNumber(punishmentResponse.getPunishment().getStudent().getParentPhoneNumber()),
-////                    new PhoneNumber("+18437900073"), punishmentResponse.getMessage()).create();
-//
-//            return punishmentResponse;
-//        }}
-
     public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
 
         if (findMe == null) {
@@ -254,12 +204,12 @@ public class OfficeReferralService {
 
         // Ensure referralDescription is initialized before modifying it
         if (findMe.getReferralDescription() == null) {
-            System.out.println("Referral Description is Null for referral " + findMe.getOfficeReferralId());
-            findMe.setReferralDescription(new ArrayList<>()); // Initialize if null
+            log.debug("Referral Description is Null for referral {}", findMe.getOfficeReferralId());
+            findMe.setReferralDescription(new ArrayList<>());
         }
 
         // Add comment if one is there
-        if (!request.getComment().isEmpty()) {
+        if (request.getComment() != null && !request.getComment().isEmpty()) {
             List<String> description = new ArrayList<>(findMe.getReferralDescription());
             description.add(request.getComment());
             findMe.setReferralDescription(description);
@@ -276,7 +226,7 @@ public class OfficeReferralService {
         List<OfficeReferral> all = officeReferralRepository.findAll();
         List<OfficeReferral> saved = new ArrayList<>();
         for (OfficeReferral referral : all) {
-            if (referral.getReferralDescription().size() > 1) {
+            if (referral.getReferralDescription() != null && referral.getReferralDescription().size() > 1) {
                 referral.getReferralDescription().remove(0);
                 officeReferralRepository.save(referral);
                 saved.add(referral);
@@ -286,8 +236,11 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException {
-//        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(referralId);
+
+        if (findMe == null) {
+            throw new ResourceNotFoundException("Office Referral not found for ID: " + referralId);
+        }
 
         findMe.setStatus("PENDING");
         findMe.setTimeClosed(LocalDate.now());
@@ -299,14 +252,18 @@ public class OfficeReferralService {
     }
 
     public List<TeacherDTO> getTeacherResponse(List<OfficeReferral> referralList) {
+        if (referralList == null || referralList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         // Extract student emails from the given punishmentList
         List<String> studentEmails = referralList.stream()
                 .map(OfficeReferral::getStudentEmail)
                 .collect(Collectors.toList());
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("studentEmail").in(studentEmails)), // Match only the specified student emails
-                lookup("students", "studentEmail", "studentEmail", "studentInfo"), // Join with the students collection
+                match(Criteria.where("studentEmail").in(studentEmails)),
+                lookup("students", "studentEmail", "studentEmail", "studentInfo"),
                 unwind("studentInfo"),
                 project()
                         .and("studentInfo.studentEmail").as("studentEmail")

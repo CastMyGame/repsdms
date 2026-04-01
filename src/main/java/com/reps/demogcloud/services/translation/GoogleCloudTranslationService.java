@@ -10,11 +10,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class GoogleCloudTranslationService implements TranslationService {
 
+    private static final String DEFAULT_LANGUAGE = "en";
+
     private final Translate translate;
 
     public GoogleCloudTranslationService() {
         // Uses GOOGLE_APPLICATION_CREDENTIALS / ADC under the hood
-        this.translate = TranslateOptions.getDefaultInstance().getService();
+        this(TranslateOptions.getDefaultInstance().getService());
+    }
+
+    public GoogleCloudTranslationService(Translate translate) {
+        this.translate = translate;
     }
 
     @Override
@@ -25,11 +31,11 @@ public class GoogleCloudTranslationService implements TranslationService {
 
         // Normalize target language
         if (targetLang == null || targetLang.isBlank()) {
-            targetLang = "en";
+            targetLang = DEFAULT_LANGUAGE;
         }
 
         // No-op if already English
-        if ("en".equalsIgnoreCase(targetLang)) {
+        if (DEFAULT_LANGUAGE.equalsIgnoreCase(targetLang)) {
             return text;
         }
 
@@ -38,7 +44,7 @@ public class GoogleCloudTranslationService implements TranslationService {
                     text,
                     sourceLang != null && !sourceLang.isBlank()
                             ? Translate.TranslateOption.sourceLanguage(sourceLang)
-                            : Translate.TranslateOption.sourceLanguage("en"),
+                            : Translate.TranslateOption.sourceLanguage(DEFAULT_LANGUAGE),
                     Translate.TranslateOption.targetLanguage(targetLang)
                     // You could also specify model, format, etc.
                     // TranslateOption.model("nmt")
