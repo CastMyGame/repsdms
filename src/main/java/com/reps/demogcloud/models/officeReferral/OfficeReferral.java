@@ -19,7 +19,7 @@ public class OfficeReferral implements Comparable<OfficeReferral>{
     private String officeReferralId;
     private OfficeReferralCode referralCode;
     private String infractionName;
-private String infractionLevel;
+    private String infractionLevel;
     private String studentEmail;
     private String adminEmail;
     private String teacherEmail;
@@ -37,7 +37,7 @@ private String infractionLevel;
     private LocalDate archivedOn;
     private int mapIndex = 0;
     private Map<Date, List<String>> answerHistory;
-    private ArrayList<String> referralDescription;
+    private List<String> referralDescription;
 
 
 

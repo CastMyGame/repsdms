@@ -78,7 +78,7 @@ public class PunishmentUtils {
         p.setTimeCreated(now);
         p.setClosedTimes(Integer.parseInt(getClosedLevel(student.getStudentEmail(), infraction.getInfractionName(), maxLevel)));
 
-        ArrayList<String> descriptions = new ArrayList<>();
+        List<String> descriptions = new ArrayList<>();
         descriptions.add(formRequest.getInfractionDescription());
         p.setInfractionDescription(descriptions);
         return p;
@@ -207,7 +207,7 @@ public class PunishmentUtils {
     }
 
     public void appendStudentAnswers(Punishment punishment, List<StudentAnswer> answers) {
-        ArrayList<String> existing = punishment.getInfractionDescription();
+        List<String> existing = punishment.getInfractionDescription();
         for (StudentAnswer answer : answers) {
             existing.add(answer.toString());
         }

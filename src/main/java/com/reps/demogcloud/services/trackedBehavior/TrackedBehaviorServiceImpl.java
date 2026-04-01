@@ -1,12 +1,22 @@
 package com.reps.demogcloud.services.trackedBehavior;
 
 import com.reps.demogcloud.data.TrackedBehaviorEventRepository;
-import com.reps.demogcloud.models.trackedBehavior.*;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorAdjustmentRequest;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorEvent;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorRequest;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorStudentTotalsRequest;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorType;
+import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorTypeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -35,46 +45,9 @@ public class TrackedBehaviorServiceImpl implements TrackedBehaviorService {
                         studentEmails
                 );
 
-        Map<String, Map<String, Integer>> currentTotals = new HashMap<>();
+        Map<String, Map<String, Integer>> currentTotals = buildCurrentTotals(existingEvents);
 
-        for (TrackedBehaviorEvent existingEvent : existingEvents) {
-            currentTotals.putIfAbsent(existingEvent.getStudentEmail(), new HashMap<>());
-            Map<String, Integer> studentTotals = currentTotals.get(existingEvent.getStudentEmail());
-
-            studentTotals.put(
-                    existingEvent.getBehaviorCode(),
-                    studentTotals.getOrDefault(existingEvent.getBehaviorCode(), 0) + existingEvent.getAdjustmentValue()
-            );
-        }
-
-        for (TrackedBehaviorAdjustmentRequest adjustment : request.getAdjustments()) {
-            if (adjustment == null || adjustment.getAdjustmentValue() == 0) {
-                continue;
-            }
-
-            if (!TrackedBehaviorType.isValidCode(adjustment.getBehaviorCode())) {
-                throw new IllegalArgumentException(
-                        "Invalid tracked behavior code: " + adjustment.getBehaviorCode()
-                );
-            }
-
-            currentTotals.putIfAbsent(adjustment.getStudentEmail(), new HashMap<>());
-            Map<String, Integer> studentTotals = currentTotals.get(adjustment.getStudentEmail());
-
-            int currentValue = studentTotals.getOrDefault(adjustment.getBehaviorCode(), 0);
-            int newValue = currentValue + adjustment.getAdjustmentValue();
-
-            if (newValue < 0) {
-                throw new IllegalArgumentException(
-                        "Tracked behavior total cannot go below zero for studentEmail="
-                                + adjustment.getStudentEmail()
-                                + ", behaviorCode="
-                                + adjustment.getBehaviorCode()
-                );
-            }
-
-            studentTotals.put(adjustment.getBehaviorCode(), newValue);
-        }
+        validateAdjustmentsDoNotCreateNegativeTotals(request, currentTotals);
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -176,5 +149,55 @@ public class TrackedBehaviorServiceImpl implements TrackedBehaviorService {
                         .displayName(type.getDisplayName())
                         .build())
                 .toList();
+    }
+
+    private Map<String, Map<String, Integer>> buildCurrentTotals(List<TrackedBehaviorEvent> existingEvents) {
+        Map<String, Map<String, Integer>> currentTotals = new HashMap<>();
+
+        for (TrackedBehaviorEvent existingEvent : existingEvents) {
+            currentTotals.putIfAbsent(existingEvent.getStudentEmail(), new HashMap<>());
+            Map<String, Integer> studentTotals = currentTotals.get(existingEvent.getStudentEmail());
+
+            studentTotals.put(
+                    existingEvent.getBehaviorCode(),
+                    studentTotals.getOrDefault(existingEvent.getBehaviorCode(), 0) + existingEvent.getAdjustmentValue()
+            );
+        }
+
+        return currentTotals;
+    }
+
+    private void validateAdjustmentsDoNotCreateNegativeTotals(
+            TrackedBehaviorRequest request,
+            Map<String, Map<String, Integer>> currentTotals
+    ) {
+        for (TrackedBehaviorAdjustmentRequest adjustment : request.getAdjustments()) {
+            if (adjustment == null || adjustment.getAdjustmentValue() == 0) {
+                continue;
+            }
+
+            if (!TrackedBehaviorType.isValidCode(adjustment.getBehaviorCode())) {
+                throw new IllegalArgumentException(
+                        "Invalid tracked behavior code: " + adjustment.getBehaviorCode()
+                );
+            }
+
+            currentTotals.putIfAbsent(adjustment.getStudentEmail(), new HashMap<>());
+            Map<String, Integer> studentTotals = currentTotals.get(adjustment.getStudentEmail());
+
+            int currentValue = studentTotals.getOrDefault(adjustment.getBehaviorCode(), 0);
+            int newValue = currentValue + adjustment.getAdjustmentValue();
+
+            if (newValue < 0) {
+                throw new IllegalArgumentException(
+                        "Tracked behavior total cannot go below zero for studentEmail="
+                                + adjustment.getStudentEmail()
+                                + ", behaviorCode="
+                                + adjustment.getBehaviorCode()
+                );
+            }
+
+            studentTotals.put(adjustment.getBehaviorCode(), newValue);
+        }
     }
 }

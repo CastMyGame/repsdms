@@ -29,7 +29,7 @@ public class GuidanceReferral {
     private String classPeriod;
     private String teacherEmail;
     private String guidanceEmail;
-    private ArrayList<String> referralDescription;
+    private List<String> referralDescription;
     private String status;
     private List<ThreadEvent> notesArray;
     private String linkToPunishment;

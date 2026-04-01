@@ -6,12 +6,10 @@ import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.utils.DtoUtils;
 import com.reps.demogcloud.utils.SchoolUtils;
 import com.reps.demogcloud.utils.StudentUtils;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -20,9 +18,9 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class StudentQueryService {
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final StudentUtils studentUtils;
     private final SchoolUtils schoolUtils;
@@ -38,16 +36,24 @@ public class StudentQueryService {
         LocalDate today = LocalDate.now();
 
         for (Punishment punishment : punishments) {
-            if (!"OPEN".equalsIgnoreCase(punishment.getStatus())) continue;
+            if (!"OPEN".equalsIgnoreCase(punishment.getStatus())) {
+                continue;
+            }
 
             int daysSinceCreated = studentUtils.getWorkDaysBetweenTwoDates(punishment.getTimeCreated(), today);
-            if (daysSinceCreated <= 1) continue;
+            if (daysSinceCreated <= 1) {
+                continue;
+            }
 
             String studentEmail = punishment.getStudentEmail();
-            if (seenStudentEmails.contains(studentEmail)) continue;
+            if (seenStudentEmails.contains(studentEmail)) {
+                continue;
+            }
 
             Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-            if (student == null) continue;
+            if (student == null) {
+                continue;
+            }
 
             PunishmentDTO dto = new PunishmentDTO();
             dto.setStudentFirstName(student.getFirstName());
@@ -66,6 +72,7 @@ public class StudentQueryService {
         List<Punishment> punishments = punishRepository.findAllBySchoolAndArchived(school, false);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
+
         for (Punishment punishment : punishments) {
             if (punishment.getStatus().equals("OPEN")) {
                 PunishmentDTO dto = new PunishmentDTO();
@@ -81,10 +88,11 @@ public class StudentQueryService {
                     dto.setStudentLastName(student.getLastName());
                     dto.setStudentEmail(studentEmail);
                     dto.setPunishment(punishment);
+
                     if (!uniqueStudentEmails.contains(studentEmail)) {
                         punishedStudents.add(dto);
-
                     }
+
                     uniqueStudentEmails.add(studentEmail);
                 }
             }
@@ -102,7 +110,8 @@ public class StudentQueryService {
         if (studentRecord.isEmpty()) {
             throw new ResourceNotFoundException("That student does not exist");
         }
-        logger.debug(String.valueOf(studentRecord));
+
+        log.debug(String.valueOf(studentRecord));
         return studentRecord;
     }
 
@@ -111,10 +120,12 @@ public class StudentQueryService {
         List<Student> studentRecord = fetchData.stream()
                 .filter(x -> !x.isArchived()) // Filter out punishments where isArchived is true
                 .toList(); // Collect the filtered punishments into a list
+
         if (studentRecord.isEmpty()) {
             throw new ResourceNotFoundException("That student does not exist");
         }
-        logger.debug(String.valueOf(studentRecord));
+
+        log.debug(String.valueOf(studentRecord));
         return studentRecord;
     }
 
@@ -129,7 +140,6 @@ public class StudentQueryService {
     }
 
     public List<Student> findByStudentEmailList(List<String> email) throws Exception {
-
         List<Student> studentList = new ArrayList<>();
 
         for (String emailAddress : email) {
@@ -138,8 +148,10 @@ public class StudentQueryService {
             if (findMe == null) {
                 throw new Exception("No student with that email exists");
             }
+
             studentList.add(findMe);
         }
+
         return studentList;
     }
 
@@ -166,7 +178,8 @@ public class StudentQueryService {
         if (findMe == null) {
             throw new ResourceNotFoundException("No students with that ID exist");
         }
-        logger.debug(String.valueOf(findMe));
+
+        log.debug(String.valueOf(findMe));
         return findMe;
     }
 
@@ -192,7 +205,5 @@ public class StudentQueryService {
             return new ArrayList<>();
         }
         return archivedRecords;
-
     }
-
 }

@@ -28,13 +28,13 @@ public class EmployeeQueryService {
     private final SchoolUtils schoolUtils;
 
     public List<Employee> findAll() throws ResourceNotFoundException {
-        return FetchEmployeeDataByArchivedAndSchool(false);
+        return fetchEmployeeDataByArchivedAndSchool(false);
     }
 
     public Optional<List<Employee>> findAllByRole(String role) {
 
         //Fetch Data
-        List<Employee> allEmployees = FetchEmployeeDataByArchivedAndSchool(false);
+        List<Employee> allEmployees = fetchEmployeeDataByArchivedAndSchool(false);
 
         if (!allEmployees.isEmpty()) {
             List<Employee> employeesWithRole = allEmployees.stream()
@@ -77,7 +77,7 @@ public class EmployeeQueryService {
         return employee;
     }
 
-    public List<Employee> FetchEmployeeDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
+    public List<Employee> fetchEmployeeDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
         List<Employee> archivedRecords = employeeRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();

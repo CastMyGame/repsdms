@@ -1,8 +1,8 @@
 package com.reps.demogcloud.controllers;
 
+import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.ClassRequest;
 import com.reps.demogcloud.models.employee.Employee;
-import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.models.employee.EmployeeResponse;
 import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
@@ -31,132 +31,116 @@ import java.util.Set;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
-
     private final EmployeeRepository employeeRepository;
 
-    // -----------------------------------GET Controllers---------------------------------
     @GetMapping("/employees")
-    private ResponseEntity<List<Employee>> getAllUsers(){
-        List<Employee> employees =  employeeService.findAll();
+    public ResponseEntity<List<Employee>> getAllUsers() {
+        List<Employee> employees = employeeService.findAll();
         return ResponseEntity.ok(employees);
     }
 
     @GetMapping("/employees/email/{email}")
-    private ResponseEntity<Employee> getUserById(@PathVariable String email){
-        Employee employees =  employeeService.findByUserName(email);
-        return ResponseEntity.ok(employees);
+    public ResponseEntity<Employee> getUserById(@PathVariable String email) {
+        Employee employee = employeeService.findByUserName(email);
+        return ResponseEntity.ok(employee);
     }
 
     @GetMapping("/employees/{role}")
-    private ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
+    public ResponseEntity<List<Employee>> getAllEmployeesByRole(@PathVariable String role) {
         Optional<List<Employee>> employeesOptional = employeeService.findAllByRole(role);
 
-        if (employeesOptional.isPresent()) {
-            List<Employee> employees = employeesOptional.get();
-            if(employees.isEmpty()){
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
-
-            }else{
-                return ResponseEntity.ok(employees);
-
-            }
-        } else {
-            // If no employees with the specified role are found, return a 404 Not Found response
+        if (employeesOptional.isEmpty() || employeesOptional.get().isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
         }
+
+        return ResponseEntity.ok(employeesOptional.get());
     }
 
-    //------------------------------POST Controllers------------------------------------
-
     @PostMapping("/employees")
-    private ResponseEntity<EmployeeResponse> createEmployee(@RequestBody Employee employee){
-        EmployeeResponse employees =  employeeService.createNewEmployee(employee);
-        return ResponseEntity.ok(employees);
+    public ResponseEntity<EmployeeResponse> createEmployee(@RequestBody Employee employee) {
+        EmployeeResponse response = employeeService.createNewEmployee(employee);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/employees/list")
-    private ResponseEntity<List<EmployeeResponse>> createEmployeeList(@RequestBody List<Employee> employeeList){
-
-
-        List<EmployeeResponse> employees =  employeeService.createNewEmployeeList(employeeList);
-        return ResponseEntity.ok(employees);
+    public ResponseEntity<List<EmployeeResponse>> createEmployeeList(@RequestBody List<Employee> employeeList) {
+        List<EmployeeResponse> response = employeeService.createNewEmployeeList(employeeList);
+        return ResponseEntity.ok(response);
     }
 
-
-    //---------------------------PUT Controllers------------------------------
-
     @PutMapping("/employees/{id}/roles")
-    private ResponseEntity<Employee> updateEmployeesRole(@PathVariable String id, @RequestBody Set<RoleModel> roles) {
+    public ResponseEntity<Employee> updateEmployeesRole(@PathVariable String id, @RequestBody Set<RoleModel> roles) {
         Optional<Employee> optionalEmployee = employeeRepository.findById(id);
 
-        if (optionalEmployee.isPresent()) {
-            Employee employee = optionalEmployee.get();
-
-            // Update the role of the user
-            employee.setRoles(roles);  // Assuming UserModel has a setter method for roles of type Set<RoleModel>
-
-            // Save the updated user back to the repository
-            Employee updatedEmployee = employeeRepository.save(employee);
-
-            // Return a response entity with the updated user and a success status
-            return ResponseEntity.ok(updatedEmployee);
-        } else {
-            // If user not found, return a 404 Not Found response
+        if (optionalEmployee.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
+        Employee employee = optionalEmployee.get();
+        employee.setRoles(roles);
+        Employee updatedEmployee = employeeRepository.save(employee);
+
+        return ResponseEntity.ok(updatedEmployee);
     }
 
     @PutMapping("/currency/spend")
     public ResponseEntity<List<Student>> spendCurrency(@RequestBody List<CurrencySpendRequest> requests) {
         List<Student> response = employeeService.spendCurrency(requests);
-        return ResponseEntity
-                .accepted()
-                .body(response);
+        return ResponseEntity.accepted().body(response);
     }
 
     @PutMapping("/{school}")
     public ResponseEntity<List<Employee>> editSchool(@PathVariable String school) {
         List<Employee> updated = employeeService.editSchool(school);
-        return updated == null
-                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
-                : new ResponseEntity<>(updated, HttpStatus.OK);
+
+        if (updated == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
     @PutMapping("/updateClass/{teacherEmail}")
-    public ResponseEntity<Employee> updateClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+    public ResponseEntity<Employee> updateClassRoster(@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
         Employee updated = employeeService.addOrUpdateClassToEmployee(teacherEmail, request);
-        return updated == null
-                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
-                : new ResponseEntity<>(updated, HttpStatus.OK);
+
+        if (updated == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
     @PutMapping("/updateAll")
-    public ResponseEntity<List<Employee>> updateAllEmployees () {
+    public ResponseEntity<List<Employee>> updateAllEmployees() {
         List<Employee> updated = employeeService.updateAllEmployees();
-        return updated == null
-                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
-                : new ResponseEntity<>(updated, HttpStatus.OK);
+
+        if (updated == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
-    //----------------------------DELETE Controllers----------------------------------
     @DeleteMapping("/employees/{id}")
     public ResponseEntity<String> deleteEmployeeById(@PathVariable String id) {
         try {
             employeeService.deleteEmployee(id);
-
-            // If the service method executed successfully, return a 200 OK response
             return ResponseEntity.ok("Employee with ID " + id + " has been deleted.");
         } catch (Exception e) {
-            // If an exception occurred, handle it and return a 404 Not Found response
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Employee with ID " + id + " not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Employee with ID " + id + " not found.");
         }
     }
 
     @PostMapping("/deleteClass/{teacherEmail}")
-    public ResponseEntity<Employee> deleteClassRoster (@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
+    public ResponseEntity<Employee> deleteClassRoster(@PathVariable String teacherEmail, @RequestBody ClassRequest request) {
         Employee updated = employeeService.removeClassFromEmployee(teacherEmail, request);
-        return updated == null
-                ? new ResponseEntity<>(null, HttpStatus.BAD_REQUEST)
-                : new ResponseEntity<>(updated, HttpStatus.OK);
+
+        if (updated == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(updated);
     }
 }

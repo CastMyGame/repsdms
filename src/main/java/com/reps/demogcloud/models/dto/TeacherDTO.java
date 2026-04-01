@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class TeacherDTO {
@@ -12,7 +13,7 @@ public class TeacherDTO {
     private String studentLastName;
     private String infractionName;
     private LocalDate timeCreated;
-    private ArrayList<String> infractionDescription;
+    private List<String> infractionDescription;
     private String classPeriod;
     private String teacherEmail;
     private String status;

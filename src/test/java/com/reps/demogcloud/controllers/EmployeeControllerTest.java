@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
-
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -74,52 +73,17 @@ class EmployeeControllerTest {
         role.setRole("ROLE_TEACHER");
     }
 
+    // ---------- GET TESTS ----------
+
     @Test
     void getAllUsers_returnsListOfEmployees() throws Exception {
-        List<Employee> employees = List.of(employee);
-        when(employeeService.findAll()).thenReturn(employees);
+        when(employeeService.findAll()).thenReturn(List.of(employee));
 
         mockMvc.perform(get("/employees/v1/employees"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].email").value("teacher@example.com"));
-    }
 
-    @Test
-    void updateEmployeesRole_whenEmployeeExists_returnsUpdatedEmployee() throws Exception {
-        Set<RoleModel> roles = Set.of(role);
-        employee.setRoles(roles);
-
-        when(employeeRepository.findById("123")).thenReturn(Optional.of(employee));
-        when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
-
-        mockMvc.perform(put("/employees/v1/employees/123/roles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(roles)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roles[0].role").value("ROLE_TEACHER"));
-    }
-
-    @Test
-    void deleteEmployeeById_whenEmployeeExists_returnsOk() throws Exception {
-        doNothing().when(employeeService).deleteEmployee("123");
-
-        mockMvc.perform(delete("/employees/v1/employees/123"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Employee with ID 123 has been deleted."));
-    }
-
-    @Test
-    void createEmployee_returnsEmployeeResponse() throws Exception {
-        EmployeeResponse response = new EmployeeResponse();
-        response.setEmployee(employee);
-
-        when(employeeService.createNewEmployee(any(Employee.class))).thenReturn(response);
-
-        mockMvc.perform(post("/employees/v1/employees")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(employee)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.employee.email").value("teacher@example.com"));
+        verify(employeeService).findAll();
     }
 
     @Test
@@ -129,31 +93,53 @@ class EmployeeControllerTest {
         mockMvc.perform(get("/employees/v1/employees/email/teacher@example.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("teacher@example.com"));
+
+        verify(employeeService).findByUserName("teacher@example.com");
     }
 
     @Test
     void getAllEmployeesByRole_returnsEmployees() throws Exception {
-        when(employeeService.findAllByRole("TEACHER")).thenReturn(Optional.of(List.of(employee)));
+        when(employeeService.findAllByRole("TEACHER"))
+                .thenReturn(Optional.of(List.of(employee)));
 
         mockMvc.perform(get("/employees/v1/employees/TEACHER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].email").value("teacher@example.com"));
+
+        verify(employeeService).findAllByRole("TEACHER");
     }
 
     @Test
-    void getAllEmployeesByRole_whenEmptyList_returnsNotFound() throws Exception {
-        when(employeeService.findAllByRole("TEACHER")).thenReturn(Optional.of(List.of()));
+    void getAllEmployeesByRole_returnsNotFound_whenEmptyOrMissing() throws Exception {
+        when(employeeService.findAllByRole("TEACHER"))
+                .thenReturn(Optional.of(List.of()));
+
+        mockMvc.perform(get("/employees/v1/employees/TEACHER"))
+                .andExpect(status().isNotFound());
+
+        when(employeeService.findAllByRole("TEACHER"))
+                .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/employees/v1/employees/TEACHER"))
                 .andExpect(status().isNotFound());
     }
 
-    @Test
-    void getAllEmployeesByRole_whenOptionalEmpty_returnsNotFound() throws Exception {
-        when(employeeService.findAllByRole("TEACHER")).thenReturn(Optional.empty());
+    // ---------- POST TESTS ----------
 
-        mockMvc.perform(get("/employees/v1/employees/TEACHER"))
-                .andExpect(status().isNotFound());
+    @Test
+    void createEmployee_returnsEmployeeResponse() throws Exception {
+        EmployeeResponse response = new EmployeeResponse();
+        response.setEmployee(employee);
+
+        when(employeeService.createNewEmployee(any())).thenReturn(response);
+
+        mockMvc.perform(post("/employees/v1/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(employee)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employee.email").value("teacher@example.com"));
+
+        verify(employeeService).createNewEmployee(any());
     }
 
     @Test
@@ -161,91 +147,24 @@ class EmployeeControllerTest {
         EmployeeResponse response = new EmployeeResponse();
         response.setEmployee(employee);
 
-        when(employeeService.createNewEmployeeList(any())).thenReturn(List.of(response));
+        when(employeeService.createNewEmployeeList(any()))
+                .thenReturn(List.of(response));
 
         mockMvc.perform(post("/employees/v1/employees/list")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(employee))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].employee.email").value("teacher@example.com"));
+
+        verify(employeeService).createNewEmployeeList(any());
     }
 
     @Test
-    void spendCurrency_returnsAcceptedResponse() throws Exception {
-        CurrencySpendRequest request = new CurrencySpendRequest();
-        Student student = new Student();
-
-        when(employeeService.spendCurrency(any())).thenReturn(List.of(student));
-
-        mockMvc.perform(put("/employees/v1/currency/spend")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(request))))
-                .andExpect(status().isAccepted());
-    }
-
-    @Test
-    void editSchool_returnsUpdatedEmployees() throws Exception {
-        when(employeeService.editSchool("MySchool")).thenReturn(List.of(employee));
-
-        mockMvc.perform(put("/employees/v1/MySchool"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].email").value("teacher@example.com"));
-    }
-
-    @Test
-    void editSchool_returnsBadRequest_whenNull() throws Exception {
-        when(employeeService.editSchool("MySchool")).thenReturn(null);
-
-        mockMvc.perform(put("/employees/v1/MySchool"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateClassRoster_returnsUpdatedEmployee() throws Exception {
-        ClassRequest request = new ClassRequest(); // fill as needed
-
-        when(employeeService.addOrUpdateClassToEmployee(any(), any())).thenReturn(employee);
-
-        mockMvc.perform(put("/employees/v1/updateClass/teacher@example.com")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("teacher@example.com"));
-    }
-
-    @Test
-    void updateClassRoster_returnsBadRequest_whenNull() throws Exception {
+    void deleteClassRoster_returnsEmployee() throws Exception {
         ClassRequest request = new ClassRequest();
 
-        when(employeeService.addOrUpdateClassToEmployee(any(), any())).thenReturn(null);
-
-        mockMvc.perform(put("/employees/v1/updateClass/teacher@example.com")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateAllEmployees_returnsUpdatedList() throws Exception {
-        when(employeeService.updateAllEmployees()).thenReturn(List.of(employee));
-
-        mockMvc.perform(put("/employees/v1/updateAll"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void updateAllEmployees_returnsBadRequest_whenNull() throws Exception {
-        when(employeeService.updateAllEmployees()).thenReturn(null);
-
-        mockMvc.perform(put("/employees/v1/updateAll"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void deleteClassRoster_returnsUpdatedEmployee() throws Exception {
-        ClassRequest request = new ClassRequest();
-
-        when(employeeService.removeClassFromEmployee(any(), any())).thenReturn(employee);
+        when(employeeService.removeClassFromEmployee(any(), any()))
+                .thenReturn(employee);
 
         mockMvc.perform(post("/employees/v1/deleteClass/teacher@example.com")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -258,7 +177,8 @@ class EmployeeControllerTest {
     void deleteClassRoster_returnsBadRequest_whenNull() throws Exception {
         ClassRequest request = new ClassRequest();
 
-        when(employeeService.removeClassFromEmployee(any(), any())).thenReturn(null);
+        when(employeeService.removeClassFromEmployee(any(), any()))
+                .thenReturn(null);
 
         mockMvc.perform(post("/employees/v1/deleteClass/teacher@example.com")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -266,8 +186,25 @@ class EmployeeControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ---------- PUT TESTS ----------
+
     @Test
-    void updateEmployeesRole_whenEmployeeNotFound_returnsNotFound() throws Exception {
+    void updateEmployeesRole_success() throws Exception {
+        Set<RoleModel> roles = Set.of(role);
+        employee.setRoles(roles);
+
+        when(employeeRepository.findById("123")).thenReturn(Optional.of(employee));
+        when(employeeRepository.save(any())).thenReturn(employee);
+
+        mockMvc.perform(put("/employees/v1/employees/123/roles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(roles)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0].role").value("ROLE_TEACHER"));
+    }
+
+    @Test
+    void updateEmployeesRole_notFound() throws Exception {
         when(employeeRepository.findById("123")).thenReturn(Optional.empty());
 
         mockMvc.perform(put("/employees/v1/employees/123/roles")
@@ -277,14 +214,81 @@ class EmployeeControllerTest {
     }
 
     @Test
-    void deleteEmployeeById_whenExceptionThrown_returnsNotFound() throws Exception {
-        doThrow(new RuntimeException("Employee not found"))
+    void spendCurrency_returnsAccepted() throws Exception {
+        when(employeeService.spendCurrency(any()))
+                .thenReturn(List.of(new Student()));
+
+        mockMvc.perform(put("/employees/v1/currency/spend")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(new CurrencySpendRequest()))))
+                .andExpect(status().isAccepted());
+
+        verify(employeeService).spendCurrency(any());
+    }
+
+    @Test
+    void editSchool_success_and_failure() throws Exception {
+        when(employeeService.editSchool("MySchool")).thenReturn(List.of(employee));
+
+        mockMvc.perform(put("/employees/v1/MySchool"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].email").value("teacher@example.com"));
+
+        when(employeeService.editSchool("MySchool")).thenReturn(null);
+
+        mockMvc.perform(put("/employees/v1/MySchool"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateClassRoster_success_and_failure() throws Exception {
+        ClassRequest request = new ClassRequest();
+
+        when(employeeService.addOrUpdateClassToEmployee(any(), any()))
+                .thenReturn(employee);
+
+        mockMvc.perform(put("/employees/v1/updateClass/teacher@example.com")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        when(employeeService.addOrUpdateClassToEmployee(any(), any()))
+                .thenReturn(null);
+
+        mockMvc.perform(put("/employees/v1/updateClass/teacher@example.com")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateAllEmployees_success_and_failure() throws Exception {
+        when(employeeService.updateAllEmployees()).thenReturn(List.of(employee));
+
+        mockMvc.perform(put("/employees/v1/updateAll"))
+                .andExpect(status().isOk());
+
+        when(employeeService.updateAllEmployees()).thenReturn(null);
+
+        mockMvc.perform(put("/employees/v1/updateAll"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------- DELETE TESTS ----------
+
+    @Test
+    void deleteEmployee_success_and_notFound() throws Exception {
+        doNothing().when(employeeService).deleteEmployee("123");
+
+        mockMvc.perform(delete("/employees/v1/employees/123"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Employee with ID 123 has been deleted."));
+
+        doThrow(new RuntimeException("not found"))
                 .when(employeeService).deleteEmployee("123");
 
         mockMvc.perform(delete("/employees/v1/employees/123"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("Employee with ID 123 not found."));
     }
-
 }
-

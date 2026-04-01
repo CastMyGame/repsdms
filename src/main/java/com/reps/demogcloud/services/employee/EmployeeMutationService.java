@@ -9,8 +9,6 @@ import com.reps.demogcloud.models.student.CurrencySpendRequest;
 import com.reps.demogcloud.models.student.Student;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,17 +24,12 @@ public class EmployeeMutationService {
     private final StudentRepository studentRepository;
 
     public void deleteEmployee(String id) throws Exception {
-        try {
-            Optional<Employee> employeeOptional = employeeRepository.findById(id);
+        Optional<Employee> employeeOptional = employeeRepository.findById(id);
 
-            if (employeeOptional.isPresent()) {
-                employeeRepository.deleteById(id);
-
-            } else {
-                throw new Exception("Employee with ID " + id + " does not exist");
-            }
-        } catch (Exception e) {
-            throw new Exception("An error occurred while deleting the employee");
+        if (employeeOptional.isPresent()) {
+            employeeRepository.deleteById(id);
+        } else {
+            throw new Exception("Employee with ID " + id + " does not exist");
         }
     }
 

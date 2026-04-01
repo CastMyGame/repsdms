@@ -34,13 +34,11 @@ public class GuidanceService {
     private final SchoolRepository schoolRepository;
     private final EmailService emailService;
     private final GuidanceRepository guidanceRepository;
-
+    private final MongoTemplate mongoTemplate;
     //@Value("${sm://RepsDiscipline-twilio_username}")
     private String twilioUsername;
    // @Value("${sm://RepsDiscipline-twilio_password}")
     private String twilioPassword;
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
     public List<GuidanceReferral> findAll() {
         return guidanceRepository.findAll();
@@ -65,10 +63,13 @@ public class GuidanceService {
     }
 
     public void createNewGuidanceForm(GuidanceRequest request, PunishmentFormRequest punishmentRequest) {
-//        Twilio.init(secretClient.getSecret("TWILIO-ACCOUNT-SID").toString(), secretClient.getSecret("TWILIO-AUTH-TOKEN").toString());
         LocalDate now = LocalDate.now();
 
         Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(punishmentRequest.getStudentEmail());
+        if (studentRecord == null) {
+            throw new IllegalStateException("Student not found: " + punishmentRequest.getStudentEmail());
+        }
+
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(studentRecord.getSchool());
 
         School ourSchool = ourSchoolOpt.orElseThrow(() ->
@@ -80,9 +81,11 @@ public class GuidanceService {
         guidanceObj.setGuidanceId(UUID.randomUUID().toString());
         guidanceObj.setTimeCreated(now);
         guidanceObj.setTeacherEmail(punishmentRequest.getTeacherEmail());
-        ArrayList<String> description = new ArrayList<>();
+
+        List<String> description = new ArrayList<>();
         description.add(punishmentRequest.getGuidanceDescription());
         guidanceObj.setReferralDescription(description);
+
         guidanceObj.setSchool(ourSchool.getSchoolName());
         guidanceObj.setStatus("OPEN");
         guidanceObj.setGuidanceEmail(studentRecord.getGuidanceEmail());
@@ -94,14 +97,17 @@ public class GuidanceService {
         guidances.add(guidanceObj);
         response.setGuidance(guidances);
         response.setMessage("Successfully Created Guidance Referral");
-
-
     }
 
     public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) {
         LocalDate now = LocalDate.now();
 
-        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(request.getGuidance().getStudentEmail());
+        String studentEmail = request.getGuidance().getStudentEmail();
+        Student studentRecord = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        if (studentRecord == null) {
+            throw new IllegalStateException("Student not found: " + studentEmail);
+        }
+
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(studentRecord.getSchool());
 
         School ourSchool = ourSchoolOpt.orElseThrow(() ->
@@ -126,8 +132,6 @@ public class GuidanceService {
         response.setGuidance(guidances);
         response.setMessage("Successfully Created Guidance Referral");
         return response;
-
-
     }
 
     public GuidanceReferral updateGuidanceStatus(String id, String newStatus) {
@@ -135,9 +139,10 @@ public class GuidanceService {
 
         if (getReferral.isEmpty()) {
             GuidanceResponse response = new GuidanceResponse();
-            response.setError("Guidance Referral with id " + " was not found");
+            response.setError("Guidance Referral with id " + id + " was not found");
             return null;
         }
+
         GuidanceReferral record = getReferral.get();
         record.setStatus(newStatus);
         List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
@@ -148,6 +153,7 @@ public class GuidanceService {
         newEvent.setDate(timePosted);
         newEvent.setContent("The Status of This Task was Changed to " + newStatus);
         events.add(newEvent);
+        record.setNotesArray(events);
 
         return guidanceRepository.save(record);
     }
@@ -193,7 +199,6 @@ public class GuidanceService {
             return response;
         }
 
-
         GuidanceReferral guidance = guidanceOptional.get();
         LocalDate timePosted = LocalDate.now();
         List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
@@ -202,20 +207,24 @@ public class GuidanceService {
         newEvent.setEvent("Resources");
         newEvent.setDate(timePosted);
 
-        // Extract URLs from ResourceOption list
-        List<String> labels = request.getResourceOptionList().stream()
+        List<ResourceOption> options = request.getResourceOptionList() == null
+                ? new ArrayList<>()
+                : request.getResourceOptionList();
+
+        List<String> labels = options.stream()
                 .map(ResourceOption::getLabel)
                 .toList();
 
-        // Set the content of the new event
         newEvent.setContent("Resources Sent: " + String.join(", ", labels));
         events.add(newEvent);
 
         guidance.setNotesArray(events);
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(guidance.getStudentEmail());
+        if (student == null) {
+            throw new IllegalStateException("Student not found: " + guidance.getStudentEmail());
+        }
 
-        // Construct the resource message in HTML format
         StringBuilder resourceMessage = new StringBuilder();
         resourceMessage.append("<html>")
                 .append("<body>")
@@ -226,7 +235,7 @@ public class GuidanceService {
                 .append(", Guidance has sent you the following resources for your consideration:</p>")
                 .append("<ul>");
 
-        for (ResourceOption item : request.getResourceOptionList()) {
+        for (ResourceOption item : options) {
             resourceMessage.append("<li><a href=\"")
                     .append(item.getUrl())
                     .append("\">")
@@ -238,19 +247,16 @@ public class GuidanceService {
                 .append("</body>")
                 .append("</html>");
 
-        String finalMessage = resourceMessage.toString();
-
         String subject = student.getSchool() + " High School Guidance's Resources";
         ArrayList<String> ccList = new ArrayList<>();
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());
 
-
         emailService.sendEmailGeneric(
                 ccList,
                 student.getStudentEmail(),
                 subject,
-                finalMessage,// Use HTML message
+                resourceMessage.toString(),
                 student.getPreferredLanguage()
         );
 
