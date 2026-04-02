@@ -10,18 +10,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @CrossOrigin(origins = {
         "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
-        "https://repsdev.vercel.app"})
-
+        "https://repsdev.vercel.app"
+})
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/school/v1")
 public class SchoolController {
+
     private final SchoolService schoolService;
 
     @GetMapping("/all")
@@ -38,10 +38,12 @@ public class SchoolController {
     }
 
     @PostMapping("/newSchool")
-    public ResponseEntity<SchoolResponse> createSchool (@RequestBody School schoolRequest) {
+    public ResponseEntity<SchoolResponse> createSchool(@RequestBody School schoolRequest) {
         log.info("POST /school/v1/newSchool payload: schoolName='{}', currency='{}'",
                 schoolRequest.getSchoolName(), schoolRequest.getCurrency());
+
         SchoolResponse schoolResponse = schoolService.createNewSchool(schoolRequest);
+
         if (schoolResponse.getSchool() == null) {
             log.warn("Create school failed: error='{}'", schoolResponse.getError());
             return new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST);
@@ -55,8 +57,12 @@ public class SchoolController {
     }
 
     @PutMapping("/{schoolName}")
-    public ResponseEntity<SchoolResponse> editSchool(@PathVariable String schoolName, @RequestParam Map<String, String> update) {
+    public ResponseEntity<SchoolResponse> editSchool(
+            @PathVariable String schoolName,
+            @RequestParam Map<String, String> update
+    ) {
         SchoolResponse schoolResponse = schoolService.editSchool(schoolName, update);
+
         return schoolResponse.getSchool() == null
                 ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(schoolResponse, HttpStatus.OK);

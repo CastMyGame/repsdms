@@ -13,7 +13,8 @@ import java.util.List;
 @CrossOrigin(origins = {
         "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
-        "https://repsdev.vercel.app"})
+        "https://repsdev.vercel.app"
+})
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/assignments/v1/bindings")
@@ -31,16 +32,15 @@ public class AssignmentBindingController {
     public ResponseEntity<AssignmentTemplateBinding> setTeacherDefault(
             @RequestBody SetTeacherDefaultBindingRequest request
     ) throws Exception {
-
-        AssignmentTemplateBinding binding = assignmentService.setTeacherDefaultTemplate(
-                request.getTeacherEmail(),
-                request.getSchoolId(),
-                request.getInfractionName(),
-                request.getLevel(),
-                request.getAssignmentTemplateId()
+        return ResponseEntity.ok(
+                assignmentService.setTeacherDefaultTemplate(
+                        request.getTeacherEmail(),
+                        request.getSchoolId(),
+                        request.getInfractionName(),
+                        request.getLevel(),
+                        request.getAssignmentTemplateId()
+                )
         );
-
-        return ResponseEntity.ok(binding);
     }
 
     /**
@@ -67,10 +67,9 @@ public class AssignmentBindingController {
     public ResponseEntity<List<AssignmentTemplateBinding>> getTeacherDefaults(
             @RequestParam String teacherEmail
     ) {
-        List<AssignmentTemplateBinding> bindings =
-                assignmentService.getActiveBindingsForTeacher(teacherEmail);
-
-        return ResponseEntity.ok(bindings);
+        return ResponseEntity.ok(
+                assignmentService.getActiveBindingsForTeacher(teacherEmail)
+        );
     }
 
     /**
@@ -81,9 +80,8 @@ public class AssignmentBindingController {
     public ResponseEntity<List<AssignmentTemplateBinding>> getBindingsForTemplate(
             @PathVariable String templateId
     ) {
-        List<AssignmentTemplateBinding> bindings =
-                assignmentService.getActiveBindingsForTemplate(templateId);
-
-        return ResponseEntity.ok(bindings);
+        return ResponseEntity.ok(
+                assignmentService.getActiveBindingsForTemplate(templateId)
+        );
     }
 }

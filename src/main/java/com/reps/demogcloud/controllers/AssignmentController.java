@@ -2,7 +2,6 @@ package com.reps.demogcloud.controllers;
 
 import com.reps.demogcloud.data.PunishRepository;
 import com.reps.demogcloud.models.assignments.Assignment;
-
 import com.reps.demogcloud.models.assignments.AssignmentTemplate;
 import com.reps.demogcloud.models.dto.AssignmentTemplateSummaryDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
@@ -16,8 +15,8 @@ import java.util.List;
 @CrossOrigin(origins = {
         "http://localhost:3000",
         "https://repsdiscipline.vercel.app",
-        "https://repsdev.vercel.app"})
-
+        "https://repsdev.vercel.app"
+})
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/assignments/v1")
@@ -27,12 +26,11 @@ public class AssignmentController {
     private final PunishRepository punishRepository;
 
     //-----------------------GET Controllers----------------------------
+
     @GetMapping("/")
-    public ResponseEntity<List<Assignment>> getAllQuestions() throws Exception{
-        var message = assignmentService.getAllAssignments();
-        return ResponseEntity
-                .accepted()
-                .body(message);
+    public ResponseEntity<List<Assignment>> getAllQuestions() throws Exception {
+        List<Assignment> assignments = assignmentService.getAllAssignments();
+        return ResponseEntity.accepted().body(assignments);
     }
 
     @GetMapping("/templates/for-punishment/{punishmentId}")
@@ -43,15 +41,6 @@ public class AssignmentController {
         return ResponseEntity.ok(template);
     }
 
-    //------------------------POST Controllers-----------------------------
-    @PostMapping("/")
-    public ResponseEntity<Assignment> createNewAssignment(@RequestBody Assignment assignment) throws Exception {
-        var message = assignmentService.createNewAssignment(assignment);
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
     @GetMapping("/templates/search")
     public ResponseEntity<List<AssignmentTemplateSummaryDTO>> searchTemplates(
             @RequestParam(required = false) String infractionName,
@@ -60,7 +49,7 @@ public class AssignmentController {
             @RequestParam(required = false) Boolean createdBySystem,
             @RequestParam(required = false, name = "q") String textQuery
     ) {
-        var results = assignmentService.searchTemplates(
+        List<AssignmentTemplateSummaryDTO> results = assignmentService.searchTemplates(
                 infractionName,
                 level,
                 creatorEmail,
@@ -72,7 +61,7 @@ public class AssignmentController {
 
     @GetMapping("/templates")
     public ResponseEntity<List<AssignmentTemplate>> getAllTemplates() {
-        var templates = assignmentService.getAllTemplates();
+        List<AssignmentTemplate> templates = assignmentService.getAllTemplates();
         return ResponseEntity.ok(templates);
     }
 
@@ -81,20 +70,23 @@ public class AssignmentController {
             @RequestParam String infractionName,
             @RequestParam int level
     ) {
-        var templates = assignmentService.getTemplatesByInfractionAndLevel(infractionName, level);
+        List<AssignmentTemplate> templates =
+                assignmentService.getTemplatesByInfractionAndLevel(infractionName, level);
         return ResponseEntity.ok(templates);
     }
 
     @GetMapping("/templates/{id}")
     public ResponseEntity<AssignmentTemplate> getTemplateById(@PathVariable String id) throws Exception {
-        var template = assignmentService.getTemplateById(id);
+        AssignmentTemplate template = assignmentService.getTemplateById(id);
         return ResponseEntity.ok(template);
     }
 
     @GetMapping("/{id}/assignment-template")
-    public ResponseEntity<AssignmentTemplate> getAssignmentTemplateForPunishment(@PathVariable String id) throws Exception {
+    public ResponseEntity<AssignmentTemplate> getAssignmentTemplateForPunishment(
+            @PathVariable String id
+    ) throws Exception {
         Punishment punishment = punishRepository.findById(id)
-                .orElseThrow(() -> new Exception("Punishment not found: " + id));
+                .orElseThrow(() -> new RuntimeException("Punishment not found: " + id));
 
         if (punishment.getAssignmentTemplateId() == null) {
             return ResponseEntity.notFound().build();
@@ -104,70 +96,67 @@ public class AssignmentController {
         return ResponseEntity.ok(template);
     }
 
-    //----------------------------PUT Controllers----------------------------------
-    @PutMapping("/{id}")
-    public ResponseEntity<Assignment> updateAssignment(@RequestBody Assignment assignment,@PathVariable String id) throws Exception {
-        var message = assignmentService.updateNewAssignment(assignment,id);
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-
-    //-------------------------DELETE Controllers--------------------------------
-    @DeleteMapping("/delete/{assignmentName}")
-    public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
-        var message = assignmentService.deleteAssignment(assignmentName);
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-
-    // ------------------------- MIGRATION ENDPOINT ------------------------------
-
-    /**
-     * One-shot endpoint to migrate all legacy assignments into
-     * the new assignment_templates collection.
-     *
-     * You can hit this from Bruno: POST /assignments/v1/migrate-legacy
-     */
-    @PostMapping("/migrate-legacy")
-    public ResponseEntity<String> migrateLegacyAssignments() {
-        int migrated = assignmentService.migrateLegacyAssignmentsToTemplates();
-        String msg = "Migrated " + migrated + " legacy assignments to templates.";
-        return ResponseEntity.ok(msg);
-    }
-
-
-    // Create a new template
-    @PostMapping("/templates")
-    public ResponseEntity<AssignmentTemplate> createTemplate(@RequestBody AssignmentTemplate template) {
-        var created = assignmentService.createAssignmentTemplate(template);
-        return ResponseEntity.ok(created); // or .status(HttpStatus.CREATED).body(created)
-    }
-
-    // Update an existing template
-    @PutMapping("/templates/{id}")
-    public ResponseEntity<AssignmentTemplate> updateTemplate(@PathVariable String id,
-                                                             @RequestBody AssignmentTemplate template) throws Exception {
-        var updated = assignmentService.updateAssignmentTemplate(id, template);
-        return ResponseEntity.ok(updated);
-    }
-
-    // Delete a template by id
-    @DeleteMapping("/templates/{id}")
-    public ResponseEntity<Void> deleteTemplate(@PathVariable String id) throws Exception {
-        assignmentService.deleteAssignmentTemplate(id);
-        return ResponseEntity.noContent().build();
-    }
     // Make sure to migrate this as the main and phase out the old get assignments
     @GetMapping("/by-punishment/{punishmentId}")
     public ResponseEntity<AssignmentTemplate> getAssignmentForPunishment(
             @PathVariable String punishmentId
     ) throws Exception {
-
         AssignmentTemplate assignment = assignmentService.buildAssignmentForPunishment(punishmentId);
         return ResponseEntity.ok(assignment);
     }
 
+    //------------------------POST Controllers-----------------------------
+
+    @PostMapping("/")
+    public ResponseEntity<Assignment> createNewAssignment(@RequestBody Assignment assignment) throws Exception {
+        Assignment createdAssignment = assignmentService.createNewAssignment(assignment);
+        return ResponseEntity.accepted().body(createdAssignment);
+    }
+
+    @PostMapping("/migrate-legacy")
+    public ResponseEntity<String> migrateLegacyAssignments() {
+        int migrated = assignmentService.migrateLegacyAssignmentsToTemplates();
+        String message = "Migrated " + migrated + " legacy assignments to templates.";
+        return ResponseEntity.ok(message);
+    }
+
+    @PostMapping("/templates")
+    public ResponseEntity<AssignmentTemplate> createTemplate(@RequestBody AssignmentTemplate template) {
+        AssignmentTemplate created = assignmentService.createAssignmentTemplate(template);
+        return ResponseEntity.ok(created);
+    }
+
+    //----------------------------PUT Controllers----------------------------------
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Assignment> updateAssignment(
+            @RequestBody Assignment assignment,
+            @PathVariable String id
+    ) throws Exception {
+        Assignment updatedAssignment = assignmentService.updateNewAssignment(assignment, id);
+        return ResponseEntity.accepted().body(updatedAssignment);
+    }
+
+    @PutMapping("/templates/{id}")
+    public ResponseEntity<AssignmentTemplate> updateTemplate(
+            @PathVariable String id,
+            @RequestBody AssignmentTemplate template
+    ) throws Exception {
+        AssignmentTemplate updated = assignmentService.updateAssignmentTemplate(id, template);
+        return ResponseEntity.ok(updated);
+    }
+
+    //-------------------------DELETE Controllers--------------------------------
+
+    @DeleteMapping("/delete/{assignmentName}")
+    public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
+        Assignment deletedAssignment = assignmentService.deleteAssignment(assignmentName);
+        return ResponseEntity.accepted().body(deletedAssignment);
+    }
+
+    @DeleteMapping("/templates/{id}")
+    public ResponseEntity<Void> deleteTemplate(@PathVariable String id) throws Exception {
+        assignmentService.deleteAssignmentTemplate(id);
+        return ResponseEntity.noContent().build();
+    }
 }

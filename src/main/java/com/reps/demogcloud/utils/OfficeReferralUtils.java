@@ -6,20 +6,24 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class OfficeReferralUtils {
+
     private final OfficeReferralRepository officeReferralRepository;
     private final SchoolUtils schoolUtils;
 
-    public List<OfficeReferral> FetchOfficeReferralsByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
-        List<OfficeReferral> archivedRecords = officeReferralRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
-        if (archivedRecords.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return archivedRecords;
+    public List<OfficeReferral> fetchOfficeReferralsByArchivedAndSchool(boolean archived)
+            throws ResourceNotFoundException {
+
+        String schoolName = schoolUtils.fetchSchoolName();
+
+        List<OfficeReferral> results =
+                officeReferralRepository.findByArchivedAndSchool(archived, schoolName);
+
+        return results != null ? results : Collections.emptyList();
     }
 }
