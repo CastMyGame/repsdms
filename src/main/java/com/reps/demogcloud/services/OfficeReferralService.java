@@ -157,7 +157,7 @@ public class OfficeReferralService {
 
     // Methods that Need Global Filters Due for schools
     public List<OfficeReferral> findAllSchool() {
-        return officeReferralUtils.FetchOfficeReferralsByArchivedAndSchool(false);
+        return officeReferralUtils.fetchOfficeReferralsByArchivedAndSchool(false);
     }
 
     public List<OfficeReferral> findByAdminEmail(String adminEmail) {

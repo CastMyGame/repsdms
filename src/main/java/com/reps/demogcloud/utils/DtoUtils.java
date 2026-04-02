@@ -8,45 +8,61 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class DtoUtils {
+
+    private static final String POSITIVE_BEHAVIOR_SHOUT_OUT = "Positive Behavior Shout Out!";
+
     private final EmployeeRepository employeeRepository;
 
     public List<TeacherDTO> listOfShoutOuts(List<TeacherDTO> allSchoolPunishmentsWithDisplayInformation) {
-        List<TeacherDTO> punishmentFilteredByShoutOuts = new ArrayList<>(allSchoolPunishmentsWithDisplayInformation.stream().filter(punishment -> punishment.getInfractionName().equalsIgnoreCase("Positive Behavior Shout Out!")).toList());
+        if (allSchoolPunishmentsWithDisplayInformation == null || allSchoolPunishmentsWithDisplayInformation.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-        punishmentFilteredByShoutOuts.sort((o1, o2) -> {
-            if (o1.getTimeCreated() == null || o2.getTimeCreated() == null)
-                return 0;
-            return o2.getTimeCreated().compareTo(o1.getTimeCreated());
-        });
-        return punishmentFilteredByShoutOuts;
+        return allSchoolPunishmentsWithDisplayInformation.stream()
+                .filter(Objects::nonNull)
+                .filter(dto -> dto.getInfractionName() != null
+                        && dto.getInfractionName().equalsIgnoreCase(POSITIVE_BEHAVIOR_SHOUT_OUT))
+                .sorted(Comparator.comparing(
+                        TeacherDTO::getTimeCreated,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public void updateWeeklyPunishmentsForTeacherClasses(Employee teacher, List<TeacherDTO> punishmentsFilteredByTeacher) {
         if (teacher == null || teacher.getClasses() == null) {
-            return; // No classes to update
+            return;
         }
+
         LocalDate oneWeekAgo = LocalDate.now().minusWeeks(1);
 
-        // Count punishments within the last week, grouped by class period
-        Map<String, Long> weeklyPunishmentCountsByClass = punishmentsFilteredByTeacher.stream()
-                .filter(dto -> dto.getTimeCreated() != null && dto.getTimeCreated().isAfter(oneWeekAgo))
+        Map<String, Long> weeklyPunishmentCountsByClass = punishmentsFilteredByTeacher == null
+                ? Map.of()
+                : punishmentsFilteredByTeacher.stream()
+                .filter(Objects::nonNull)
+                .filter(dto -> dto.getClassPeriod() != null)
+                .filter(dto -> dto.getTimeCreated() != null && !dto.getTimeCreated().isBefore(oneWeekAgo))
                 .collect(Collectors.groupingBy(TeacherDTO::getClassPeriod, Collectors.counting()));
 
-        // Update each class in the teacher's roster with the weekly punishment count
         for (Employee.ClassRoster classRoster : teacher.getClasses()) {
+            if (classRoster == null) {
+                continue;
+            }
+
             String classPeriod = classRoster.getClassPeriod();
             int writeupCount = weeklyPunishmentCountsByClass.getOrDefault(classPeriod, 0L).intValue();
             classRoster.setPunishmentsThisWeek(writeupCount);
         }
 
-        // Save the updated teacher object back to the repository if needed
         employeeRepository.save(teacher);
     }
 }

@@ -283,7 +283,7 @@ class OfficeReferralServiceTest {
     @Test
     void findAllSchool_shouldDelegateToUtils() {
         List<OfficeReferral> expected = List.of(new OfficeReferral());
-        when(officeReferralUtils.FetchOfficeReferralsByArchivedAndSchool(false)).thenReturn(expected);
+        when(officeReferralUtils.fetchOfficeReferralsByArchivedAndSchool(false)).thenReturn(expected);
 
         List<OfficeReferral> result = officeReferralService.findAllSchool();
 
