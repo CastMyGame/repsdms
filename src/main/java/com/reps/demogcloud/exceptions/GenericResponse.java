@@ -11,12 +11,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GenericResponse {
+    int status;
     private String error;
     private Objects objects;
-    int status;
-
-
-
-
-
 }

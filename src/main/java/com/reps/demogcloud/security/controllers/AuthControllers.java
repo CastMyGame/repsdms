@@ -2,7 +2,12 @@ package com.reps.demogcloud.security.controllers;
 
 import com.reps.demogcloud.data.PasswordResetTokenRepository;
 import com.reps.demogcloud.models.ResetPasswordRequest;
-import com.reps.demogcloud.security.models.*;
+import com.reps.demogcloud.security.models.AuthenticationRequest;
+import com.reps.demogcloud.security.models.AuthenticationResponse;
+import com.reps.demogcloud.security.models.ForgotPasswordRequest;
+import com.reps.demogcloud.security.models.PasswordResetToken;
+import com.reps.demogcloud.security.models.UserModel;
+import com.reps.demogcloud.security.models.UserRepository;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.CustomUserDetailsService;
@@ -10,6 +15,8 @@ import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.security.utils.TokenStatus;
 import com.reps.demogcloud.services.EmailService;
+import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +28,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @CrossOrigin(
         origins = {
@@ -33,41 +41,28 @@ import java.util.*;
                 "https://repsdev.vercel.app"
         }
 )
-
 @RestController
 @RequiredArgsConstructor
 public class AuthControllers {
 
-
     private final EmailService emailService;
-
     private final UserAccountService userAccountService;
-
     private final CustomUserDetailsService customUserDetailsService;
-
     private final PasswordEncoder passwordEncoder;
-
     private final JwtUtils jwtUtils;
-
     private final UserRepository userRepository;
-
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-
     private final AuthenticationManager authenticationManager;
-
-
 
     @PostMapping("/v1/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
-        // Get the current authentication object
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Check if authentication object is not null and contains a token
-        if (authentication != null && authentication.getDetails() != null ) {
+        if (authentication != null && authentication.getDetails() != null) {
             String authorizationHeader = request.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); // Extract token after "Bearer "
-                jwtUtils.blacklistToken(token); // Assuming jwtUtils has a blacklistToken method
+                String token = authorizationHeader.substring(7);
+                jwtUtils.blacklistToken(token);
                 return ResponseEntity.ok("Logout successful");
             } else {
                 return ResponseEntity.badRequest().body("Token not found in Authorization header");
@@ -77,15 +72,13 @@ public class AuthControllers {
         }
     }
 
-    //------------------------GET Controllers----------------------
     @GetMapping("/test")
-    private  String testingToken(){
+    public String testingToken() {
         return "I WORKS";
     }
 
-    //---------------------POST Controllers-----------------------------
     @PostMapping("/register")
-    private ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
+    public ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
         String username = authenticationRequest.getUsername();
         String password = authenticationRequest.getPassword();
         String firstName = authenticationRequest.getFirstName();
@@ -97,43 +90,38 @@ public class AuthControllers {
         userModel.setFirstName(firstName);
         userModel.setLastName(lastName);
         userModel.setSchool(school);
-
-        // Use BCryptPasswordEncoder to encode the provided password
-        String encodedPassword = passwordEncoder.encode(password);
-        userModel.setPassword(encodedPassword);
+        userModel.setPassword(passwordEncoder.encode(password));
 
         try {
             userRepository.save(userModel);
-            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username,null));
+            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username, null));
         } catch (Exception e) {
-            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username,null));
+            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username, null));
         }
     }
 
     @PostMapping("/auth")
-    private ResponseEntity<?> authenticateUser ( @RequestBody AuthenticationRequest authenticationRequest) throws IOException, InterruptedException {
-        String username = authenticationRequest.getUsername().toLowerCase();
+    public ResponseEntity<?> authenticateUser(@RequestBody AuthenticationRequest authenticationRequest) {
 
+        String username = authenticationRequest.getUsername().toLowerCase();
         String password = authenticationRequest.getPassword();
-        try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username,password));
-        }catch (Exception e){
-            return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username,null));
+
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
+        } catch (Exception e) {
+            return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username, null));
         }
+
         UserDetails loadedUser = customUserDetailsService.loadUserByUsername(username);
         String generatedToken = jwtUtils.generateToken(loadedUser);
-
-        // Fetch additional user-related details (e.g., UserModel) based on the username
         UserModel userModel = userAccountService.loadUserModelByUsername(username);
 
-        // Create a response object that includes the token and user details
         AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
-
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/users/create/{school}")
-    private ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school){
+    public ResponseEntity<List<UserModel>> createNewUsers(@PathVariable String school) {
         List<UserModel> createdUsers = userAccountService.createUsersForSchool(school);
         return ResponseEntity.ok(createdUsers);
     }
@@ -143,7 +131,7 @@ public class AuthControllers {
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7); // Extract token after "Bearer "
+            String token = authorizationHeader.substring(7);
 
             try {
                 TokenStatus tokenStatus = jwtUtils.getTokenStatus(token);
@@ -166,7 +154,7 @@ public class AuthControllers {
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7); // Extract token after "Bearer "
+            String token = authorizationHeader.substring(7);
 
             try {
                 String newToken = jwtUtils.renewTokenWithBlacklist(token);
@@ -174,8 +162,9 @@ public class AuthControllers {
                 Map<String, String> response = new HashMap<>();
                 response.put("newToken", newToken);
 
-                // Make sure to return JSON and set the content type explicitly if needed
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response);
             } catch (Exception e) {
                 return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Token renewal failed"));
             }
@@ -184,31 +173,33 @@ public class AuthControllers {
         }
     }
 
-
-
-
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) throws MessagingException {
         String email = forgotPasswordRequest.getEmail();
-        //check if email is in userRepository
         UserModel user = userRepository.findByUsername(email);
-        if (user==null){
+
+        if (user == null) {
             return ResponseEntity.badRequest().body("User not found for email " + email);
         }
-        // Generate unique token that will be sent to email
-    String resetToken = UUID.randomUUID().toString();
 
-        // save token into mongo to check against after user gets email
-    PasswordResetToken passwordResetToken = new PasswordResetToken();
-    passwordResetToken.setUser(user);
-    passwordResetToken.setToken(resetToken);
-    passwordResetToken.setExpiryDate(24*60); // set exipration time in minutes
-    passwordResetTokenRepository.save(passwordResetToken);
-    String link = "https://repsdiscipline.vercel.app/reset-password/"+resetToken;
-    emailService.sendEmail(user.getUsername(), "Reset Your Password", "Click the Link Below to Reset Your Password " + link , "en");
-    return ResponseEntity.ok("Password reset link sent to " + email);
+        String resetToken = UUID.randomUUID().toString();
 
+        PasswordResetToken passwordResetToken = new PasswordResetToken();
+        passwordResetToken.setUser(user);
+        passwordResetToken.setToken(resetToken);
+        passwordResetToken.setExpiryDate(24 * 60);
 
+        passwordResetTokenRepository.save(passwordResetToken);
+
+        String link = "https://repsdiscipline.vercel.app/reset-password/" + resetToken;
+        emailService.sendEmail(
+                user.getUsername(),
+                "Reset Your Password",
+                "Click the Link Below to Reset Your Password " + link,
+                "en"
+        );
+
+        return ResponseEntity.ok("Password reset link sent to " + email);
     }
 
     @PostMapping("/reset-password")
@@ -216,46 +207,23 @@ public class AuthControllers {
         String token = resetPasswordRequest.getToken();
         String newPassword = resetPasswordRequest.getNewPassword();
 
-        // Find the token in the database
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token);
 
         if (passwordResetToken == null || passwordResetToken.isExpired()) {
             return ResponseEntity.badRequest().body("Invalid or expired token");
         }
 
-        // Update the user's password
         UserModel user = passwordResetToken.getUser();
-
-        // This is where the issue might be if newPassword is null
         user.setPassword(passwordEncoder.encode(newPassword));
-
         userRepository.save(user);
-
-        // Delete the used token from the database
         passwordResetTokenRepository.delete(passwordResetToken);
 
         return ResponseEntity.ok("Password reset successfully");
     }
 
     @PostMapping("/contact-us")
-    public ResponseEntity<ContactUsResponse> contactUs (@RequestBody ContactUsRequest request) {
+    public ResponseEntity<ContactUsResponse> contactUs(@RequestBody ContactUsRequest request) {
         ContactUsResponse response = userAccountService.contactUs(request);
-
         return ResponseEntity.ok(response);
     }
-
-}
-
- class AuthenticationResponseRenewal {
-     private final String message;
-     private final String token;
-     private final UserModel userModel;
-
-    public AuthenticationResponseRenewal(String message, String token, UserModel userModel) {
-        this.message = message;
-        this.token = token;
-        this.userModel = userModel;
-    }
-
-    // Getters and setters for message, token, and userModel...
 }
