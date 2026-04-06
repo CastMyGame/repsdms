@@ -22,37 +22,42 @@ public class StripeController {
     public ResponseEntity<CreateCheckoutSessionResponse> createCheckoutSession(
             @RequestBody CreateCheckoutSessionRequest req
     ) {
-
         try {
-
             if (isBlank(req.priceId)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "priceId is required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "priceId is required"));
             }
             if (isBlank(req.schoolIdNumber)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "schoolIdNumber is required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "schoolIdNumber is required"));
             }
             if (isBlank(req.schoolName)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "schoolName is required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "schoolName is required"));
             }
             if (isBlank(req.currencyName)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "currencyName is required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "currencyName is required"));
             }
             if (isBlank(req.firstName) || isBlank(req.lastName)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "firstName and lastName are required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "firstName and lastName are required"));
             }
             if (isBlank(req.email)) {
-                return ResponseEntity.badRequest().body(new CreateCheckoutSessionResponse(null, "email is required"));
+                return ResponseEntity.badRequest()
+                        .body(new CreateCheckoutSessionResponse(null, "email is required"));
             }
 
             String url = stripeBillingService.createCheckoutSessionUrl(req);
             return ResponseEntity.ok(new CreateCheckoutSessionResponse(url, null));
-        } catch (com.stripe.exception.StripeException se) {
+        } catch (StripeException se) {
             log.warn("Stripe error creating checkout session: {}", se.getMessage(), se);
-            String msg = "Stripe error: " + se.getMessage();
-            return ResponseEntity.status(400).body(new CreateCheckoutSessionResponse(null, msg));
+            return ResponseEntity.badRequest()
+                    .body(new CreateCheckoutSessionResponse(null, "Stripe error: " + se.getMessage()));
         } catch (Exception e) {
             log.error("Server error creating checkout session", e);
-            return ResponseEntity.status(500).body(new CreateCheckoutSessionResponse(null, "Server error creating checkout session"));
+            return ResponseEntity.internalServerError()
+                    .body(new CreateCheckoutSessionResponse(null, "Server error creating checkout session"));
         }
     }
 
@@ -64,19 +69,15 @@ public class StripeController {
         log.info(">>> HIT StripeController /stripe/v1/webhook");
         log.info("Webhook hit. Stripe-Signature present? {}", sigHeader != null && !sigHeader.isBlank());
 
-
         try {
             stripeWebhookService.handleWebhook(payload, sigHeader);
             return ResponseEntity.ok("ok");
         } catch (StripeWebhookService.BadWebhookRequestException bre) {
-            // Stripe sent something invalid (bad signature/payload/missing header)
-            // 400 is correct and SHOULD NOT be retried in normal operation.
             log.warn("Stripe webhook bad request: {}", bre.getMessage());
             return ResponseEntity.badRequest().body("bad request");
         } catch (Exception e) {
-            // Any provisioning / server failure => Stripe SHOULD retry
             log.error("Stripe webhook server/provisioning failure", e);
-            return ResponseEntity.status(500).body("server error");
+            return ResponseEntity.internalServerError().body("server error");
         }
     }
 
@@ -88,7 +89,6 @@ public class StripeController {
     @lombok.ToString
     public static class CreateCheckoutSessionRequest {
         private String priceId;
-
         private String schoolIdNumber;
         private String schoolName;
         private String currencyName;
