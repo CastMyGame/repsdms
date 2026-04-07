@@ -13,9 +13,14 @@ import java.util.List;
 @Builder
 public class TrackedBehaviorRequest {
 
+    private String studentEmail;
     private String teacherEmail;
     private String school;
     private String classPeriod;
 
-    private List<TrackedBehaviorAdjustmentRequest> adjustments;
+    private String behaviorCode;
+    private String behaviorName;
+
+    private String consequenceCode;
+    private String consequenceName;
 }
