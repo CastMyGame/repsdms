@@ -1,7 +1,6 @@
 package com.reps.demogcloud.services.trackedBehavior;
 
 import com.reps.demogcloud.data.TrackedBehaviorEventRepository;
-import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorAdjustmentRequest;
 import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorEvent;
 import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorRequest;
 import com.reps.demogcloud.models.trackedBehavior.TrackedBehaviorStudentTotalsRequest;

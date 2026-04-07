@@ -20,10 +20,10 @@ public class TrackedBehaviorController {
     private final TrackedBehaviorService trackedBehaviorService;
 
     @PostMapping("/save")
-    public ResponseEntity<List<TrackedBehaviorEvent>> saveTrackedBehaviorBatch(
-            @RequestBody TrackedBehaviorRequest request
+    public ResponseEntity<List<TrackedBehaviorEvent>> saveTrackedBehaviorEvents(
+            @RequestBody List<TrackedBehaviorRequest> requests
     ) {
-        return ResponseEntity.ok(trackedBehaviorService.saveTrackedBehaviorBatch(request));
+        return ResponseEntity.ok(trackedBehaviorService.saveTrackedBehaviorEvents(requests));
     }
 
     @GetMapping("/student/{studentEmail}/timeline")

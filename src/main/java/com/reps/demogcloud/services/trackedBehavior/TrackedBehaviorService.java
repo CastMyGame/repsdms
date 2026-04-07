@@ -10,7 +10,7 @@ import java.util.Map;
 
 public interface TrackedBehaviorService {
 
-    List<TrackedBehaviorEvent> saveTrackedBehaviorBatch(TrackedBehaviorRequest request);
+    List<TrackedBehaviorEvent> saveTrackedBehaviorEvents(List<TrackedBehaviorRequest> requests);
 
     List<TrackedBehaviorEvent> getStudentTrackedBehaviorTimeline(String studentEmail);
 

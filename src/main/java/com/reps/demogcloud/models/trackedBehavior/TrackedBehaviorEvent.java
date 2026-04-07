@@ -27,7 +27,8 @@ public class TrackedBehaviorEvent {
     private String behaviorCode;
     private String behaviorName;
 
-    private int adjustmentValue;
+    private String consequenceCode;
+    private String consequenceName;
 
     private LocalDateTime timeCreated;
 }
