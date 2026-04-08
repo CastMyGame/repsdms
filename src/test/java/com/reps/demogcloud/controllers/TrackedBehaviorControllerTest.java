@@ -30,17 +30,19 @@ class TrackedBehaviorControllerTest {
     private TrackedBehaviorController trackedBehaviorController;
 
     @Test
-    void saveTrackedBehaviorBatch_shouldReturnOkAndSavedEvents() {
-        TrackedBehaviorRequest request = new TrackedBehaviorRequest();
+    void saveTrackedBehaviorEvents_shouldReturnOkAndSavedEvents() {
+        TrackedBehaviorRequest request1 = new TrackedBehaviorRequest();
+        TrackedBehaviorRequest request2 = new TrackedBehaviorRequest();
+        List<TrackedBehaviorRequest> requests = List.of(request1, request2);
 
         TrackedBehaviorEvent event1 = new TrackedBehaviorEvent();
         TrackedBehaviorEvent event2 = new TrackedBehaviorEvent();
         List<TrackedBehaviorEvent> savedEvents = List.of(event1, event2);
 
-        when(trackedBehaviorService.saveTrackedBehaviorBatch(request)).thenReturn(savedEvents);
+        when(trackedBehaviorService.saveTrackedBehaviorEvents(requests)).thenReturn(savedEvents);
 
         ResponseEntity<List<TrackedBehaviorEvent>> response =
-                trackedBehaviorController.saveTrackedBehaviorBatch(request);
+                trackedBehaviorController.saveTrackedBehaviorEvents(requests);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -48,24 +50,25 @@ class TrackedBehaviorControllerTest {
         assertEquals(2, response.getBody().size());
         assertSame(savedEvents, response.getBody());
 
-        verify(trackedBehaviorService).saveTrackedBehaviorBatch(request);
+        verify(trackedBehaviorService).saveTrackedBehaviorEvents(requests);
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldReturnOkAndEmptyList_whenNoEventsSaved() {
+    void saveTrackedBehaviorEvents_shouldReturnOkAndEmptyList_whenNoEventsSaved() {
         TrackedBehaviorRequest request = new TrackedBehaviorRequest();
+        List<TrackedBehaviorRequest> requests = List.of(request);
 
-        when(trackedBehaviorService.saveTrackedBehaviorBatch(request)).thenReturn(List.of());
+        when(trackedBehaviorService.saveTrackedBehaviorEvents(requests)).thenReturn(List.of());
 
         ResponseEntity<List<TrackedBehaviorEvent>> response =
-                trackedBehaviorController.saveTrackedBehaviorBatch(request);
+                trackedBehaviorController.saveTrackedBehaviorEvents(requests);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().isEmpty());
 
-        verify(trackedBehaviorService).saveTrackedBehaviorBatch(request);
+        verify(trackedBehaviorService).saveTrackedBehaviorEvents(requests);
     }
 
     @Test

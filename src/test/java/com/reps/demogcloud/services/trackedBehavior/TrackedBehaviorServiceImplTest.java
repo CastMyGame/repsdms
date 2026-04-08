@@ -14,14 +14,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,18 +33,35 @@ class TrackedBehaviorServiceImplTest {
     private TrackedBehaviorServiceImpl trackedBehaviorService;
 
     private String validBehaviorCode;
+    private String secondValidBehaviorCode;
+    private String validConsequenceCode;
+    private String secondValidConsequenceCode;
 
     @BeforeEach
     void setUp() {
-        validBehaviorCode = TrackedBehaviorType.getAll().stream()
+        TrackedBehaviorType firstType = TrackedBehaviorType.getAll().stream()
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No tracked behavior types found"))
-                .getCode();
+                .orElseThrow(() -> new IllegalStateException("No tracked behavior types found"));
+
+        validBehaviorCode = firstType.getCode();
+        validConsequenceCode = firstType.getConsequences().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No consequences found for first tracked behavior type"));
+
+        TrackedBehaviorType secondType = TrackedBehaviorType.getAll().stream()
+                .filter(type -> !type.getCode().equals(validBehaviorCode))
+                .findFirst()
+                .orElse(firstType);
+
+        secondValidBehaviorCode = secondType.getCode();
+        secondValidConsequenceCode = secondType.getConsequences().stream()
+                .findFirst()
+                .orElse(validConsequenceCode);
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldReturnEmptyList_whenRequestIsNull() {
-        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorBatch(null);
+    void saveTrackedBehaviorEvents_shouldReturnEmptyList_whenRequestsIsNull() {
+        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorEvents(null);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -53,11 +69,8 @@ class TrackedBehaviorServiceImplTest {
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldReturnEmptyList_whenAdjustmentsAreNull() {
-        TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setAdjustments(null);
-
-        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorBatch(request);
+    void saveTrackedBehaviorEvents_shouldReturnEmptyList_whenRequestsIsEmpty() {
+        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorEvents(List.of());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -65,11 +78,9 @@ class TrackedBehaviorServiceImplTest {
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldReturnEmptyList_whenAdjustmentsAreEmpty() {
-        TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setAdjustments(new ArrayList<>());
-
-        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorBatch(request);
+    void saveTrackedBehaviorEvents_shouldSkipNullRequest() {
+        List<TrackedBehaviorEvent> result =
+                trackedBehaviorService.saveTrackedBehaviorEvents(Collections.singletonList(null));
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -77,74 +88,118 @@ class TrackedBehaviorServiceImplTest {
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldSkipNullAndZeroAdjustments_andSaveValidEvents() {
-        TrackedBehaviorAdjustmentRequest validAdjustment = new TrackedBehaviorAdjustmentRequest();
-        validAdjustment.setStudentEmail("student1@test.com");
-        validAdjustment.setBehaviorCode(validBehaviorCode);
-        validAdjustment.setAdjustmentValue(2);
-
-        TrackedBehaviorAdjustmentRequest zeroAdjustment = new TrackedBehaviorAdjustmentRequest();
-        zeroAdjustment.setStudentEmail("student2@test.com");
-        zeroAdjustment.setBehaviorCode(validBehaviorCode);
-        zeroAdjustment.setAdjustmentValue(0);
-
+    void saveTrackedBehaviorEvents_shouldSkipRequest_whenStudentEmailIsNull() {
         TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setSchool("Test School");
+        request.setStudentEmail(null);
         request.setTeacherEmail("teacher@test.com");
+        request.setSchool("Test School");
         request.setClassPeriod("1st");
+        request.setBehaviorCode(validBehaviorCode);
+        request.setConsequenceCode(validConsequenceCode);
+        request.setConsequenceName("Lunch Detention");
 
-        List<TrackedBehaviorAdjustmentRequest> adjustments = new ArrayList<>();
-        adjustments.add(null);
-        adjustments.add(zeroAdjustment);
-        adjustments.add(validAdjustment);
-        request.setAdjustments(adjustments);
-
-        when(trackedBehaviorEventRepository.findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                anyList()
-        )).thenReturn(List.of());
-
-        when(trackedBehaviorEventRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorBatch(request);
+        List<TrackedBehaviorEvent> result =
+                trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request));
 
         assertNotNull(result);
-        assertEquals(1, result.size());
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(trackedBehaviorEventRepository);
+    }
 
-        TrackedBehaviorEvent savedEvent = result.get(0);
-        assertEquals("student1@test.com", savedEvent.getStudentEmail());
-        assertEquals("teacher@test.com", savedEvent.getTeacherEmail());
-        assertEquals("Test School", savedEvent.getSchool());
-        assertEquals("1st", savedEvent.getClassPeriod());
-        assertEquals(validBehaviorCode, savedEvent.getBehaviorCode());
-        assertEquals(2, savedEvent.getAdjustmentValue());
-        assertNotNull(savedEvent.getBehaviorName());
-        assertNotNull(savedEvent.getTimeCreated());
+    @Test
+    void saveTrackedBehaviorEvents_shouldSaveValidEvents() {
+        TrackedBehaviorRequest request1 = new TrackedBehaviorRequest();
+        request1.setStudentEmail("student1@test.com");
+        request1.setTeacherEmail("teacher@test.com");
+        request1.setSchool("Test School");
+        request1.setClassPeriod("1st");
+        request1.setBehaviorCode(validBehaviorCode);
+        request1.setConsequenceCode(validConsequenceCode);
+        request1.setConsequenceName("Lunch Detention");
+
+        TrackedBehaviorRequest request2 = new TrackedBehaviorRequest();
+        request2.setStudentEmail("student2@test.com");
+        request2.setTeacherEmail("teacher@test.com");
+        request2.setSchool("Test School");
+        request2.setClassPeriod("2nd");
+        request2.setBehaviorCode(secondValidBehaviorCode);
+        request2.setConsequenceCode(secondValidConsequenceCode);
+        request2.setConsequenceName("Parent Contact");
+
+        when(trackedBehaviorEventRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TrackedBehaviorEvent> result =
+                trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request1, request2));
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+        TrackedBehaviorEvent firstEvent = result.get(0);
+        assertEquals("student1@test.com", firstEvent.getStudentEmail());
+        assertEquals("teacher@test.com", firstEvent.getTeacherEmail());
+        assertEquals("Test School", firstEvent.getSchool());
+        assertEquals("1st", firstEvent.getClassPeriod());
+        assertEquals(validBehaviorCode, firstEvent.getBehaviorCode());
+        assertEquals(TrackedBehaviorType.getDisplayNameByCode(validBehaviorCode), firstEvent.getBehaviorName());
+        assertEquals(validConsequenceCode, firstEvent.getConsequenceCode());
+        assertEquals("Lunch Detention", firstEvent.getConsequenceName());
+        assertNotNull(firstEvent.getTimeCreated());
+
+        TrackedBehaviorEvent secondEvent = result.get(1);
+        assertEquals("student2@test.com", secondEvent.getStudentEmail());
+        assertEquals(secondValidBehaviorCode, secondEvent.getBehaviorCode());
+        assertEquals(secondValidConsequenceCode, secondEvent.getConsequenceCode());
+        assertEquals("Parent Contact", secondEvent.getConsequenceName());
+        assertNotNull(secondEvent.getTimeCreated());
 
         verify(trackedBehaviorEventRepository).saveAll(anyList());
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldThrowException_whenBehaviorCodeIsInvalid() {
-        TrackedBehaviorAdjustmentRequest invalidAdjustment = new TrackedBehaviorAdjustmentRequest();
-        invalidAdjustment.setStudentEmail("student1@test.com");
-        invalidAdjustment.setBehaviorCode("INVALID_CODE");
-        invalidAdjustment.setAdjustmentValue(1);
+    void saveTrackedBehaviorEvents_shouldUseSameTimestampForAllEventsInSingleCall() {
+        TrackedBehaviorRequest request1 = new TrackedBehaviorRequest();
+        request1.setStudentEmail("student1@test.com");
+        request1.setTeacherEmail("teacher@test.com");
+        request1.setSchool("Test School");
+        request1.setClassPeriod("1st");
+        request1.setBehaviorCode(validBehaviorCode);
+        request1.setConsequenceCode(validConsequenceCode);
+        request1.setConsequenceName("Lunch Detention");
 
+        TrackedBehaviorRequest request2 = new TrackedBehaviorRequest();
+        request2.setStudentEmail("student2@test.com");
+        request2.setTeacherEmail("teacher@test.com");
+        request2.setSchool("Test School");
+        request2.setClassPeriod("1st");
+        request2.setBehaviorCode(validBehaviorCode);
+        request2.setConsequenceCode(validConsequenceCode);
+        request2.setConsequenceName("Lunch Detention");
+
+        when(trackedBehaviorEventRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TrackedBehaviorEvent> result =
+                trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request1, request2));
+
+        assertEquals(2, result.size());
+        assertEquals(result.get(0).getTimeCreated(), result.get(1).getTimeCreated());
+    }
+
+    @Test
+    void saveTrackedBehaviorEvents_shouldThrowException_whenBehaviorCodeIsInvalid() {
         TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setSchool("Test School");
+        request.setStudentEmail("student1@test.com");
         request.setTeacherEmail("teacher@test.com");
+        request.setSchool("Test School");
         request.setClassPeriod("1st");
-        request.setAdjustments(List.of(invalidAdjustment));
-
-        when(trackedBehaviorEventRepository.findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                anyList()
-        )).thenReturn(List.of());
+        request.setBehaviorCode("INVALID_CODE");
+        request.setConsequenceCode(validConsequenceCode);
+        request.setConsequenceName("Lunch Detention");
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> trackedBehaviorService.saveTrackedBehaviorBatch(request)
+                () -> trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request))
         );
 
         assertTrue(ex.getMessage().contains("Invalid tracked behavior code"));
@@ -152,118 +207,92 @@ class TrackedBehaviorServiceImplTest {
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldThrowException_whenAdjustmentWouldMakeTotalNegative() {
-        TrackedBehaviorEvent existingEvent = TrackedBehaviorEvent.builder()
-                .studentEmail("student1@test.com")
-                .school("Test School")
-                .behaviorCode(validBehaviorCode)
-                .adjustmentValue(1)
-                .timeCreated(LocalDateTime.now())
-                .build();
-
-        TrackedBehaviorAdjustmentRequest adjustment = new TrackedBehaviorAdjustmentRequest();
-        adjustment.setStudentEmail("student1@test.com");
-        adjustment.setBehaviorCode(validBehaviorCode);
-        adjustment.setAdjustmentValue(-2);
+    void saveTrackedBehaviorEvents_shouldThrowException_whenConsequenceCodeIsInvalidForBehavior() {
+        String invalidConsequenceCode = "INVALID_CONSEQUENCE";
 
         TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setSchool("Test School");
+        request.setStudentEmail("student1@test.com");
         request.setTeacherEmail("teacher@test.com");
+        request.setSchool("Test School");
         request.setClassPeriod("1st");
-        request.setAdjustments(List.of(adjustment));
-
-        when(trackedBehaviorEventRepository.findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                anyList()
-        )).thenReturn(List.of(existingEvent));
+        request.setBehaviorCode(validBehaviorCode);
+        request.setConsequenceCode(invalidConsequenceCode);
+        request.setConsequenceName("Bad Consequence");
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> trackedBehaviorService.saveTrackedBehaviorBatch(request)
+                () -> trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request))
         );
 
-        assertTrue(ex.getMessage().contains("Tracked behavior total cannot go below zero"));
+        assertTrue(ex.getMessage().contains("Invalid consequence for behavior"));
+        assertTrue(ex.getMessage().contains("behaviorCode=" + validBehaviorCode));
+        assertTrue(ex.getMessage().contains("consequenceCode=" + invalidConsequenceCode));
         verify(trackedBehaviorEventRepository, never()).saveAll(anyList());
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldAllowNegativeAdjustment_whenItDoesNotMakeTotalNegative() {
-        TrackedBehaviorEvent existingEvent = TrackedBehaviorEvent.builder()
-                .studentEmail("student1@test.com")
-                .school("Test School")
-                .behaviorCode(validBehaviorCode)
-                .adjustmentValue(3)
-                .timeCreated(LocalDateTime.now())
-                .build();
+    void saveTrackedBehaviorEvents_shouldSaveOnlyValidNonSkippedRequests() {
+        TrackedBehaviorRequest skippedNoStudent = new TrackedBehaviorRequest();
+        skippedNoStudent.setStudentEmail(null);
+        skippedNoStudent.setTeacherEmail("teacher@test.com");
+        skippedNoStudent.setSchool("Test School");
+        skippedNoStudent.setClassPeriod("1st");
+        skippedNoStudent.setBehaviorCode(validBehaviorCode);
+        skippedNoStudent.setConsequenceCode(validConsequenceCode);
+        skippedNoStudent.setConsequenceName("Lunch Detention");
 
-        TrackedBehaviorAdjustmentRequest adjustment = new TrackedBehaviorAdjustmentRequest();
-        adjustment.setStudentEmail("student1@test.com");
-        adjustment.setBehaviorCode(validBehaviorCode);
-        adjustment.setAdjustmentValue(-1);
+        TrackedBehaviorRequest validRequest = new TrackedBehaviorRequest();
+        validRequest.setStudentEmail("student1@test.com");
+        validRequest.setTeacherEmail("teacher@test.com");
+        validRequest.setSchool("Test School");
+        validRequest.setClassPeriod("1st");
+        validRequest.setBehaviorCode(validBehaviorCode);
+        validRequest.setConsequenceCode(validConsequenceCode);
+        validRequest.setConsequenceName("Lunch Detention");
 
-        TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setSchool("Test School");
-        request.setTeacherEmail("teacher@test.com");
-        request.setClassPeriod("2nd");
-        request.setAdjustments(List.of(adjustment));
+        when(trackedBehaviorEventRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(trackedBehaviorEventRepository.findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                anyList()
-        )).thenReturn(List.of(existingEvent));
-
-        when(trackedBehaviorEventRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        List<TrackedBehaviorEvent> result = trackedBehaviorService.saveTrackedBehaviorBatch(request);
+        List<TrackedBehaviorEvent> result =
+                trackedBehaviorService.saveTrackedBehaviorEvents(
+                        Arrays.asList(null, skippedNoStudent, validRequest)
+                );
 
         assertEquals(1, result.size());
-        assertEquals(-1, result.get(0).getAdjustmentValue());
+        assertEquals("student1@test.com", result.get(0).getStudentEmail());
         verify(trackedBehaviorEventRepository).saveAll(anyList());
     }
 
     @Test
-    void saveTrackedBehaviorBatch_shouldUseDistinctNonNullStudentEmails_whenLookingUpExistingEvents() {
-        TrackedBehaviorAdjustmentRequest adjustment1 = new TrackedBehaviorAdjustmentRequest();
-        adjustment1.setStudentEmail("student1@test.com");
-        adjustment1.setBehaviorCode(validBehaviorCode);
-        adjustment1.setAdjustmentValue(1);
-
-        TrackedBehaviorAdjustmentRequest adjustment2 = new TrackedBehaviorAdjustmentRequest();
-        adjustment2.setStudentEmail("student1@test.com");
-        adjustment2.setBehaviorCode(validBehaviorCode);
-        adjustment2.setAdjustmentValue(1);
-
-        TrackedBehaviorAdjustmentRequest adjustment3 = new TrackedBehaviorAdjustmentRequest();
-        adjustment3.setStudentEmail(null);
-        adjustment3.setBehaviorCode(validBehaviorCode);
-        adjustment3.setAdjustmentValue(1);
-
+    void saveTrackedBehaviorEvents_shouldPassBuiltEventsToRepository() {
         TrackedBehaviorRequest request = new TrackedBehaviorRequest();
-        request.setSchool("Test School");
+        request.setStudentEmail("student1@test.com");
         request.setTeacherEmail("teacher@test.com");
-        request.setClassPeriod("3rd");
-        request.setAdjustments(List.of(adjustment1, adjustment2, adjustment3));
+        request.setSchool("Test School");
+        request.setClassPeriod("4th");
+        request.setBehaviorCode(validBehaviorCode);
+        request.setConsequenceCode(validConsequenceCode);
+        request.setConsequenceName("Lunch Detention");
 
-        when(trackedBehaviorEventRepository.findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                anyList()
-        )).thenReturn(List.of());
+        when(trackedBehaviorEventRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(trackedBehaviorEventRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        trackedBehaviorService.saveTrackedBehaviorBatch(request);
+        trackedBehaviorService.saveTrackedBehaviorEvents(List.of(request));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<TrackedBehaviorEvent>> captor = ArgumentCaptor.forClass(List.class);
 
-        verify(trackedBehaviorEventRepository).findBySchoolAndStudentEmailInOrderByTimeCreatedDesc(
-                eq("Test School"),
-                captor.capture()
-        );
+        verify(trackedBehaviorEventRepository).saveAll(captor.capture());
 
-        List<String> capturedStudentEmails = captor.getValue();
-        assertEquals(1, capturedStudentEmails.size());
-        assertEquals("student1@test.com", capturedStudentEmails.get(0));
+        List<TrackedBehaviorEvent> savedEvents = captor.getValue();
+        assertEquals(1, savedEvents.size());
+        assertEquals("student1@test.com", savedEvents.get(0).getStudentEmail());
+        assertEquals("teacher@test.com", savedEvents.get(0).getTeacherEmail());
+        assertEquals("Test School", savedEvents.get(0).getSchool());
+        assertEquals("4th", savedEvents.get(0).getClassPeriod());
+        assertEquals(validBehaviorCode, savedEvents.get(0).getBehaviorCode());
+        assertEquals(validConsequenceCode, savedEvents.get(0).getConsequenceCode());
+        assertEquals("Lunch Detention", savedEvents.get(0).getConsequenceName());
     }
 
     @Test
@@ -272,7 +301,6 @@ class TrackedBehaviorServiceImplTest {
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(1)
                         .build()
         );
 
@@ -300,27 +328,18 @@ class TrackedBehaviorServiceImplTest {
 
     @Test
     void getStudentTrackedBehaviorTotals_shouldAggregateTotalsByBehaviorCode() {
-        String secondCode = TrackedBehaviorType.getAll().stream()
-                .map(TrackedBehaviorType::getCode)
-                .filter(code -> !code.equals(validBehaviorCode))
-                .findFirst()
-                .orElse(validBehaviorCode + "_SECOND");
-
         List<TrackedBehaviorEvent> events = List.of(
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(2)
                         .build(),
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(-1)
                         .build(),
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
-                        .behaviorCode(secondCode)
-                        .adjustmentValue(3)
+                        .behaviorCode(secondValidBehaviorCode)
                         .build()
         );
 
@@ -331,8 +350,8 @@ class TrackedBehaviorServiceImplTest {
                 trackedBehaviorService.getStudentTrackedBehaviorTotals("student1@test.com");
 
         assertEquals(2, result.size());
-        assertEquals(1, result.get(validBehaviorCode));
-        assertEquals(3, result.get(secondCode));
+        assertEquals(2, result.get(validBehaviorCode));
+        assertEquals(1, result.get(secondValidBehaviorCode));
     }
 
     @Test
@@ -394,12 +413,6 @@ class TrackedBehaviorServiceImplTest {
 
     @Test
     void getTrackedBehaviorTotalsForStudents_shouldAggregateTotalsPerStudent() {
-        String secondCode = TrackedBehaviorType.getAll().stream()
-                .map(TrackedBehaviorType::getCode)
-                .filter(code -> !code.equals(validBehaviorCode))
-                .findFirst()
-                .orElse(validBehaviorCode + "_SECOND");
-
         TrackedBehaviorStudentTotalsRequest request = new TrackedBehaviorStudentTotalsRequest();
         request.setSchool("Test School");
         request.setStudentEmails(List.of("student1@test.com", "student2@test.com"));
@@ -408,17 +421,14 @@ class TrackedBehaviorServiceImplTest {
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(2)
                         .build(),
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student1@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(-1)
                         .build(),
                 TrackedBehaviorEvent.builder()
                         .studentEmail("student2@test.com")
-                        .behaviorCode(secondCode)
-                        .adjustmentValue(5)
+                        .behaviorCode(secondValidBehaviorCode)
                         .build()
         );
 
@@ -431,21 +441,20 @@ class TrackedBehaviorServiceImplTest {
                 trackedBehaviorService.getTrackedBehaviorTotalsForStudents(request);
 
         assertEquals(2, result.size());
-        assertEquals(1, result.get("student1@test.com").get(validBehaviorCode));
-        assertEquals(5, result.get("student2@test.com").get(secondCode));
+        assertEquals(2, result.get("student1@test.com").get(validBehaviorCode));
+        assertEquals(1, result.get("student2@test.com").get(secondValidBehaviorCode));
     }
 
     @Test
-    void getTrackedBehaviorTotalsForStudents_shouldClampNegativeTotalsToZero() {
+    void getTrackedBehaviorTotalsForStudents_shouldInitializeUnknownStudentFromReturnedEvents() {
         TrackedBehaviorStudentTotalsRequest request = new TrackedBehaviorStudentTotalsRequest();
         request.setSchool("Test School");
         request.setStudentEmails(List.of("student1@test.com"));
 
         List<TrackedBehaviorEvent> events = List.of(
                 TrackedBehaviorEvent.builder()
-                        .studentEmail("student1@test.com")
+                        .studentEmail("student2@test.com")
                         .behaviorCode(validBehaviorCode)
-                        .adjustmentValue(-3)
                         .build()
         );
 
@@ -457,7 +466,10 @@ class TrackedBehaviorServiceImplTest {
         Map<String, Map<String, Integer>> result =
                 trackedBehaviorService.getTrackedBehaviorTotalsForStudents(request);
 
-        assertEquals(0, result.get("student1@test.com").get(validBehaviorCode));
+        assertEquals(2, result.size());
+        assertTrue(result.containsKey("student1@test.com"));
+        assertTrue(result.containsKey("student2@test.com"));
+        assertEquals(1, result.get("student2@test.com").get(validBehaviorCode));
     }
 
     @Test
@@ -470,6 +482,7 @@ class TrackedBehaviorServiceImplTest {
         for (TrackedBehaviorTypeResponse response : result) {
             assertNotNull(response.getCode());
             assertNotNull(response.getDisplayName());
+            assertNotNull(response.getConsequences());
         }
     }
 }
