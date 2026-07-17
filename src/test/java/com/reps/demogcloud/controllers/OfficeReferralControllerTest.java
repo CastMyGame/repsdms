@@ -7,6 +7,7 @@ import com.reps.demogcloud.security.config.SecurityConfig;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.services.OfficeReferralService;
+import com.reps.demogcloud.services.UserContextService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -49,12 +50,20 @@ class OfficeReferralControllerTest {
     @MockitoBean
     private JwtUtils jwtUtils;
 
+    @MockitoBean
+    private UserContextService userContextService;
+
     private OfficeReferral referral;
     private OfficeReferralResponse response;
 
     @BeforeEach
     void setUp() {
+        when(userContextService.getCurrentUserEmail()).thenReturn("teacher@test.com");
+        when(userContextService.getCurrentUserSchool()).thenReturn("Test School");
         referral = new OfficeReferral();
+        referral.setSchool("Test School");
+        referral.setStudentEmail("student@example.com");
+        when(officeReferralService.findByReferralId(any())).thenReturn(referral);
         referral.setOfficeReferralId("123");
         referral.setAdminEmail("admin@example.com");
         referral.setArchived(false);
@@ -99,6 +108,7 @@ class OfficeReferralControllerTest {
     @Test
     void closeByReferralId_returnsResponse() throws Exception {
         OfficeReferralCloseRequest request = new OfficeReferralCloseRequest();
+        request.setId("123");
         when(officeReferralService.closeByReferralId(any())).thenReturn(response);
 
         mockMvc.perform(post("/officeReferral/v1/closeId")

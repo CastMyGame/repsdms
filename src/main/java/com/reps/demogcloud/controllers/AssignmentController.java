@@ -6,6 +6,7 @@ import com.reps.demogcloud.models.assignments.AssignmentTemplate;
 import com.reps.demogcloud.models.dto.AssignmentTemplateSummaryDTO;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.UserContextService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
     private final PunishRepository punishRepository;
+    private final UserContextService userContextService;
 
     //-----------------------GET Controllers----------------------------
 
@@ -37,6 +39,7 @@ public class AssignmentController {
     public ResponseEntity<AssignmentTemplate> getTemplateForPunishment(
             @PathVariable String punishmentId
     ) throws Exception {
+        authorizePunishmentAccess(punishmentId);
         AssignmentTemplate template = assignmentService.buildAssignmentForPunishment(punishmentId);
         return ResponseEntity.ok(template);
     }
@@ -56,13 +59,18 @@ public class AssignmentController {
                 createdBySystem,
                 textQuery
         );
-        return ResponseEntity.ok(results);
+        if (creatorEmail != null
+                && !creatorEmail.equalsIgnoreCase(userContextService.getCurrentUserEmail())
+                && !userContextService.hasRole("ADMIN")) {
+            throw new org.springframework.security.access.AccessDeniedException("Cannot search another teacher's private templates");
+        }
+        return ResponseEntity.ok(results.stream().filter(this::canViewTemplateSummary).toList());
     }
 
     @GetMapping("/templates")
     public ResponseEntity<List<AssignmentTemplate>> getAllTemplates() {
         List<AssignmentTemplate> templates = assignmentService.getAllTemplates();
-        return ResponseEntity.ok(templates);
+        return ResponseEntity.ok(templates.stream().filter(this::canViewTemplate).toList());
     }
 
     @GetMapping("/templates/by-infraction")
@@ -72,12 +80,13 @@ public class AssignmentController {
     ) {
         List<AssignmentTemplate> templates =
                 assignmentService.getTemplatesByInfractionAndLevel(infractionName, level);
-        return ResponseEntity.ok(templates);
+        return ResponseEntity.ok(templates.stream().filter(this::canViewTemplate).toList());
     }
 
     @GetMapping("/templates/{id}")
     public ResponseEntity<AssignmentTemplate> getTemplateById(@PathVariable String id) throws Exception {
         AssignmentTemplate template = assignmentService.getTemplateById(id);
+        requireTemplateVisible(template);
         return ResponseEntity.ok(template);
     }
 
@@ -87,6 +96,7 @@ public class AssignmentController {
     ) throws Exception {
         Punishment punishment = punishRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Punishment not found: " + id));
+        userContextService.requireStudentRecordAccess(punishment.getStudentEmail());
 
         if (punishment.getAssignmentTemplateId() == null) {
             return ResponseEntity.notFound().build();
@@ -101,6 +111,7 @@ public class AssignmentController {
     public ResponseEntity<AssignmentTemplate> getAssignmentForPunishment(
             @PathVariable String punishmentId
     ) throws Exception {
+        authorizePunishmentAccess(punishmentId);
         AssignmentTemplate assignment = assignmentService.buildAssignmentForPunishment(punishmentId);
         return ResponseEntity.ok(assignment);
     }
@@ -109,12 +120,14 @@ public class AssignmentController {
 
     @PostMapping("/")
     public ResponseEntity<Assignment> createNewAssignment(@RequestBody Assignment assignment) throws Exception {
+        userContextService.requireAnyRole("ADMIN");
         Assignment createdAssignment = assignmentService.createNewAssignment(assignment);
         return ResponseEntity.accepted().body(createdAssignment);
     }
 
     @PostMapping("/migrate-legacy")
     public ResponseEntity<String> migrateLegacyAssignments() {
+        userContextService.requireAnyRole("ADMIN");
         int migrated = assignmentService.migrateLegacyAssignmentsToTemplates();
         String message = "Migrated " + migrated + " legacy assignments to templates.";
         return ResponseEntity.ok(message);
@@ -122,6 +135,12 @@ public class AssignmentController {
 
     @PostMapping("/templates")
     public ResponseEntity<AssignmentTemplate> createTemplate(@RequestBody AssignmentTemplate template) {
+        if (!userContextService.hasRole("ADMIN")) {
+            template.setCreatedBySystem(false);
+            template.setCreatedByUserId(userContextService.getCurrentUserEmail());
+            template.setSchoolId(userContextService.getCurrentUserSchool());
+            template.setScope(AssignmentTemplate.Scope.TEACHER_DEFAULT);
+        }
         AssignmentTemplate created = assignmentService.createAssignmentTemplate(template);
         return ResponseEntity.ok(created);
     }
@@ -133,6 +152,7 @@ public class AssignmentController {
             @RequestBody Assignment assignment,
             @PathVariable String id
     ) throws Exception {
+        userContextService.requireAnyRole("ADMIN");
         Assignment updatedAssignment = assignmentService.updateNewAssignment(assignment, id);
         return ResponseEntity.accepted().body(updatedAssignment);
     }
@@ -142,6 +162,8 @@ public class AssignmentController {
             @PathVariable String id,
             @RequestBody AssignmentTemplate template
     ) throws Exception {
+        AssignmentTemplate existing = assignmentService.getTemplateById(id);
+        requireTemplateManageable(existing);
         AssignmentTemplate updated = assignmentService.updateAssignmentTemplate(id, template);
         return ResponseEntity.ok(updated);
     }
@@ -150,13 +172,54 @@ public class AssignmentController {
 
     @DeleteMapping("/delete/{assignmentName}")
     public ResponseEntity<Assignment> deleteAssignmentByName(@PathVariable String assignmentName) throws Exception {
+        userContextService.requireAnyRole("ADMIN");
         Assignment deletedAssignment = assignmentService.deleteAssignment(assignmentName);
         return ResponseEntity.accepted().body(deletedAssignment);
     }
 
     @DeleteMapping("/templates/{id}")
     public ResponseEntity<Void> deleteTemplate(@PathVariable String id) throws Exception {
+        AssignmentTemplate existing = assignmentService.getTemplateById(id);
+        requireTemplateManageable(existing);
         assignmentService.deleteAssignmentTemplate(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private void authorizePunishmentAccess(String punishmentId) {
+        Punishment punishment = punishRepository.findById(punishmentId)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Assignment not found"));
+        userContextService.requireStudentRecordAccess(punishment.getStudentEmail());
+    }
+
+    private boolean canViewTemplateSummary(AssignmentTemplateSummaryDTO template) {
+        return userContextService.hasRole("ADMIN")
+                || template.isCreatedBySystem()
+                || userContextService.getCurrentUserEmail().equalsIgnoreCase(template.getCreatedByUserId());
+    }
+
+    private boolean canViewTemplate(AssignmentTemplate template) {
+        return userContextService.hasRole("ADMIN")
+                || template.isCreatedBySystem()
+                || userContextService.getCurrentUserEmail().equalsIgnoreCase(template.getCreatedByUserId())
+                || (template.getVisibility() == AssignmentTemplate.Visibility.SCHOOL
+                && template.getSchoolId() != null
+                && template.getSchoolId().equalsIgnoreCase(userContextService.getCurrentUserSchool()));
+    }
+
+    private void requireTemplateVisible(AssignmentTemplate template) {
+        if (!canViewTemplate(template)) {
+            throw new org.springframework.security.access.AccessDeniedException("Template is private");
+        }
+    }
+
+    private void requireTemplateManageable(AssignmentTemplate template) {
+        if (template.isCreatedBySystem()) {
+            userContextService.requireAnyRole("ADMIN");
+            return;
+        }
+        if (!userContextService.hasRole("ADMIN")
+                && !userContextService.getCurrentUserEmail().equalsIgnoreCase(template.getCreatedByUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You may manage only your own templates");
+        }
     }
 }

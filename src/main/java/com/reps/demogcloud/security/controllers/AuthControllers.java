@@ -6,11 +6,13 @@ import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.AuthenticationResponse;
 import com.reps.demogcloud.security.models.ForgotPasswordRequest;
 import com.reps.demogcloud.security.models.PasswordResetToken;
+import com.reps.demogcloud.security.models.RefreshTokenRequest;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.models.UserRepository;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.CustomUserDetailsService;
+import com.reps.demogcloud.security.services.RefreshTokenService;
 import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.security.utils.TokenStatus;
@@ -53,23 +55,25 @@ public class AuthControllers {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/v1/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request) {
+    public ResponseEntity<String> logout(
+            HttpServletRequest request,
+            @RequestBody(required = false) RefreshTokenRequest refreshTokenRequest
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null && authentication.getDetails() != null) {
-            String authorizationHeader = request.getHeader("Authorization");
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7);
-                jwtUtils.blacklistToken(token);
-                return ResponseEntity.ok("Logout successful");
-            } else {
-                return ResponseEntity.badRequest().body("Token not found in Authorization header");
-            }
-        } else {
-            return ResponseEntity.badRequest().body("No active session or token found");
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("No authenticated session found");
         }
+
+        if (refreshTokenRequest != null && refreshTokenRequest.getRefreshToken() != null) {
+            refreshTokenService.revoke(refreshTokenRequest.getRefreshToken());
+        } else {
+            refreshTokenService.revokeAllForUser(authentication.getName());
+        }
+        return ResponseEntity.ok("Logout successful");
     }
 
     @GetMapping("/test")
@@ -101,7 +105,10 @@ public class AuthControllers {
     }
 
     @PostMapping("/auth")
-    public ResponseEntity<?> authenticateUser(@RequestBody AuthenticationRequest authenticationRequest) {
+    public ResponseEntity<?> authenticateUser(
+            @RequestBody AuthenticationRequest authenticationRequest,
+            HttpServletRequest request
+    ) {
 
         String username = authenticationRequest.getUsername().toLowerCase();
         String password = authenticationRequest.getPassword();
@@ -116,8 +123,39 @@ public class AuthControllers {
         String generatedToken = jwtUtils.generateToken(loadedUser);
         UserModel userModel = userAccountService.loadUserModelByUsername(username);
 
-        AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
+        AuthenticationResponse response = new AuthenticationResponse(generatedToken, safeUser(userModel));
+        response.setRefreshToken(refreshTokenService.issue(userModel, requestDeviceName(request)));
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/auth/refresh")
+    public ResponseEntity<?> refreshAccessToken(
+            @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        try {
+            RefreshTokenService.Rotation rotation = refreshTokenService.rotate(
+                    request == null ? null : request.getRefreshToken(),
+                    requestDeviceName(httpRequest)
+            );
+            UserDetails loadedUser = customUserDetailsService.loadUserByUsername(rotation.user().getUsername());
+            String accessToken = jwtUtils.generateToken(loadedUser);
+
+            AuthenticationResponse response = new AuthenticationResponse(accessToken, safeUser(rotation.user()));
+            response.setRefreshToken(rotation.rawRefreshToken());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.status(401).body(Collections.singletonMap("error", "Invalid refresh token"));
+        }
+    }
+
+    @GetMapping("/auth/me")
+    public ResponseEntity<?> currentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(safeUser(userAccountService.loadUserModelByUsername(authentication.getName())));
     }
 
     @PostMapping("/users/create/{school}")
@@ -225,5 +263,23 @@ public class AuthControllers {
     public ResponseEntity<ContactUsResponse> contactUs(@RequestBody ContactUsRequest request) {
         ContactUsResponse response = userAccountService.contactUs(request);
         return ResponseEntity.ok(response);
+    }
+
+    private UserModel safeUser(UserModel user) {
+        UserModel safeUser = new UserModel();
+        safeUser.setId(user.getId());
+        safeUser.setUsername(user.getUsername());
+        safeUser.setFirstName(user.getFirstName());
+        safeUser.setLastName(user.getLastName());
+        safeUser.setSchool(user.getSchool());
+        safeUser.setRoles(user.getRoles());
+        safeUser.setEnabled(user.isEnabled());
+        safeUser.setPaid(user.isPaid());
+        safeUser.setAccessEndsAt(user.getAccessEndsAt());
+        return safeUser;
+    }
+
+    private String requestDeviceName(HttpServletRequest request) {
+        return request == null ? null : request.getHeader("X-Device-Name");
     }
 }

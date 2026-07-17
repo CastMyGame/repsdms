@@ -6,6 +6,7 @@ import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.dto.StudentOverviewDTO;
 import com.reps.demogcloud.models.dto.TeacherOverviewDTO;
 import com.reps.demogcloud.services.DTOService;
+import com.reps.demogcloud.services.UserContextService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ import java.util.List;
 public class DTOController {
     private static final Logger logger = LoggerFactory.getLogger(DTOController.class);
     private final DTOService dtoService;
+    private final UserContextService userContextService;
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
@@ -82,6 +84,7 @@ public class DTOController {
 
     @GetMapping("/StudentOverviewData/{studentEmail}")
     public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(@PathVariable String studentEmail) throws Exception {
+        userContextService.requireStudentRecordAccess(studentEmail);
         var message = dtoService.getStudentOverData(studentEmail);
         return ResponseEntity
                 .accepted()

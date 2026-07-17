@@ -10,6 +10,8 @@ import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.security.config.SecurityConfig;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.UserContextService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doNothing;
@@ -56,8 +59,23 @@ class AssignmentControllerTest {
     private AssignmentService assignmentService;
     @MockitoBean
     private PunishRepository punishRepository;
+    @MockitoBean
+    private UserContextService userContextService;
     @Autowired
     private ObjectMapper objectMapper;
+
+    @BeforeEach
+    void setUpSecurityContext() throws Exception {
+        when(userContextService.hasRole("ADMIN")).thenReturn(true);
+        when(userContextService.getCurrentUserEmail()).thenReturn("admin@test.com");
+        when(userContextService.getCurrentUserSchool()).thenReturn("Test School");
+        testTemplate.setCreatedBySystem(true);
+
+        Punishment punishment = new Punishment();
+        punishment.setStudentEmail("student@test.com");
+        when(punishRepository.findById(anyString())).thenReturn(Optional.of(punishment));
+        when(assignmentService.getTemplateById(anyString())).thenReturn(testTemplate);
+    }
 
     @Test
     void getAllAssignments_returnsAccepted_withList() throws Exception {

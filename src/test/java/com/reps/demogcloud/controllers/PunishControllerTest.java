@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.punishment.*;
 import com.reps.demogcloud.security.config.SecurityConfig;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.services.PunishmentService;
+import com.reps.demogcloud.services.UserContextService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -49,6 +51,9 @@ public class PunishControllerTest {
     @MockitoBean
     private PunishmentService punishmentService;
 
+    @MockitoBean
+    private UserContextService userContextService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -57,6 +62,7 @@ public class PunishControllerTest {
 
     @BeforeEach
     void setUp() {
+        when(userContextService.getCurrentUserEmail()).thenReturn("teacher@test.com");
         punishment = new Punishment();
         punishment.setPunishmentId("123");
         punishment.setStudentEmail("test@student.com");
@@ -254,7 +260,7 @@ public class PunishControllerTest {
                 PunishmentResponse.builder().message("Punishment 2").build()
         );
 
-        when(punishmentService.createNewPunishFormBulk(bulkRequests)).thenReturn(mockResponses);
+        when(punishmentService.createNewPunishFormBulk(anyList())).thenReturn(mockResponses);
 
         mockMvc.perform(post("/punish/v1/startPunish/formList")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -291,8 +297,13 @@ public class PunishControllerTest {
         String punishmentId = "abc123";
         int index = 5;
 
-        Punishment updated = Punishment.builder().punishmentId(punishmentId).mapIndex(index).build();
+        Punishment updated = Punishment.builder()
+                .punishmentId(punishmentId)
+                .studentEmail("student@example.com")
+                .mapIndex(index)
+                .build();
 
+        when(punishmentService.findByPunishmentId(punishmentId)).thenReturn(updated);
         when(punishmentService.updateMapIndex(punishmentId, index)).thenReturn(updated);
 
         mockMvc.perform(put("/punish/v1/{id}/index/{index}", punishmentId, index))

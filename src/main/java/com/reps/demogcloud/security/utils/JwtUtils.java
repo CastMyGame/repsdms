@@ -3,7 +3,9 @@ package com.reps.demogcloud.security.utils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +15,30 @@ import java.util.function.Function;
 
 @Service
 public class JwtUtils {
-    private static final long EXPIRATION_TIME = 20 * 60 * 1000; // 10 minutes
-    private final SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private final Set<String> blacklistedTokens = new HashSet<>();
+    private final long expirationTimeMillis;
+    private final SecretKey secretKey;
+
+    public JwtUtils(
+            @Value("${security.jwt.secret}") String base64Secret,
+            @Value("${security.jwt.access-token-minutes:15}") long accessTokenMinutes
+    ) {
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(base64Secret);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("security.jwt.secret must be a Base64-encoded key", exception);
+        }
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("security.jwt.secret must decode to at least 256 bits");
+        }
+        if (accessTokenMinutes <= 0) {
+            throw new IllegalStateException("security.jwt.access-token-minutes must be positive");
+        }
+
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        this.expirationTimeMillis = accessTokenMinutes * 60 * 1000;
+    }
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
@@ -30,7 +53,7 @@ public class JwtUtils {
 
     private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + EXPIRATION_TIME);
+        Date expiration = new Date(now.getTime() + expirationTimeMillis);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -50,16 +73,18 @@ public class JwtUtils {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
     }
 
+    /**
+     * Compatibility endpoint for the existing web client. New clients must use
+     * a persisted refresh token through /auth/refresh instead.
+     */
+    @Deprecated
     public String renewTokenWithBlacklist(String oldToken) {
-        if (!isTokenExpired(oldToken) && !isTokenBlacklisted(oldToken)) {
+        if (!isTokenExpired(oldToken)) {
             String username = extractUserName(oldToken);
-            // Blacklist the old token to prevent reuse
-            blacklistToken(oldToken);
-
             Map<String, Object> claims = new HashMap<>();
             return createToken(claims, username);
         } else {
-            throw new RuntimeException("Token is either expired or blacklisted");
+            throw new RuntimeException("Token is expired");
         }
     }
 
@@ -77,14 +102,19 @@ public class JwtUtils {
         return extractExpiration(token).before(new Date());
     }
 
+    /**
+     * Access-token revocation is intentionally handled through persisted refresh
+     * token revocation. This method remains temporarily for callers compiled
+     * against the old API.
+     */
+    @Deprecated
     public void blacklistToken(String token) {
-        blacklistedTokens.add(token);
+        // No-op: access tokens are short lived and refresh sessions are revoked persistently.
     }
 
+    @Deprecated
     public boolean isTokenBlacklisted(String token) {
-        boolean isBlacklisted = blacklistedTokens.contains(token);
-        System.out.println("incoming: " +token);
-        return isBlacklisted;
+        return false;
     }
 
 

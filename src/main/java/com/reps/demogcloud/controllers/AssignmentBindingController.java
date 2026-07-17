@@ -4,6 +4,7 @@ import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
 import com.reps.demogcloud.models.dto.ClearTeacherDefaultBindingRequest;
 import com.reps.demogcloud.models.dto.SetTeacherDefaultBindingRequest;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.UserContextService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.List;
 public class AssignmentBindingController {
 
     private final AssignmentService assignmentService;
+    private final UserContextService userContextService;
 
     /**
      * Set or change the default template for a teacher + infraction + level.
@@ -32,6 +34,13 @@ public class AssignmentBindingController {
     public ResponseEntity<AssignmentTemplateBinding> setTeacherDefault(
             @RequestBody SetTeacherDefaultBindingRequest request
     ) throws Exception {
+        String teacherEmail = request.getTeacherEmail();
+        userContextService.requireTeacherDefaultAccess(teacherEmail);
+        if (!userContextService.hasRole("ADMIN")) {
+            request.setTeacherEmail(userContextService.getCurrentUserEmail());
+            request.setSchoolId(userContextService.getCurrentUserSchool());
+        }
+
         return ResponseEntity.ok(
                 assignmentService.setTeacherDefaultTemplate(
                         request.getTeacherEmail(),
@@ -51,6 +60,10 @@ public class AssignmentBindingController {
     public ResponseEntity<Void> clearTeacherDefault(
             @RequestBody ClearTeacherDefaultBindingRequest request
     ) {
+        userContextService.requireTeacherDefaultAccess(request.getTeacherEmail());
+        if (!userContextService.hasRole("ADMIN")) {
+            request.setTeacherEmail(userContextService.getCurrentUserEmail());
+        }
         assignmentService.clearTeacherDefaultTemplate(
                 request.getTeacherEmail(),
                 request.getInfractionName(),
@@ -67,6 +80,7 @@ public class AssignmentBindingController {
     public ResponseEntity<List<AssignmentTemplateBinding>> getTeacherDefaults(
             @RequestParam String teacherEmail
     ) {
+        userContextService.requireTeacherDefaultAccess(teacherEmail);
         return ResponseEntity.ok(
                 assignmentService.getActiveBindingsForTeacher(teacherEmail)
         );
