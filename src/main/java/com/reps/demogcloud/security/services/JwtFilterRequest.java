@@ -52,12 +52,6 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         String jwtToken = authorizationHeader.substring(7);
 
         try {
-            if (jwtUtils.isTokenBlacklisted(jwtToken)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Your session has expired. Please login again to continue");
-                return;
-            }
-
             String username = jwtUtils.extractUserName(jwtToken);
             UserDetails currentUserDetails = customUserDetailsService.loadUserByUsername(username);
 
@@ -99,14 +93,17 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         if (path.startsWith("/oauth2/")) return true;
         if (path.startsWith("/error")) return true;
 
-        // Any other public pages you listed in SecurityConfig
+        // Explicit public auth routes. /auth/me must still pass through this
+        // filter so the bearer token can establish the security context.
+        if (path.equals("/auth")) return true;
+        if (path.equals("/auth/refresh")) return true;
+
+        // Any other public pages listed in SecurityConfig
         if (path.startsWith("/register")) return true;
         if (path.startsWith("/contact-us")) return true;
-        if (path.startsWith("/auth")) return true;
         if (path.startsWith("/forgot-password")) return true;
         if (path.startsWith("/reset-password")) return true;
 
-        // Your template endpoint
-        return path.startsWith("/assignments/v1/templates");
+        return false;
     }
 }

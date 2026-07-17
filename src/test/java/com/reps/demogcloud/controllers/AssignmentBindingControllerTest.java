@@ -4,6 +4,8 @@ import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
 import com.reps.demogcloud.models.dto.ClearTeacherDefaultBindingRequest;
 import com.reps.demogcloud.models.dto.SetTeacherDefaultBindingRequest;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.UserContextService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,8 +25,16 @@ class AssignmentBindingControllerTest {
     @Mock
     private AssignmentService assignmentService;
 
+    @Mock
+    private UserContextService userContextService;
+
     @InjectMocks
     private AssignmentBindingController assignmentBindingController;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(userContextService.hasRole("ADMIN")).thenReturn(true);
+    }
 
     @Test
     void setTeacherDefault_shouldReturnOkAndBinding_whenRequestIsValid() throws Exception {

@@ -10,6 +10,7 @@ import com.reps.demogcloud.security.config.SecurityConfig;
 import com.reps.demogcloud.security.services.JwtFilterRequest;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.services.DTOService;
+import com.reps.demogcloud.services.UserContextService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,9 @@ class DTOControllerTest {
 
     @MockitoBean
     private JwtUtils jwtUtils;
+
+    @MockitoBean
+    private UserContextService userContextService;
 
     @Test
     void getAll_returnsAccepted_withAdminOverviewDTO() throws Exception {

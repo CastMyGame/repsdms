@@ -12,6 +12,7 @@ import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.CustomUserDetailsService;
 import com.reps.demogcloud.security.services.UserAccountService;
+import com.reps.demogcloud.security.services.RefreshTokenService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.security.utils.TokenStatus;
 import com.reps.demogcloud.services.EmailService;
@@ -84,6 +85,9 @@ class AuthControllersTest {
     @MockitoBean
     private AuthenticationManager authenticationManager;
 
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -96,14 +100,12 @@ class AuthControllersTest {
         authentication.setDetails("details");
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        doNothing().when(jwtUtils).blacklistToken("abc123");
-
         mockMvc.perform(post("/v1/logout")
                         .header("Authorization", "Bearer abc123"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Logout successful"));
 
-        verify(jwtUtils).blacklistToken("abc123");
+        verify(refreshTokenService).revokeAllForUser("user");
     }
 
     @Test
@@ -114,8 +116,8 @@ class AuthControllersTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         mockMvc.perform(post("/v1/logout"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Token not found in Authorization header"));
+                .andExpect(status().isOk())
+                .andExpect(content().string("Logout successful"));
     }
 
     @Test
@@ -123,8 +125,8 @@ class AuthControllersTest {
         SecurityContextHolder.clearContext();
 
         mockMvc.perform(post("/v1/logout"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("No active session or token found"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("No authenticated session found"));
     }
 
     @Test
