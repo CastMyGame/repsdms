@@ -4,6 +4,7 @@ import com.reps.demogcloud.data.PasswordResetTokenRepository;
 import com.reps.demogcloud.models.ResetPasswordRequest;
 import com.reps.demogcloud.security.models.AuthenticationRequest;
 import com.reps.demogcloud.security.models.AuthenticationResponse;
+import com.reps.demogcloud.security.models.AuthCapabilitiesResponse;
 import com.reps.demogcloud.security.models.ForgotPasswordRequest;
 import com.reps.demogcloud.security.models.PasswordResetToken;
 import com.reps.demogcloud.security.models.UserModel;
@@ -11,6 +12,7 @@ import com.reps.demogcloud.security.models.UserRepository;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import com.reps.demogcloud.security.models.contactus.ContactUsResponse;
 import com.reps.demogcloud.security.services.CustomUserDetailsService;
+import com.reps.demogcloud.security.services.GoogleOAuthTokenStore;
 import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import com.reps.demogcloud.security.utils.TokenStatus;
@@ -18,6 +20,7 @@ import com.reps.demogcloud.services.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,6 +46,7 @@ import java.util.UUID;
 )
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class AuthControllers {
 
     private final EmailService emailService;
@@ -53,6 +57,7 @@ public class AuthControllers {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AuthenticationManager authenticationManager;
+    private final GoogleOAuthTokenStore googleOAuthTokenStore;
 
     @PostMapping("/v1/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
@@ -106,18 +111,53 @@ public class AuthControllers {
         String username = authenticationRequest.getUsername().toLowerCase();
         String password = authenticationRequest.getPassword();
 
+        log.info("Password authentication request received for username={}", username);
+
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         } catch (Exception e) {
+            log.warn("Password authentication failed for username={}: {}", username, e.getMessage());
             return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username, null));
         }
 
-        UserDetails loadedUser = customUserDetailsService.loadUserByUsername(username);
-        String generatedToken = jwtUtils.generateToken(loadedUser);
-        UserModel userModel = userAccountService.loadUserModelByUsername(username);
+        try {
+            UserDetails loadedUser = customUserDetailsService.loadUserByUsername(username);
+            String generatedToken = jwtUtils.generateToken(loadedUser, "PASSWORD");
+            UserModel userModel = userAccountService.loadUserModelByUsername(username);
 
-        AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
-        return ResponseEntity.ok(response);
+            log.info("Password authentication succeeded for username={}", username);
+            AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Authentication succeeded but session creation failed for username={}", username, e);
+            throw e;
+        }
+    }
+
+    @GetMapping("/auth/capabilities")
+    public ResponseEntity<AuthCapabilitiesResponse> getAuthCapabilities(HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication == null ? "" : authentication.getName();
+        String loginMethod = "PASSWORD";
+
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            loginMethod = jwtUtils.extractLoginMethod(authorizationHeader.substring(7));
+        }
+
+        boolean googlePermission = googleOAuthTokenStore.hasUsableGmailSendToken(username);
+        boolean canSendAsUser = "GOOGLE".equalsIgnoreCase(loginMethod) && googlePermission;
+        String emailProvider = canSendAsUser ? "GOOGLE_GMAIL" : "REPS_SMTP";
+        String emailPermission = canSendAsUser ? "GRANTED" :
+                ("GOOGLE".equalsIgnoreCase(loginMethod) ? "NOT_GRANTED" : "NOT_AVAILABLE");
+
+        return ResponseEntity.ok(new AuthCapabilitiesResponse(
+                loginMethod.toUpperCase(),
+                username,
+                emailProvider,
+                emailPermission,
+                canSendAsUser
+        ));
     }
 
     @PostMapping("/users/create/{school}")

@@ -18,7 +18,12 @@ public class JwtUtils {
     private final Set<String> blacklistedTokens = new HashSet<>();
 
     public String generateToken(UserDetails userDetails) {
+        return generateToken(userDetails, "PASSWORD");
+    }
+
+    public String generateToken(UserDetails userDetails, String loginMethod) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("loginMethod", loginMethod);
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -57,6 +62,7 @@ public class JwtUtils {
             blacklistToken(oldToken);
 
             Map<String, Object> claims = new HashMap<>();
+            claims.put("loginMethod", extractLoginMethod(oldToken));
             return createToken(claims, username);
         } else {
             throw new RuntimeException("Token is either expired or blacklisted");
@@ -67,6 +73,11 @@ public class JwtUtils {
 
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractLoginMethod(String token) {
+        String loginMethod = extractClaim(token, claims -> claims.get("loginMethod", String.class));
+        return loginMethod == null || loginMethod.isBlank() ? "PASSWORD" : loginMethod;
     }
 
     public Date extractExpiration(String token) {

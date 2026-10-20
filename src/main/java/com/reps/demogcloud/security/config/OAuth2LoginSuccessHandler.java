@@ -109,7 +109,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
         storeGoogleTokens(authentication, userModel);
 
-        String token = jwtUtils.generateToken(userDetails);
+        String token = jwtUtils.generateToken(userDetails, "GOOGLE");
 
         String redirectUrl = env.getProperty("auth.sso.google.redirect-url", "");
 
@@ -180,7 +180,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                                 authorizedClient.getAccessToken().getExpiresAt(),
                                 authorizedClient.getRefreshToken() != null
                                         ? authorizedClient.getRefreshToken().getTokenValue()
-                                        : null
+                                        : null,
+                                authorizedClient.getAccessToken().getScopes()
                         )
                 );
             }
