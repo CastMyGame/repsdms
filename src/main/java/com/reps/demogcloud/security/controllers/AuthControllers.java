@@ -145,8 +145,8 @@ public class AuthControllers {
             loginMethod = jwtUtils.extractLoginMethod(authorizationHeader.substring(7));
         }
 
-        boolean googleTokenPresent = googleOAuthTokenStore.getToken(username).isPresent();
-        boolean canSendAsUser = "GOOGLE".equalsIgnoreCase(loginMethod) && googleTokenPresent;
+        boolean googlePermission = googleOAuthTokenStore.hasUsableGmailSendToken(username);
+        boolean canSendAsUser = "GOOGLE".equalsIgnoreCase(loginMethod) && googlePermission;
         String emailProvider = canSendAsUser ? "GOOGLE_GMAIL" : "REPS_SMTP";
         String emailPermission = canSendAsUser ? "GRANTED" :
                 ("GOOGLE".equalsIgnoreCase(loginMethod) ? "NOT_GRANTED" : "NOT_AVAILABLE");

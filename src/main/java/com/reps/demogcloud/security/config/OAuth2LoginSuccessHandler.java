@@ -180,7 +180,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                                 authorizedClient.getAccessToken().getExpiresAt(),
                                 authorizedClient.getRefreshToken() != null
                                         ? authorizedClient.getRefreshToken().getTokenValue()
-                                        : null
+                                        : null,
+                                authorizedClient.getAccessToken().getScopes()
                         )
                 );
             }

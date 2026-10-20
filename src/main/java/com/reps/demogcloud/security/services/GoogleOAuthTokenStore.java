@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -25,11 +26,20 @@ public class GoogleOAuthTokenStore {
         return Optional.ofNullable(tokensByUsername.get(username));
     }
 
+    public boolean hasUsableGmailSendToken(String username) {
+        return getToken(username)
+                .filter(token -> token.getAccessToken() != null && !token.getAccessToken().isBlank())
+                .filter(token -> token.getAccessTokenExpiresAt() == null || token.getAccessTokenExpiresAt().isAfter(Instant.now()))
+                .filter(token -> token.getScopes() != null && token.getScopes().contains("https://www.googleapis.com/auth/gmail.send"))
+                .isPresent();
+    }
+
     @Value
     public static class GoogleOAuthToken {
         String accessToken;
         Instant accessTokenExpiresAt;
         String refreshToken;
+        Set<String> scopes;
     }
 }
 
