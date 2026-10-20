@@ -102,7 +102,9 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         // Any other public pages you listed in SecurityConfig
         if (path.startsWith("/register")) return true;
         if (path.startsWith("/contact-us")) return true;
-        if (path.startsWith("/auth")) return true;
+        // Keep the credential-login endpoint public, but protect sub-routes
+        // such as /auth/capabilities with the JWT filter.
+        if ("/auth".equals(path)) return true;
         if (path.startsWith("/forgot-password")) return true;
         if (path.startsWith("/reset-password")) return true;
 
