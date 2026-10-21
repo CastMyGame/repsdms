@@ -7,11 +7,9 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferral;
 import com.reps.demogcloud.models.guidance.GuidanceReferral;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.UserContextService;
-import org.bson.Document;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.*;
-import org.springframework.data.mongodb.core.mapping.event.*;
 import org.springframework.data.mongodb.core.query.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
@@ -27,7 +25,7 @@ import java.util.*;
 /** Embedded Mongo obligations: no second write/queue, no provider calls on an action's request thread. */
 @Service
 @lombok.RequiredArgsConstructor
-public class RequiredNotificationService implements AfterConvertCallback<Object>, AfterSaveCallback<Object> {
+public class RequiredNotificationService {
     private final MongoTemplate mongo;
     private final Environment env;
     private final StudentRepository students;
@@ -39,12 +37,6 @@ public class RequiredNotificationService implements AfterConvertCallback<Object>
 
     public boolean isEnabled() {
         return Boolean.parseBoolean(env.getProperty("reps.email.notifications.enabled","false")) && router.isPhase1RoutingEnabled();
-    }
-    @Override public Object onAfterConvert(Object entity, Document source, String collection) { markPersisted(entity); return entity; }
-    @Override public Object onAfterSave(Object entity, Document source, String collection) { markPersisted(entity); return entity; }
-    private void markPersisted(Object entity) {
-        if (entity instanceof Punishment || entity instanceof OfficeReferral || entity instanceof GuidanceReferral)
-            new BeanWrapperImpl(entity).setPropertyValue("persisted",true);
     }
     private String kind(Object entity) {
         if(entity instanceof Punishment) return "punishment"; if(entity instanceof OfficeReferral) return "office";

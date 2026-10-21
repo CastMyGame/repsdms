@@ -62,10 +62,10 @@ class RequiredNotificationServiceTest {
         service=new RequiredNotificationService(mongo,env,students,users,router,templates);
         action();
         when(mongo.insert(any(Punishment.class))).thenAnswer(i->{ synchronized(lock) {
-            var value=(Punishment)i.getArgument(0); value.setRevision(0L); database.set(write(value)); service.onAfterSave(value,database.get(),"Punishments"); return value;
+            var value=(Punishment)i.getArgument(0); value.setRevision(0L); database.set(write(value)); new CasePersistenceCallbacks().onAfterSave(value,database.get(),"Punishments"); return value;
         }});
         when(mongo.save(any(Punishment.class))).thenAnswer(i->{ synchronized(lock) {
-            var value=(Punishment)i.getArgument(0); value.setRevision(value.getRevision()==null?0L:value.getRevision()+1); database.set(write(value)); service.onAfterSave(value,database.get(),"Punishments"); return value;
+            var value=(Punishment)i.getArgument(0); value.setRevision(value.getRevision()==null?0L:value.getRevision()+1); database.set(write(value)); new CasePersistenceCallbacks().onAfterSave(value,database.get(),"Punishments"); return value;
         }});
         when(mongo.findById(anyString(),eq(Punishment.class))).thenAnswer(i->{ synchronized(lock) { return database.get()!=null && i.getArgument(0).equals(database.get().getString("_id"))?read():null; }});
         when(mongo.findOne(any(Query.class),eq(Punishment.class))).thenAnswer(i->{ synchronized(lock) { return match(i.getArgument(0))?read():null; }});
@@ -85,7 +85,7 @@ class RequiredNotificationServiceTest {
     @AfterEach void clean() { RequestContextHolder.resetRequestAttributes(); }
     private void action() { var request=new MockHttpServletRequest(); request.addHeader("X-REPS-Action-Id",UUID.randomUUID().toString()); RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request)); }
     private Document write(Object value) { var doc=new Document(); converter.write(value,doc); return doc; }
-    private Punishment read() { if(database.get()==null) return null; var value=converter.read(Punishment.class,Document.parse(database.get().toJson())); service.onAfterConvert(value,database.get(),"Punishments"); return value; }
+    private Punishment read() { if(database.get()==null) return null; var value=converter.read(Punishment.class,Document.parse(database.get().toJson())); new CasePersistenceCallbacks().onAfterConvert(value,database.get(),"Punishments"); return value; }
     private Punishment fresh() {
         var p=new Punishment(); p.setPunishmentId(ID); p.setStudentEmail(student.getStudentEmail()); p.setTeacherEmail(TEACHER); p.setSchool("School");
         p.setStatus("OPEN"); p.setInfractionDescription(new ArrayList<>(List.of("synthetic description"))); p.setInfractionName("Synthetic"); return p;
@@ -213,7 +213,7 @@ class RequiredNotificationServiceTest {
     @Test void modelCallbacksDistinguishNewUuidEntitiesFromLegacyLoadedEntitiesWithoutVersion() throws Exception {
         for(Object entity:List.of(fresh(),new OfficeReferral(),new GuidanceReferral())) {
             var persistable=(org.springframework.data.domain.Persistable<?>)entity; assertTrue(persistable.isNew());
-            service.onAfterConvert(entity,new Document(),"synthetic"); assertFalse(persistable.isNew());
+            new CasePersistenceCallbacks().onAfterConvert(entity,new Document(),"synthetic"); assertFalse(persistable.isNew());
         }
         var p=fresh(); service.prepare(p,"CREATED"); var document=write(p); assertTrue(document.containsKey("requiredNotifications"));
         assertFalse(new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(p).has("requiredNotifications")); assertFalse(document.containsKey("persisted"));

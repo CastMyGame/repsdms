@@ -1,6 +1,7 @@
 package com.reps.demogcloud.services.translation;
 
 import com.google.cloud.translate.Translate;
+import com.google.cloud.translate.TranslateOptions;
 import com.google.cloud.translate.Translation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,30 @@ class GoogleCloudTranslationServiceTest {
     @BeforeEach
     void setUp() {
         service = new GoogleCloudTranslationService(translate);
+    }
+
+    @Test
+    void startupAndEnglishEmailDoNotDiscoverCloudCredentials() {
+        try (var options = mockStatic(TranslateOptions.class)) {
+            var local = new GoogleCloudTranslationService();
+            assertEquals("Hello", local.translate("Hello", "en", "en"));
+            options.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void initializesTranslationClientOnceOnFirstNonEnglishRequest() {
+        var configured = mock(TranslateOptions.class);
+        when(configured.getService()).thenReturn(translate);
+        when(translate.translate(eq("Hello"), any(Translate.TranslateOption[].class))).thenReturn(translation);
+        when(translation.getTranslatedText()).thenReturn("Hola");
+        try (var options = mockStatic(TranslateOptions.class)) {
+            options.when(TranslateOptions::getDefaultInstance).thenReturn(configured);
+            var local = new GoogleCloudTranslationService();
+            assertEquals("Hola", local.translate("Hello", "en", "es"));
+            assertEquals("Hola", local.translate("Hello", "en", "es"));
+            options.verify(TranslateOptions::getDefaultInstance, times(1));
+        }
     }
 
     @Test
