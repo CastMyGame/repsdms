@@ -26,6 +26,16 @@ class EmailSenderServiceTest {
     @InjectMocks
     private EmailSenderService service;
 
+    @Test
+    void managedClassAnnouncementDoesNotExposeOtherStudentsInCc() throws MessagingException {
+        when(emailRoutingService.isPhase1RoutingEnabled()).thenReturn(true);
+        service.sendClassAnnouncement("teacher@test.com", List.of("s1@test.com", "s2@test.com"), "Subject", "Body");
+        verify(emailRoutingService).sendBulkEmail("s1@test.com", null, "Subject", "Body", null, "teacher@test.com", true);
+        verify(emailRoutingService).sendBulkEmail("s2@test.com", null, "Subject", "Body", null, "teacher@test.com", true);
+        verify(emailRoutingService).isPhase1RoutingEnabled();
+        verifyNoMoreInteractions(emailRoutingService);
+    }
+
     // -----------------------
     // sendEmail
     // -----------------------

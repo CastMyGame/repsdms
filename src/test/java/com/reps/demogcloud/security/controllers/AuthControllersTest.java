@@ -84,6 +84,13 @@ class AuthControllersTest {
     @MockitoBean
     private AuthenticationManager authenticationManager;
 
+    @MockitoBean
+    private com.reps.demogcloud.security.services.GoogleOAuthTokenStore googleOAuthTokenStore;
+    @MockitoBean
+    private com.reps.demogcloud.services.UserContextService userContextService;
+    @MockitoBean
+    private com.reps.demogcloud.services.email.EmailRoutingService emailRoutingService;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();

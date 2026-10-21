@@ -51,6 +51,7 @@ public class PunishmentService {
     private final EmailService emailService;
     private final EmployeeRepository employeeRepository;
     private final StudentUtils studentUtils;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
     // ----------------------------------------- FIND BY METHODS -----------------------------------------
 
@@ -135,11 +136,7 @@ public class PunishmentService {
     }
 
     public String deletePunishment(Punishment punishment) throws ResourceNotFoundException {
-        try {
-            punishRepository.delete(punishment);
-        } catch (Exception e) {
-            throw new ResourceNotFoundException("That punishment does not exist");
-        }
+        requiredNotifications.deleteLegacyCase("punishment",punishment.getPunishmentId());
         return "Punishment has been deleted";
     }
 

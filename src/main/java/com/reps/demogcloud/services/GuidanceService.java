@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GuidanceService {
 
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
     private final EmailService emailService;
@@ -200,6 +201,9 @@ public class GuidanceService {
         }
 
         GuidanceReferral guidance = guidanceOptional.get();
+        if(requiredNotifications.isEnabled() && requiredNotifications.hasAction(guidance,"RESOURCES")) {
+            GuidanceResponse prior = new GuidanceResponse(); prior.setGuidance(List.of(guidance)); return prior;
+        }
         LocalDate timePosted = LocalDate.now();
         List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
 
@@ -229,17 +233,22 @@ public class GuidanceService {
         resourceMessage.append("<html>")
                 .append("<body>")
                 .append("<p>Hello,<br>")
-                .append(student.getFirstName())
+                .append(org.springframework.web.util.HtmlUtils.htmlEscape(java.util.Objects.toString(student.getFirstName(),"")))
                 .append(" ")
-                .append(student.getLastName())
+                .append(org.springframework.web.util.HtmlUtils.htmlEscape(java.util.Objects.toString(student.getLastName(),"")))
                 .append(", Guidance has sent you the following resources for your consideration:</p>")
                 .append("<ul>");
 
         for (ResourceOption item : options) {
+            if(requiredNotifications.isEnabled()) {
+                java.net.URI uri=java.net.URI.create(item.getUrl());
+                if(!java.util.Set.of("https","http").contains(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null)
+                    throw new IllegalArgumentException("Resources must use HTTP or HTTPS links");
+            }
             resourceMessage.append("<li><a href=\"")
-                    .append(item.getUrl())
+                    .append(org.springframework.web.util.HtmlUtils.htmlEscape(item.getUrl()))
                     .append("\">")
-                    .append(item.getLabel())
+                    .append(org.springframework.web.util.HtmlUtils.htmlEscape(item.getLabel()))
                     .append("</a></li>");
         }
 
@@ -252,6 +261,9 @@ public class GuidanceService {
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());
 
+        if(requiredNotifications.isEnabled()) {
+            requiredNotifications.prepare(guidance,"RESOURCES",requiredNotifications.actionId(),resourceMessage.toString());
+        } else {
         emailService.sendEmailGeneric(
                 ccList,
                 student.getStudentEmail(),
@@ -260,6 +272,7 @@ public class GuidanceService {
                 student.getPreferredLanguage()
         );
 
+        }
         guidanceRepository.save(guidance);
         GuidanceResponse response = new GuidanceResponse();
         List<GuidanceReferral> listOfGuidance = new ArrayList<>();
@@ -341,12 +354,7 @@ public class GuidanceService {
     }
 
     public String deleteGuidanceReferral(String id) throws ResourceNotFoundException {
-        try {
-            guidanceRepository.deleteById(id);
-
-        } catch (Exception e) {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
+        requiredNotifications.deleteLegacyCase("guidance",id);
         return "Punishment has been deleted";
     }
 }

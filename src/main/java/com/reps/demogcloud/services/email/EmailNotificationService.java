@@ -7,6 +7,7 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.data.EmployeeRepository;
 import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.services.UserContextService;
 import com.reps.demogcloud.security.models.contactus.ContactUsRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.access.AccessDeniedException;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -31,8 +34,9 @@ public class EmailNotificationService {
     private final EmailTemplateBuilderService templateBuilderService;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
+    private final UserContextService userContextService;
 
-    @Async
+    // Keep identity-sensitive orchestration on the request thread until a durable actor is recorded (Phase 3).
     public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject, String languageCode) throws MessagingException {
 
         String sender = getCurrentUserEmail();
@@ -41,6 +45,11 @@ public class EmailNotificationService {
         Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
         if (student == null) {
             throw new IllegalArgumentException("Student not found for email: " + studentEmail);
+        }
+
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            sendVerifiedPts(student, parentEmail, teacherEmail, studentEmail, msg, subject, false);
+            return;
         }
 
         List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
@@ -66,8 +75,11 @@ public class EmailNotificationService {
         );
     }
 
-    @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
+        boolean phase1 = emailSenderService.isPhase1RoutingEnabled();
+        if (phase1 && !userContextService.getCurrentStaffEmail().equalsIgnoreCase(request.getTeacherEmail())) {
+            throw new AccessDeniedException("Class announcement sender must be the acting staff member");
+        }
         var teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
 
         if (teacher == null || teacher.getClasses() == null) return;
@@ -87,6 +99,10 @@ public class EmailNotificationService {
             if (email == null || email.isBlank()) continue;
 
             Student s = studentRepository.findByStudentEmailIgnoreCase(email);
+            if (phase1 && (s == null || s.isArchived() || s.getSchool() == null
+                    || !s.getSchool().equalsIgnoreCase(teacher.getSchool()))) {
+                throw new AccessDeniedException("Class recipients must be active students in the staff member's school");
+            }
             String lang = (s == null)
                     ? "en"
                     : templateBuilderService.normalizeLanguage(s.getPreferredLanguage());
@@ -120,7 +136,6 @@ public class EmailNotificationService {
         }
     }
 
-    @Async
     public void sendAlertEmail(String alertType, Punishment punishment, String languageCode) throws MessagingException {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         if (student == null) return;
@@ -133,6 +148,11 @@ public class EmailNotificationService {
                 + detentionType
                 + " and must complete it during that time.";
 
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            sendVerifiedPts(student, student.getParentEmail(), punishment.getTeacherEmail(),
+                    student.getStudentEmail(), message, alertType + " REMINDER", true);
+            return;
+        }
         sendPtsEmail(
                 student.getParentEmail(),
                 punishment.getTeacherEmail(),
@@ -161,8 +181,8 @@ public class EmailNotificationService {
                 response.getParentToEmail(),
                 response.getTeacherToEmail(),
                 response.getStudentToEmail(),
-                response.getSubject(),
                 response.getMessage(),
+                response.getSubject(),
                 student.getPreferredLanguage()
         );
     }
@@ -170,5 +190,70 @@ public class EmailNotificationService {
     public String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null ? authentication.getName() : null;
+    }
+
+    private String eligibleStaff(String email, Student student) {
+        if (email == null || email.isBlank()) return null;
+        try {
+            userContextService.requireStaffInStudentSchool(email, student);
+            return userContextService.getVerifiedStaffEmail(email);
+        } catch (AccessDeniedException exception) {
+            return null; // Former staff/spotters must not retain participation automatically.
+        }
+    }
+
+    private void sendVerifiedPts(Student student, String parentEmail, String originalTeacher,
+                                 String studentEmail, String body, String subject, boolean system) throws MessagingException {
+        if (student.isArchived() || !Objects.equals(parentEmail, student.getParentEmail())
+                || !Objects.equals(studentEmail, student.getStudentEmail())) {
+            throw new AccessDeniedException("Notification recipients must match the active student record");
+        }
+        String teacher = eligibleStaff(originalTeacher, student);
+        String actor = null;
+        if (!system) {
+            if (userContextService.isCurrentUserStudent()) {
+                if (!studentEmail.equalsIgnoreCase(userContextService.getCurrentUserEmail())) {
+                    throw new AccessDeniedException("Students may trigger only their own notifications");
+                }
+                system = true;
+            } else {
+                actor = userContextService.getCurrentStaffEmail();
+                userContextService.requireCaseCommunicationAccess(originalTeacher, student);
+            }
+        }
+        List<String> cc = new ArrayList<>();
+        if (teacher != null) cc.add(teacher);
+        cc.add(studentEmail);
+        List<String> bcc = new ArrayList<>();
+        if (student.getSpotters() != null) {
+            for (String spotter : student.getSpotters()) {
+                String eligible = eligibleStaff(spotter, student);
+                if (eligible != null && !cc.contains(eligible) && !bcc.contains(eligible)) bcc.add(eligible);
+            }
+        }
+        if (system) {
+            emailSenderService.sendSystemBulkEmail(parentEmail, cc, subject, body, bcc, teacher);
+        } else {
+            emailSenderService.sendStaffBulkEmail(parentEmail, cc, subject, body, bcc, actor);
+        }
+    }
+
+    public void sendCaseResources(List<String> participants, String studentEmail, String subject,
+                                  String body) throws MessagingException {
+        Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+        String actor = userContextService.getCurrentStaffEmail();
+        userContextService.requireStaffInStudentSchool(actor, student);
+        if (student.isArchived()) throw new AccessDeniedException("Student is archived");
+        // The caller supplies participants from the saved guidance case, never arbitrary frontend addresses.
+        String originalTeacher = participants.stream()
+                .filter(participant -> participant != null && !participant.equalsIgnoreCase(student.getGuidanceEmail()))
+                .findFirst().orElse(null);
+        userContextService.requireCaseCommunicationAccess(originalTeacher, student);
+        List<String> bcc = new ArrayList<>();
+        for (String participant : participants) {
+            String eligible = eligibleStaff(participant, student);
+            if (eligible != null && !bcc.contains(eligible)) bcc.add(eligible);
+        }
+        emailSenderService.sendStaffBulkEmail(student.getStudentEmail(), null, subject, body, bcc, actor);
     }
 }

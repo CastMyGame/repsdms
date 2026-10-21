@@ -18,6 +18,8 @@ public class UserModel {
     private String id;
     //UserName is the email address
     private String username;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
+    @lombok.ToString.Exclude
     private String password;
     private String firstName;
     private String lastName;

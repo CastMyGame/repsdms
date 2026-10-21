@@ -8,6 +8,7 @@ import com.reps.demogcloud.models.infraction.Infraction;
 import com.reps.demogcloud.models.punishment.Punishment;
 import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.services.UserContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,8 +40,91 @@ class EmailNotificationServiceTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Mock
+    private UserContextService userContextService;
+
     @InjectMocks
     private EmailNotificationService service;
+
+    private Student managedStudent() {
+        Student student = new Student();
+        student.setStudentEmail("student@test.com");
+        student.setParentEmail("parent@test.com");
+        student.setSchool("School");
+        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
+        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
+        return student;
+    }
+
+    @Test
+    void administratorClosureUsesAdministratorWhileOriginalTeacherRemainsParticipant() throws Exception {
+        Student student = managedStudent();
+        student.setSpotters(List.of("former@test.com"));
+        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+        when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
+        doNothing().when(userContextService).requireStaffInStudentSchool("teacher@test.com", student);
+        doThrow(new org.springframework.security.access.AccessDeniedException("Former staff"))
+                .when(userContextService).requireStaffInStudentSchool("former@test.com", student);
+        service.sendPtsEmail("parent@test.com", "teacher@test.com", "student@test.com", "Closed", "Subject", "en");
+        verify(userContextService).requireCaseCommunicationAccess("teacher@test.com", student);
+        verify(emailSenderService).sendStaffBulkEmail("parent@test.com", List.of("teacher@test.com", "student@test.com"),
+                "Subject", "Closed", List.of(), "admin@test.com");
+        verify(emailSenderService, never()).sendSystemBulkEmail(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void teacherCreationUsesTeacherAsActor() throws Exception {
+        managedStudent();
+        when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com");
+        when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
+        service.sendPtsEmail("parent@test.com", "teacher@test.com", "student@test.com", "Created", "Subject", "en");
+        verify(emailSenderService).sendStaffBulkEmail("parent@test.com", List.of("teacher@test.com", "student@test.com"),
+                "Subject", "Created", List.of(), "teacher@test.com");
+    }
+
+    @Test
+    void forgedFamilyRecipientCannotSend() throws Exception {
+        managedStudent();
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () ->
+                service.sendPtsEmail("unrelated@test.com", "teacher@test.com", "student@test.com", "Body", "Subject", "en"));
+        verify(emailSenderService, never()).sendStaffBulkEmail(any(), any(), any(), any(), any(), any());
+        verifyNoInteractions(userContextService);
+    }
+
+    @Test
+    void studentCompletionNeverUsesStudentsGmail() throws Exception {
+        managedStudent();
+        when(userContextService.isCurrentUserStudent()).thenReturn(true);
+        when(userContextService.getCurrentUserEmail()).thenReturn("student@test.com");
+        when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
+        service.sendPtsEmail("parent@test.com", "teacher@test.com", "student@test.com", "Body", "Subject", "en");
+        verify(emailSenderService).sendSystemBulkEmail("parent@test.com", List.of("teacher@test.com", "student@test.com"),
+                "Subject", "Body", List.of(), "teacher@test.com");
+        verify(userContextService, never()).getCurrentStaffEmail();
+    }
+
+    @Test
+    void backgroundAlertIsExplicitlySystemEvenWithAuthenticatedAdministrator() throws Exception {
+        managedStudent();
+        Punishment punishment = new Punishment();
+        punishment.setStudentEmail("student@test.com");
+        punishment.setTeacherEmail("teacher@test.com");
+        when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
+        service.sendAlertEmail("ISS", punishment, "en");
+        verify(emailSenderService).sendSystemBulkEmail(eq("parent@test.com"), any(), eq("ISS REMINDER"), any(), any(), eq("teacher@test.com"));
+        verify(userContextService, never()).getCurrentStaffEmail();
+        verify(userContextService, never()).isCurrentUserStudent();
+    }
+
+    @Test
+    void announcementCannotBorrowAnotherTeachersIdentity() {
+        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
+        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+        ClassAnnouncementRequest request = new ClassAnnouncementRequest();
+        request.setTeacherEmail("teacher@test.com");
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> service.sendClassAnnouncement(request));
+        verifyNoInteractions(employeeRepository, studentRepository);
+    }
 
     @Test
     void sendPtsEmail_shouldSendBulkEmail() throws Exception {
@@ -125,7 +209,7 @@ class EmailNotificationServiceTest {
 
         service.sendClassAnnouncement(req);
 
-        verifyNoInteractions(emailSenderService);
+        verify(emailSenderService, never()).sendClassAnnouncement(any(), any(), any(), any());
     }
 
     @Test
@@ -181,6 +265,6 @@ class EmailNotificationServiceTest {
         spy.notifyParentViaTextAndEmail(punishment, student, infraction, response);
 
         assertEquals("builtMessage", response.getMessage());
-        verify(spy).sendPtsEmail(any(), any(), any(), any(), any(), any());
+        verify(spy).sendPtsEmail("p", "t", "s", "builtMessage", "sub", "en");
     }
 }

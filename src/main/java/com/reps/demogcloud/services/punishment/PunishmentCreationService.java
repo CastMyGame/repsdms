@@ -9,6 +9,8 @@ import com.reps.demogcloud.models.punishment.PunishmentResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.UserContextService;
+import com.reps.demogcloud.services.email.EmailSenderService;
 import com.reps.demogcloud.utils.PunishmentUtils;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +29,28 @@ public class PunishmentCreationService {
 
     private final PunishmentUtils punishmentUtils;
     private final AssignmentService assignmentService;
+    private final UserContextService userContextService;
+    private final EmailSenderService emailSenderService;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
         punishmentUtils.validateFormRequest(formRequest);
         LocalDate now = LocalDate.now();
 
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            String actor = userContextService.getCurrentStaffEmail();
+            userContextService.requireStaffInStudentSchool(actor, student);
+            formRequest.setTeacherEmail(actor);
+        }
+        String managedId = null;
+        if (requiredNotifications.isEnabled()) {
+            managedId = requiredNotifications.creationId("punishment", student.getStudentEmail(),java.util.Arrays.asList(
+                    formRequest.getInfractionName(),formRequest.getInfractionPeriod(),formRequest.getInfractionDescription(),formRequest.getCurrency(),
+                    formRequest.getGuidanceDescription(),formRequest.getPhoneLogDescription(),formRequest.isAdminReferral(),formRequest.isGuidanceReferral()));
+            Punishment existing = requiredNotifications.existingCreation(managedId, Punishment.class);
+            if (existing != null) return requiredNotifications.response(existing);
+        }
         Optional<School> schoolOpt = punishmentUtils.fetchSchool(student.getSchool());
 
         School school = schoolOpt.orElseThrow(() ->
@@ -42,6 +60,7 @@ public class PunishmentCreationService {
 
         Infraction infraction = punishmentUtils.resolveInfraction(formRequest, school, maxLevel);
         Punishment punishment = punishmentUtils.buildPunishment(formRequest, infraction, student, maxLevel, now);
+        if (managedId != null) punishment.setPunishmentId(managedId);
 
         try {
             int level;

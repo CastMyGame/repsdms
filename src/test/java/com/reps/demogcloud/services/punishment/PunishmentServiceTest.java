@@ -41,6 +41,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentServiceTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
 
     @Mock
     private PunishmentCreationService punishmentCreationService;
@@ -341,19 +344,19 @@ class PunishmentServiceTest {
     void deletePunishment_shouldDeleteAndReturnMessage() {
         Punishment punishment = new Punishment();
 
-        doNothing().when(punishRepository).delete(punishment);
+        doNothing().when(requiredNotifications).deleteLegacyCase("punishment",punishment.getPunishmentId());
 
         String result = punishmentService.deletePunishment(punishment);
 
         assertEquals("Punishment has been deleted", result);
-        verify(punishRepository).delete(punishment);
+        verify(requiredNotifications).deleteLegacyCase("punishment",punishment.getPunishmentId());
     }
 
     @Test
     void deletePunishment_shouldThrowResourceNotFoundException_whenDeleteFails() {
         Punishment punishment = new Punishment();
 
-        doThrow(new RuntimeException("delete failed")).when(punishRepository).delete(punishment);
+        doThrow(new ResourceNotFoundException("That punishment does not exist")).when(requiredNotifications).deleteLegacyCase("punishment",punishment.getPunishmentId());
 
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
@@ -361,7 +364,7 @@ class PunishmentServiceTest {
         );
 
         assertEquals("That punishment does not exist", exception.getMessage());
-        verify(punishRepository).delete(punishment);
+        verify(requiredNotifications).deleteLegacyCase("punishment",punishment.getPunishmentId());
     }
 
     @Test
@@ -603,4 +606,3 @@ class PunishmentServiceTest {
         return outputStream.toString(StandardCharsets.UTF_8);
     }
 }
-

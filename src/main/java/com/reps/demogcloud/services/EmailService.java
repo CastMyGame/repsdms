@@ -27,6 +27,7 @@ public class EmailService {
     private final EmailNotificationService emailNotificationService;
     private final EmailSenderService emailSenderService;
     private final EmailReferralService emailReferralService;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
     public void createEmailAndSend(
             String parentEmail,
@@ -37,7 +38,11 @@ public class EmailService {
             String subject,
             String languageCode
     ) throws MessagingException {
-        emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, languageCode);
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            emailNotificationService.sendPtsEmail(parentEmail, teacherEmail, studentEmail, msg, subject, languageCode);
+        } else {
+            emailSenderService.sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, languageCode);
+        }
     }
 
     @Async
@@ -45,7 +50,6 @@ public class EmailService {
         emailSenderService.sendEmail(toEmail, subject, msg, languageCode);
     }
 
-    @Async
     public void sendPtsEmail(
             String parentEmail,
             String teacherEmail,
@@ -68,10 +72,10 @@ public class EmailService {
     }
 
     public void sendAlertEmail(String detention, Punishment punishment, String languageCode) throws MessagingException {
+        if(requiredNotifications.isEnabled()) { requiredNotifications.reminder(punishment,detention); return; }
         emailNotificationService.sendAlertEmail(detention, punishment, languageCode);
     }
 
-    @Async
     public void sendEmailGeneric(
             List<String> ccEmails,
             String recipientEmail,
@@ -79,10 +83,13 @@ public class EmailService {
             String msg,
             String languageCode
     ) throws MessagingException {
-        emailSenderService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, languageCode);
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            emailNotificationService.sendCaseResources(ccEmails, recipientEmail, subject, msg);
+        } else {
+            emailSenderService.sendGenericEmail(ccEmails, recipientEmail, subject, msg, languageCode);
+        }
     }
 
-    @Async
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
         emailNotificationService.sendClassAnnouncement(request);
     }
@@ -95,7 +102,6 @@ public class EmailService {
         return emailReferralService.sendEmailBasedOnType(formRequest, punishment, emailService);
     }
 
-    @Async
     public void sendTextAndEmail(
             Punishment punishment,
             Student student,

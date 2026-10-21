@@ -6,11 +6,13 @@ import com.reps.demogcloud.exceptions.EntityNotFoundException;
 import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.services.UserAccountService;
+import com.reps.demogcloud.security.models.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import jakarta.mail.internet.InternetAddress;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,7 +21,7 @@ public class UserContextService {
 
     private static final String STUDENT_ROLE = "STUDENT";
 
-    private final UserAccountService userAccountService;
+    private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
@@ -62,9 +64,85 @@ public class UserContextService {
         return isCurrentUserStudent();
     }
 
+    /** Resolve a sender from enabled school staff records, never from a request's From field. */
+    public String getCurrentStaffEmail() {
+        return getVerifiedStaffEmail(getRequiredAuthentication().getName());
+    }
+
+    public String getVerifiedStaffEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new AccessDeniedException("A verified staff sender is required");
+        }
+        UserModel user = userRepository.findByUsername(email);
+        Employee employee = employeeRepository.findByEmailIgnoreCase(email);
+        boolean staff = user != null && user.isEnabled() && user.getRoles() != null
+                && user.getRoles().stream().anyMatch(role -> role != null
+                && ("TEACHER".equalsIgnoreCase(role.getRole())
+                || "GUIDANCE".equalsIgnoreCase(role.getRole())
+                || "ADMIN".equalsIgnoreCase(role.getRole())));
+        if (!staff || employee == null || employee.isArchived()
+                || employee.getEmail() == null || !employee.getEmail().equalsIgnoreCase(user.getUsername())
+                || employee.getSchool() == null || user.getSchool() == null
+                || !employee.getSchool().equalsIgnoreCase(user.getSchool())) {
+            throw new AccessDeniedException("A verified staff sender is required");
+        }
+        try {
+            InternetAddress address = new InternetAddress(employee.getEmail(), true);
+            address.validate();
+            if (!employee.getEmail().equals(address.getAddress())) {
+                throw new IllegalArgumentException();
+            }
+        } catch (Exception exception) {
+            throw new AccessDeniedException("Invalid staff email address");
+        }
+        return employee.getEmail();
+    }
+
+    public void requireStaffInStudentSchool(String staffEmail, Student student) {
+        getVerifiedStaffEmail(staffEmail);
+        Employee employee = employeeRepository.findByEmailIgnoreCase(staffEmail);
+        if (student == null || student.getSchool() == null
+                || !student.getSchool().equalsIgnoreCase(employee.getSchool())) {
+            throw new AccessDeniedException("Communication is limited to the student's school");
+        }
+    }
+
+    public void requireCaseCommunicationAccess(String originalTeacher, Student student) {
+        String actor = getCurrentStaffEmail();
+        requireStaffInStudentSchool(actor, student);
+        UserModel user = getCurrentUserModel();
+        boolean admin = user.getRoles().stream().anyMatch(role -> role != null
+                && "ADMIN".equalsIgnoreCase(role.getRole()));
+        boolean participant = actor.equalsIgnoreCase(originalTeacher)
+                || actor.equalsIgnoreCase(student.getGuidanceEmail())
+                || (student.getSpotters() != null && student.getSpotters().stream()
+                .anyMatch(actor::equalsIgnoreCase));
+        if (!admin && !participant) {
+            throw new AccessDeniedException("Staff must be an authorized participant in this case");
+        }
+    }
+
+    public void requireRecordedCaseCommunicationAccess(String actor, String originalTeacher, String owner, Student student) {
+        requireStaffInStudentSchool(actor, student);
+        UserModel user = userRepository.findByUsername(actor);
+        boolean admin = user.getRoles().stream().anyMatch(role -> role != null && "ADMIN".equalsIgnoreCase(role.getRole()));
+        boolean participant = actor.equalsIgnoreCase(originalTeacher) || actor.equalsIgnoreCase(owner)
+                || actor.equalsIgnoreCase(student.getGuidanceEmail())
+                || (student.getSpotters() != null && student.getSpotters().stream().anyMatch(actor::equalsIgnoreCase));
+        if (!admin && !participant) throw new AccessDeniedException("Staff must be an authorized case participant");
+    }
+
+    public void requireAdministratorInSchool(String school) {
+        String actor = getCurrentStaffEmail();
+        UserModel user = userRepository.findByUsername(actor);
+        if (!school.equalsIgnoreCase(user.getSchool()) || user.getRoles().stream()
+                .noneMatch(role -> role != null && "ADMIN".equalsIgnoreCase(role.getRole())))
+            throw new AccessDeniedException("A school administrator must record manual resolution");
+    }
+
     private UserModel getCurrentUserModel() {
         String username = getRequiredAuthentication().getName();
-        return userAccountService.loadUserModelByUsername(username);
+        return userRepository.findByUsername(username);
     }
 
     private boolean hasStudentRole(UserModel user) {

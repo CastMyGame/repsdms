@@ -27,6 +27,13 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentCreationServiceTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.EmailSenderService emailSenderService;
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.UserContextService userContextService;
 
     @Mock
     private PunishmentUtils punishmentUtils;
@@ -36,6 +43,22 @@ class PunishmentCreationServiceTest {
 
     @InjectMocks
     private PunishmentCreationService punishmentCreationService;
+
+    @Test
+    void phase1CreationResolvesAuthorBeforeBuildingOrSavingReferral() {
+        PunishmentFormRequest request = new PunishmentFormRequest();
+        request.setStudentEmail("student@test.com");
+        request.setTeacherEmail("spoofed@test.com");
+        Student student = new Student();
+        student.setSchool("School");
+        when(punishmentUtils.fetchStudent("student@test.com")).thenReturn(student);
+        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
+        when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com");
+        when(punishmentUtils.fetchSchool("School")).thenThrow(new IllegalStateException("Stop before persistence"));
+        assertThrows(IllegalStateException.class, () -> punishmentCreationService.createNewPunishForm(request));
+        assertEquals("teacher@test.com", request.getTeacherEmail());
+        verify(userContextService).requireStaffInStudentSchool("teacher@test.com", student);
+    }
 
     @Test
     void createNewPunishForm_shouldHandlePositiveShoutout() throws Exception {

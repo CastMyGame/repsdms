@@ -49,6 +49,9 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GuidanceServiceTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
 
     @Mock
     private StudentRepository studentRepository;
@@ -471,13 +474,13 @@ class GuidanceServiceTest {
     void deleteGuidanceReferral_shouldDeleteAndReturnMessage() throws ResourceNotFoundException {
         String result = guidanceService.deleteGuidanceReferral("g1");
 
-        verify(guidanceRepository).deleteById("g1");
+        verify(requiredNotifications).deleteLegacyCase("guidance","g1");
         assertEquals("Punishment has been deleted", result);
     }
 
     @Test
     void deleteGuidanceReferral_shouldThrowResourceNotFoundException_whenDeleteFails() {
-        doThrow(new RuntimeException("delete failed")).when(guidanceRepository).deleteById("g1");
+        doThrow(new ResourceNotFoundException("That infraction does not exist")).when(requiredNotifications).deleteLegacyCase("guidance","g1");
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,

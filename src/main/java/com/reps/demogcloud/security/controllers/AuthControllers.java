@@ -58,6 +58,70 @@ public class AuthControllers {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AuthenticationManager authenticationManager;
     private final GoogleOAuthTokenStore googleOAuthTokenStore;
+    private final com.reps.demogcloud.services.UserContextService userContextService;
+    private final com.reps.demogcloud.services.email.EmailRoutingService emailRoutingService;
+
+    // Explicit bearer authentication prevents cookie-based account-linking CSRF even if a login session exists.
+    private String gmailAccount(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer "))
+            throw new org.springframework.security.access.AccessDeniedException("Bearer authentication is required");
+        Authentication current = SecurityContextHolder.getContext().getAuthentication();
+        String account = userContextService.getCurrentStaffEmail();
+        String bearerAccount;
+        try {
+            String token = header.substring(7);
+            bearerAccount = jwtUtils.extractUserName(token);
+            if (!jwtUtils.validateToken(token, customUserDetailsService.loadUserByUsername(account)))
+                throw new IllegalArgumentException();
+        }
+        catch (Exception ex) { throw new org.springframework.security.access.AccessDeniedException("Valid bearer authentication is required"); }
+        if (current == null || !account.equalsIgnoreCase(bearerAccount) || !current.getName().equalsIgnoreCase(bearerAccount))
+            throw new org.springframework.security.access.AccessDeniedException("Gmail must belong to the authenticated REPS account");
+        return account;
+    }
+
+    @GetMapping("/auth/gmail/status")
+    public ResponseEntity<?> gmailStatus(HttpServletRequest request) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(googleOAuthTokenStore.status(gmailAccount(request)));
+    }
+
+    @PostMapping("/auth/gmail/connect")
+    public ResponseEntity<?> connectGmail(HttpServletRequest request, @RequestBody Map<String, String> body) {
+        String account = gmailAccount(request);
+        try {
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(Map.of("authorizationUrl", googleOAuthTokenStore.beginConnection(account, body.get("browserProof"))));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(503).body(Map.of("message", "Gmail connection is not configured or is temporarily unavailable."));
+        }
+    }
+
+    @PostMapping("/auth/gmail/complete")
+    public ResponseEntity<?> completeGmail(HttpServletRequest request, @RequestBody Map<String, String> body) {
+        String account = gmailAccount(request);
+        try {
+            googleOAuthTokenStore.completeConnection(account, body.get("state"), body.get("code"), body.get("browserProof"));
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(googleOAuthTokenStore.status(account));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Gmail connection failed. Start Connect Gmail again."));
+        }
+    }
+
+    @PostMapping("/auth/gmail/disconnect")
+    public ResponseEntity<?> disconnectGmail(HttpServletRequest request) {
+        String account = gmailAccount(request);
+        try {
+            boolean revoked = googleOAuthTokenStore.disconnect(account);
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(Map.of(
+                    "state", "DISCONNECTED", "providerRevocationConfirmed", revoked,
+                    "message", revoked ? "Gmail disconnected. REPS SMTP selected." :
+                    "Gmail disconnected in REPS. Google revocation was not confirmed; remove REPS access in your Google account."));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(503).body(Map.of("message", "Disconnection could not be saved. Try again."));
+        }
+    }
 
     @PostMapping("/v1/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
@@ -145,11 +209,18 @@ public class AuthControllers {
             loginMethod = jwtUtils.extractLoginMethod(authorizationHeader.substring(7));
         }
 
-        boolean googlePermission = googleOAuthTokenStore.hasUsableGmailSendToken(username);
-        boolean canSendAsUser = "GOOGLE".equalsIgnoreCase(loginMethod) && googlePermission;
-        String emailProvider = canSendAsUser ? "GOOGLE_GMAIL" : "REPS_SMTP";
-        String emailPermission = canSendAsUser ? "GRANTED" :
-                ("GOOGLE".equalsIgnoreCase(loginMethod) ? "NOT_GRANTED" : "NOT_AVAILABLE");
+        boolean staffEligible;
+        try { staffEligible = username.equalsIgnoreCase(userContextService.getCurrentStaffEmail()); }
+        catch (org.springframework.security.access.AccessDeniedException | IllegalStateException ex) { staffEligible = false; }
+        boolean googlePermission = staffEligible && googleOAuthTokenStore.hasUsableGmailSendToken(username);
+        boolean canSendAsUser = googlePermission && emailRoutingService.isStaffGmailPolicyEnabled();
+        GoogleOAuthTokenStore.ConnectionState state = googleOAuthTokenStore.getConnectionState(username);
+        boolean blocked = staffEligible && emailRoutingService.isPhase1RoutingEnabled() && emailRoutingService.isStaffGmailPolicyEnabled()
+                && (state == GoogleOAuthTokenStore.ConnectionState.CONNECTED
+                || state == GoogleOAuthTokenStore.ConnectionState.RECONNECT_REQUIRED || state == GoogleOAuthTokenStore.ConnectionState.UNKNOWN)
+                && !canSendAsUser;
+        String emailProvider = canSendAsUser ? "GOOGLE_GMAIL" : (blocked ? "RECONNECT_REQUIRED" : "REPS_SMTP");
+        String emailPermission = googlePermission ? "GRANTED" : (blocked ? "RECONNECT_REQUIRED" : "NOT_GRANTED");
 
         return ResponseEntity.ok(new AuthCapabilitiesResponse(
                 loginMethod.toUpperCase(),

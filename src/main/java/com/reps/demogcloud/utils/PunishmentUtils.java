@@ -43,7 +43,15 @@ public class PunishmentUtils {
     private final EmployeeService employeeService;
     private final GuidanceService guidanceService;
     private final OfficeReferralService officeReferralService;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
+    private Punishment saveCreatedPunishment(Punishment punishment) {
+        if (!requiredNotifications.isEnabled()) return punishRepository.save(punishment);
+        School school = schoolRepository.findBySchoolNameIgnoreCase(punishment.getSchool()).orElseThrow();
+        if (!"CFR".equals(punishment.getStatus()) && punishment.getClosedTimes() == school.getMaxPunishLevel())
+            punishment.setStatus("REFERRAL");
+        return (Punishment) requiredNotifications.saveCreated(punishment);
+    }
     public void validateFormRequest(PunishmentFormRequest formRequest) {
         if (formRequest == null
                 || formRequest.getInfractionDescription() == null
@@ -148,9 +156,10 @@ public class PunishmentUtils {
 
         punishment.setStatus("SO");
         punishment.setTimeClosed(now);
-        Punishment saved = punishRepository.save(punishment);
+        Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -162,9 +171,10 @@ public class PunishmentUtils {
                                                LocalDate now) throws MessagingException {
         punishment.setStatus(status);
         punishment.setTimeClosed(now);
-        Punishment saved = punishRepository.save(punishment);
+        Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -189,9 +199,10 @@ public class PunishmentUtils {
         punishment.setStatus("CLOSED");
         punishment.setTimeClosed(LocalDate.now());
         punishment.setClosedTimes(punishment.getClosedTimes() + 1);
-        Punishment saved = punishRepository.save(punishment);
+        Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -202,9 +213,10 @@ public class PunishmentUtils {
                                                   LocalDate now) throws MessagingException {
         punishment.setStatus("OPEN");
         punishment.setTimeClosed(now);
-        Punishment saved = punishRepository.save(punishment);
+        Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -229,9 +241,10 @@ public class PunishmentUtils {
             punishment.setTimeClosed(LocalDate.now());
         }
 
-        Punishment saved = punishRepository.save(punishment);
+        Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         if ("CFR".equals(punishment.getStatus())) {
             return emailService.sendCFREmailBasedOnType(saved);

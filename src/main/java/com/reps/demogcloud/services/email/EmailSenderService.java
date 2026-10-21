@@ -18,6 +18,20 @@ public class EmailSenderService {
     private final JavaMailSender javaMailSender;
     private final EmailRoutingService emailRoutingService;
 
+    public boolean isPhase1RoutingEnabled() {
+        return emailRoutingService.isPhase1RoutingEnabled();
+    }
+
+    public void sendStaffBulkEmail(String to, List<String> cc, String subject, String body,
+                                  List<String> bcc, String actor) throws MessagingException {
+        emailRoutingService.sendBulkEmail(to, cc, subject, body, bcc, actor, true);
+    }
+
+    public void sendSystemBulkEmail(String to, List<String> cc, String subject, String body,
+                                   List<String> bcc, String replyTo) throws MessagingException {
+        emailRoutingService.sendBulkEmail(to, cc, subject, body, bcc, replyTo, false);
+    }
+
     public void sendEmail(String toEmail, String subject, String msg) throws MessagingException {
         emailRoutingService.sendEmail(toEmail, subject, msg, null);
     }
@@ -68,6 +82,14 @@ public class EmailSenderService {
     ) throws MessagingException {
         if (recipients == null || recipients.isEmpty()) return;
 
+        if (isPhase1RoutingEnabled()) {
+            // A class roster is not permission to disclose classmates' addresses to one another.
+            for (String recipient : recipients) {
+                sendStaffBulkEmail(recipient, null, subjectLocalized, messageBodyLocalized, null, from);
+            }
+            return;
+        }
+
         emailRoutingService.sendBulkEmail(
                 recipients.get(0),
                 recipients.size() > 1 ? recipients.subList(1, recipients.size()) : null,
@@ -87,7 +109,7 @@ public class EmailSenderService {
         try {
             sendEmail(toEmail, subjectEn, msgEn, languageCode);
         } catch (MailException | MessagingException e) {
-            log.error("Exception occurred while sending email: {}", e.getMessage());
+            log.error("Email send failed");
         }
     }
 

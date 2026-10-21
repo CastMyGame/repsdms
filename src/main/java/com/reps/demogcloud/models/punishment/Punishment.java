@@ -17,7 +17,27 @@ import java.util.*;
 @Setter
 @Builder
 @Document(collection = "Punishments")
-public class Punishment implements Comparable<Punishment>{
+public class Punishment implements Comparable<Punishment>, org.springframework.data.domain.Persistable<String>{
+
+    @org.springframework.data.annotation.Version
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long revision;
+    @org.springframework.data.annotation.Transient
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private boolean persisted;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String originalAuthorEmail;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String responsibleStaffEmail;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String conversationId;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @lombok.ToString.Exclude
+    private java.util.List<com.reps.demogcloud.models.email.RequiredNotification> requiredNotifications;
+    @Override @org.springframework.data.annotation.Transient @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isNew() { return !persisted; }
+    @Override @org.springframework.data.annotation.Transient @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getId() { return punishmentId; }
 
     @Id
     private String punishmentId;
@@ -63,5 +83,3 @@ public class Punishment implements Comparable<Punishment>{
         return getTimeCreated().compareTo(o.getTimeCreated());
     }
 }
-
-

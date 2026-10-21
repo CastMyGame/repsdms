@@ -24,6 +24,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentClosureServiceImplTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
 
     @Mock private PunishRepository punishRepository;
     @Mock private StudentRepository studentRepository;
