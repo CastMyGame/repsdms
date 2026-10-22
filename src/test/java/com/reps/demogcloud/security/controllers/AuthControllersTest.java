@@ -209,7 +209,7 @@ class AuthControllersTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(new UsernamePasswordAuthenticationToken("teacher@test.com", "secret"));
         when(customUserDetailsService.loadUserByUsername("teacher@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt-token");
+        when(jwtUtils.generateToken(userDetails, "PASSWORD")).thenReturn("jwt-token");
         when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
 
         mockMvc.perform(post("/auth")
