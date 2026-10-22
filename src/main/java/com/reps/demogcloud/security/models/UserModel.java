@@ -24,6 +24,16 @@ public class UserModel {
     private String firstName;
     private String lastName;
     private String school;
+    // Older user documents store this membership under schoolName.
+    // Keep it separate so it cannot override an explicitly stored school.
+    @org.springframework.data.mongodb.core.mapping.Field("schoolName")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String legacySchoolName;
+
+    public String getSchool() {
+        return school != null ? school : legacySchoolName;
+    }
+
     private Set<RoleModel> roles;
     private boolean enabled = true; // Default to true for existing users, can be set to false to disable access
     private boolean paid = false;
