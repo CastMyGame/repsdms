@@ -5,6 +5,8 @@ import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.data.mongodb.core.*;
 import org.springframework.data.mongodb.core.query.*;
 import org.springframework.http.MediaType;
@@ -28,6 +30,17 @@ import static org.hamcrest.Matchers.containsString;
 
 /** Stateful mocked Mongo persistence, intercepted Google HTTP; no Spring context, sockets, or real credentials. */
 class GoogleOAuthTokenStoreTest {
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost:3000/account/gmail/callback", "https://repsdev.vercel.app/account/gmail/callback"})
+    void connectUsesFixedEnvironmentCallbackAndSeparateSendScope(String callback) {
+        env.setProperty("reps.email.gmail.redirect-uri", callback);
+        String authorization = store.beginConnection(EMAIL, PROOF);
+        var query = UriComponentsBuilder.fromUriString(authorization).build().getQueryParams();
+        assertEquals(callback, java.net.URLDecoder.decode(query.getFirst("redirect_uri"), StandardCharsets.UTF_8));
+        assertTrue(java.net.URLDecoder.decode(query.getFirst("scope"), StandardCharsets.UTF_8).contains(GoogleOAuthTokenStore.GMAIL_SCOPE));
+        assertNotNull(query.getFirst("state"));
+        server.verify(); // Beginning consent makes no Google HTTP request.
+    }
     private static final String EMAIL = "teacher@example.test", PROOF = "p".repeat(43), COLLECTION = "oauth2_authorized_clients";
     private final byte[] key = new byte[32];
     private final MongoTemplate mongo = mock(MongoTemplate.class);
