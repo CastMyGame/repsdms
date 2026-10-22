@@ -6,6 +6,7 @@ import com.reps.demogcloud.models.dto.PunishmentDTO;
 import com.reps.demogcloud.models.dto.StudentOverviewDTO;
 import com.reps.demogcloud.models.dto.TeacherOverviewDTO;
 import com.reps.demogcloud.services.DTOService;
+import com.reps.demogcloud.services.WorkflowAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -33,11 +34,13 @@ import java.util.List;
 public class DTOController {
     private static final Logger logger = LoggerFactory.getLogger(DTOController.class);
     private final DTOService dtoService;
+    private final WorkflowAccessService access;
 
     //-------------------------------------GET Controllers-------------------------------
     @GetMapping("/AdminOverviewData")
     public ResponseEntity<AdminOverviewDTO> getAll() throws Exception {
-        var message = dtoService.getAdminOverData();
+        access.requireAdmin();
+        var message = access.scopeAdminOverview(dtoService.getAdminOverData());
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -47,14 +50,17 @@ public class DTOController {
     //Uses Logged In User
     @GetMapping("/TeacherOverviewData")
     public ResponseEntity<TeacherOverviewDTO> getAllTeacherOverview() {
+        access.requireStaff();
         String currentUserEmail = getCurrentUserEmail();
 
         try {
-            TeacherOverviewDTO message = dtoService.getTeacherOverData();
+            TeacherOverviewDTO message = access.scopeTeacherOverview(dtoService.getTeacherOverData());
             return ResponseEntity
                     .accepted()
                     .body(message);
 
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Error occurred while fetching teacher overview for: {}", currentUserEmail, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -64,7 +70,9 @@ public class DTOController {
 
     @GetMapping("/punishmentsDTO")
     public ResponseEntity<List<PunishmentDTO>> getAllPunishmentDTO() throws Exception {
-        var message = dtoService.getDTOPunishments();
+        access.requireStaff();
+        var message = dtoService.getDTOPunishments().stream()
+                .filter(dto -> access.canReadCase(dto.getPunishment())).toList();
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -72,7 +80,8 @@ public class DTOController {
 
     @GetMapping("/StudentOverviewData")
     public ResponseEntity<StudentOverviewDTO> getAllStudentOverview() throws Exception {
-        var message = dtoService.getLoggedInStudentOverData();
+        access.requireStudent();
+        var message = access.scopeStudentOverview(dtoService.getLoggedInStudentOverData(), getCurrentUserEmail());
         return ResponseEntity
                 .accepted()
                 .body(message);
@@ -82,7 +91,8 @@ public class DTOController {
 
     @GetMapping("/StudentOverviewData/{studentEmail}")
     public ResponseEntity<StudentOverviewDTO> getAllStudentOverview(@PathVariable String studentEmail) throws Exception {
-        var message = dtoService.getStudentOverData(studentEmail);
+        access.requireStudentAccess(studentEmail);
+        var message = access.scopeStudentOverview(dtoService.getStudentOverData(studentEmail), studentEmail);
         return ResponseEntity
                 .accepted()
                 .body(message);

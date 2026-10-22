@@ -19,6 +19,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AssignmentBindingControllerTest {
+    @Mock private com.reps.demogcloud.services.WorkflowAccessService access;
+
 
     @Mock
     private AssignmentService assignmentService;
@@ -135,7 +137,7 @@ class AssignmentBindingControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
-        assertSame(bindings, response.getBody());
+        assertEquals(bindings, response.getBody());
 
         verify(assignmentService).getActiveBindingsForTeacher(teacherEmail);
     }
@@ -160,6 +162,7 @@ class AssignmentBindingControllerTest {
 
     @Test
     void getBindingsForTemplate_shouldReturnOkAndBindings() {
+        org.mockito.Mockito.when(access.sameSchool(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         String templateId = "template-123";
 
         AssignmentTemplateBinding binding1 = new AssignmentTemplateBinding();
@@ -176,7 +179,7 @@ class AssignmentBindingControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
-        assertSame(bindings, response.getBody());
+        assertEquals(bindings, response.getBody());
 
         verify(assignmentService).getActiveBindingsForTemplate(templateId);
     }

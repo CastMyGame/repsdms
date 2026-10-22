@@ -46,6 +46,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 class AssignmentControllerTest {
+    @MockitoBean private com.reps.demogcloud.services.WorkflowAccessService access;
+    // Response mapping only; WorkflowSecurityTest exercises the real policy and filter chain.
+    @org.junit.jupiter.api.BeforeEach void responseMappingPolicy() {
+        org.mockito.Mockito.when(access.canReadTemplate(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
 
     private final Assignment testAssignment = new Assignment();
     private final AssignmentTemplate testTemplate = new AssignmentTemplate();
@@ -58,6 +63,17 @@ class AssignmentControllerTest {
     private PunishRepository punishRepository;
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Test
+    void legacyGlobalWritesAreForbiddenBeforeServiceInvocation() throws Exception {
+        doThrow(new org.springframework.security.access.AccessDeniedException("Access denied"))
+                .when(access).denyLegacyWrite();
+        for (var request : List.of(post("/assignments/v1/"), post("/assignments/v1/migrate-legacy"),
+                put("/assignments/v1/old"), delete("/assignments/v1/delete/old")))
+            mockMvc.perform(request.contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(assignmentService, punishRepository);
+    }
 
     @Test
     void getAllAssignments_returnsAccepted_withList() throws Exception {
@@ -100,6 +116,8 @@ class AssignmentControllerTest {
 
     @Test
     void searchTemplates_returnsOk_withResults() throws Exception {
+        testTemplate.setId("template-1"); testSummary.setId("template-1");
+        when(assignmentService.getAllTemplates()).thenReturn(List.of(testTemplate));
         when(assignmentService.searchTemplates("Tardy", 2, "teacher@test.com", true, "reflection"))
                 .thenReturn(List.of(testSummary));
 
@@ -248,36 +266,7 @@ class AssignmentControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    @Test
-    void createNewAssignment_returnsAccepted_withAssignment() throws Exception {
-        when(assignmentService.createNewAssignment(any(Assignment.class))).thenReturn(testAssignment);
 
-        mockMvc.perform(post("/assignments/v1/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testAssignment)))
-                .andExpect(status().isAccepted())
-                .andExpect(content().json(objectMapper.writeValueAsString(testAssignment)));
-    }
-
-    @Test
-    void createNewAssignment_returns500_whenServiceFails() throws Exception {
-        when(assignmentService.createNewAssignment(any(Assignment.class)))
-                .thenThrow(new RuntimeException("Creation error"));
-
-        mockMvc.perform(post("/assignments/v1/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testAssignment)))
-                .andExpect(status().isInternalServerError());
-    }
-
-    @Test
-    void migrateLegacyAssignments_returnsOk_withMessage() throws Exception {
-        when(assignmentService.migrateLegacyAssignmentsToTemplates()).thenReturn(17);
-
-        mockMvc.perform(post("/assignments/v1/migrate-legacy"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Migrated 17 legacy assignments to templates."));
-    }
 
     @Test
     void createTemplate_returnsOk_withCreatedTemplate() throws Exception {
@@ -302,32 +291,6 @@ class AssignmentControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    @Test
-    void updateAssignment_returnsAccepted_withAssignment() throws Exception {
-        String id = "abc123";
-
-        when(assignmentService.updateNewAssignment(any(Assignment.class), eq(id)))
-                .thenReturn(testAssignment);
-
-        mockMvc.perform(put("/assignments/v1/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testAssignment)))
-                .andExpect(status().isAccepted())
-                .andExpect(content().json(objectMapper.writeValueAsString(testAssignment)));
-    }
-
-    @Test
-    void updateAssignment_returns500_whenServiceFails() throws Exception {
-        String id = "invalid-id";
-
-        when(assignmentService.updateNewAssignment(any(Assignment.class), eq(id)))
-                .thenThrow(new RuntimeException("Update failed"));
-
-        mockMvc.perform(put("/assignments/v1/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testAssignment)))
-                .andExpect(status().isInternalServerError());
-    }
 
     @Test
     void updateTemplate_returnsOk_withUpdatedTemplate() throws Exception {
@@ -356,27 +319,6 @@ class AssignmentControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    @Test
-    void deleteAssignment_returnsAccepted_withAssignment() throws Exception {
-        String assignmentName = "SampleAssignment";
-
-        when(assignmentService.deleteAssignment(assignmentName)).thenReturn(testAssignment);
-
-        mockMvc.perform(delete("/assignments/v1/delete/{assignmentName}", assignmentName))
-                .andExpect(status().isAccepted())
-                .andExpect(content().json(objectMapper.writeValueAsString(testAssignment)));
-    }
-
-    @Test
-    void deleteAssignment_returns500_whenServiceFails() throws Exception {
-        String assignmentName = "MissingAssignment";
-
-        when(assignmentService.deleteAssignment(assignmentName))
-                .thenThrow(new RuntimeException("Delete failed"));
-
-        mockMvc.perform(delete("/assignments/v1/delete/{assignmentName}", assignmentName))
-                .andExpect(status().isInternalServerError());
-    }
 
     @Test
     void deleteTemplate_returnsNoContent() throws Exception {

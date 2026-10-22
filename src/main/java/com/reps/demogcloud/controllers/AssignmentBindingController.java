@@ -4,6 +4,7 @@ import com.reps.demogcloud.models.assignments.AssignmentTemplateBinding;
 import com.reps.demogcloud.models.dto.ClearTeacherDefaultBindingRequest;
 import com.reps.demogcloud.models.dto.SetTeacherDefaultBindingRequest;
 import com.reps.demogcloud.services.AssignmentService;
+import com.reps.demogcloud.services.WorkflowAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.List;
 public class AssignmentBindingController {
 
     private final AssignmentService assignmentService;
+    private final WorkflowAccessService access;
 
     /**
      * Set or change the default template for a teacher + infraction + level.
@@ -32,6 +34,7 @@ public class AssignmentBindingController {
     public ResponseEntity<AssignmentTemplateBinding> setTeacherDefault(
             @RequestBody SetTeacherDefaultBindingRequest request
     ) throws Exception {
+        access.requireBindingTemplate(request.getTeacherEmail(), request.getSchoolId(), request.getAssignmentTemplateId());
         return ResponseEntity.ok(
                 assignmentService.setTeacherDefaultTemplate(
                         request.getTeacherEmail(),
@@ -51,6 +54,7 @@ public class AssignmentBindingController {
     public ResponseEntity<Void> clearTeacherDefault(
             @RequestBody ClearTeacherDefaultBindingRequest request
     ) {
+        access.requireOwnBinding(request.getTeacherEmail());
         assignmentService.clearTeacherDefaultTemplate(
                 request.getTeacherEmail(),
                 request.getInfractionName(),
@@ -67,6 +71,7 @@ public class AssignmentBindingController {
     public ResponseEntity<List<AssignmentTemplateBinding>> getTeacherDefaults(
             @RequestParam String teacherEmail
     ) {
+        access.requireOwnBinding(teacherEmail);
         return ResponseEntity.ok(
                 assignmentService.getActiveBindingsForTeacher(teacherEmail)
         );
@@ -80,8 +85,10 @@ public class AssignmentBindingController {
     public ResponseEntity<List<AssignmentTemplateBinding>> getBindingsForTemplate(
             @PathVariable String templateId
     ) {
+        access.requireTemplateWrite(templateId);
         return ResponseEntity.ok(
-                assignmentService.getActiveBindingsForTemplate(templateId)
+                assignmentService.getActiveBindingsForTemplate(templateId).stream()
+                        .filter(b -> access.sameSchool(b.getSchoolId())).toList()
         );
     }
 }
