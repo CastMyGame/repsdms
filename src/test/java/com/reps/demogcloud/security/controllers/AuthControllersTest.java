@@ -96,6 +96,12 @@ class AuthControllersTest {
         SecurityContextHolder.clearContext();
     }
 
+    @Test void legacyRegistrationCannotCreateAccounts() throws Exception {
+        mockMvc.perform(post("/register").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        verify(userRepository,never()).save(any());
+    }
+
     @Test
     void logout_shouldReturnOk_whenAuthenticatedAndBearerTokenPresent() throws Exception {
         UsernamePasswordAuthenticationToken authentication =
@@ -141,54 +147,9 @@ class AuthControllersTest {
                 .andExpect(content().string("I WORKS"));
     }
 
-    @Test
-    void registerUser_shouldRegisterSuccessfully() throws Exception {
-        AuthenticationRequest request = new AuthenticationRequest();
-        request.setUsername("teacher@test.com");
-        request.setPassword("plainPass");
-        request.setFirstName("Chris");
-        request.setLastName("Coach");
-        request.setSchool("Test School");
 
-        when(passwordEncoder.encode("plainPass")).thenReturn("encodedPass");
 
-        mockMvc.perform(post("/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response", is("Successfully Registered teacher@test.com")))
-                .andExpect(jsonPath("$.userModel", nullValue()));
 
-        ArgumentCaptor<UserModel> captor = ArgumentCaptor.forClass(UserModel.class);
-        verify(userRepository).save(captor.capture());
-
-        UserModel savedUser = captor.getValue();
-        assertEquals("teacher@test.com", savedUser.getUsername());
-        assertEquals("Chris", savedUser.getFirstName());
-        assertEquals("Coach", savedUser.getLastName());
-        assertEquals("Test School", savedUser.getSchool());
-        assertEquals("encodedPass", savedUser.getPassword());
-    }
-
-    @Test
-    void registerUser_shouldReturnErrorResponse_whenSaveFails() throws Exception {
-        AuthenticationRequest request = new AuthenticationRequest();
-        request.setUsername("teacher@test.com");
-        request.setPassword("plainPass");
-        request.setFirstName("Chris");
-        request.setLastName("Coach");
-        request.setSchool("Test School");
-
-        when(passwordEncoder.encode("plainPass")).thenReturn("encodedPass");
-        when(userRepository.save(any(UserModel.class))).thenThrow(new RuntimeException("save failed"));
-
-        mockMvc.perform(post("/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response", is("Error During Registration of user: teacher@test.com")))
-                .andExpect(jsonPath("$.userModel", nullValue()));
-    }
 
     @Test
     void authenticateUser_shouldReturnTokenAndUser_whenSuccessful() throws Exception {
@@ -323,7 +284,7 @@ class AuthControllersTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("User not found for email missing@test.com"));
+                .andExpect(content().string("Account unavailable"));
 
         verify(passwordResetTokenRepository, never()).save(any());
         verify(emailService, never()).sendEmail(anyString(), anyString(), anyString(), anyString());
@@ -401,12 +362,14 @@ class AuthControllersTest {
 
         UserModel user = new UserModel();
         user.setUsername("teacher@test.com");
+        user.setId("teacher-id");
 
         PasswordResetToken passwordResetToken = mock(PasswordResetToken.class);
         when(passwordResetTokenRepository.findByToken("good-token")).thenReturn(passwordResetToken);
         when(passwordResetToken.isExpired()).thenReturn(false);
         when(passwordResetToken.getUser()).thenReturn(user);
         when(passwordEncoder.encode("newPass123")).thenReturn("encoded-new-pass");
+        when(userRepository.updatePasswordIfEnabled("teacher-id", "encoded-new-pass")).thenReturn(1L);
 
         mockMvc.perform(post("/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -414,8 +377,8 @@ class AuthControllersTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Password reset successfully"));
 
-        assertEquals("encoded-new-pass", user.getPassword());
-        verify(userRepository).save(user);
+        verify(userRepository).updatePasswordIfEnabled("teacher-id", "encoded-new-pass");
+        verify(userRepository, never()).save(any());
         verify(passwordResetTokenRepository).delete(passwordResetToken);
     }
 

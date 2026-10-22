@@ -27,6 +27,7 @@ public class UserAccountService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final EmailService emailService;
+    private final com.reps.demogcloud.services.UserAdministrationService administration;
 
     public UserModel loadUserModelByUsername(String username) {
         return userRepository.findByUsername(username);
@@ -37,7 +38,11 @@ public class UserAccountService {
     }
 
     public List<UserModel> createUsersForSchool(String school) {
+        school = administration.requireSchoolAdmin(school);
         List<Student> schoolUsers = studentRepository.findBySchool(school);
+        final String verifiedSchool = school;
+        if (schoolUsers.stream().anyMatch(s -> s.getSchool() == null || !verifiedSchool.equalsIgnoreCase(s.getSchool())))
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
 
         Set<RoleModel> studentRoles = new HashSet<>();
         RoleModel studentRole = new RoleModel();
@@ -46,6 +51,7 @@ public class UserAccountService {
 
         List<UserModel> createdUsers = new ArrayList<>();
         for (Student student : schoolUsers) {
+            if (student.isArchived()) continue;
             String email = student.getStudentEmail() == null ? null : student.getStudentEmail().trim().toLowerCase();
             if (email == null || email.isBlank()) continue;
 

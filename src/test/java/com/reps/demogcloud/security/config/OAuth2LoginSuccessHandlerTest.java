@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -81,8 +82,9 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://localhost:3000/oauth-success", "https://repsdev.vercel.app"})
-    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeWithoutLinkingGmail(String frontend) throws Exception {
+    @CsvSource({"http://localhost:3000/oauth-success,TEACHER", "https://repsdev.vercel.app,TEACHER",
+            "http://localhost:3000/oauth-success,GUIDANCE", "https://repsdev.vercel.app,GUIDANCE"})
+    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeWithoutLinkingGmail(String frontend, String role) throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
@@ -98,7 +100,7 @@ class OAuth2LoginSuccessHandlerTest {
         when(authentication.getPrincipal()).thenReturn(oidcUser);
         when(oidcUser.getEmail()).thenReturn("Teacher@Test.com ");
 
-        UserModel userModel = buildUser("teacher@test.com", true, "TEACHER");
+        UserModel userModel = buildUser("teacher@test.com", true, role);
         when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(null);
         when(customUserDetailsService.loadUserByUsername("teacher@test.com")).thenReturn(userDetails);
@@ -125,7 +127,7 @@ class OAuth2LoginSuccessHandlerTest {
         assertTrue(redirect.contains("userName=teacher%40test.com"));
         assertTrue(redirect.contains("schoolName=Test+School"));
         assertTrue(redirect.contains("email=teacher%40test.com"));
-        assertTrue(redirect.contains("role=TEACHER"));
+        assertTrue(redirect.contains("role=" + role));
         assertTrue(redirect.contains("&user="));
     }
 

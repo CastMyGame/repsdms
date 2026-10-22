@@ -63,8 +63,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         boolean isStudent = hasRole(userModel, "STUDENT");
         boolean isTeacher = hasRole(userModel, "TEACHER");
         boolean isAdmin = hasRole(userModel, "ADMIN");
+        boolean isGuidance = hasRole(userModel, "GUIDANCE");
 
-        if (isTeacher || isAdmin) {
+        if (isTeacher || isAdmin || isGuidance) {
             Employee employee = employeeRepository.findByEmailIgnoreCase(email);
 
             if (employee == null) {

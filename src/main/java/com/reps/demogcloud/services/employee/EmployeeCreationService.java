@@ -24,12 +24,12 @@ public class EmployeeCreationService {
 
     public EmployeeResponse createNewEmployee(Employee request) {
         //Check it email exist in system
-        String emailPrefix = request.getEmail().split("@")[0];
+        // Staff establish their password through reset or use their verified Google login.
 
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(request.getEmail().toLowerCase());
-        authenticationRequest.setPassword(emailPrefix);
+        authenticationRequest.setPassword(java.util.UUID.randomUUID().toString());
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchool(request.getSchool());

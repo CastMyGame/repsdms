@@ -148,25 +148,8 @@ public class AuthControllers {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody AuthenticationRequest authenticationRequest) {
-        String username = authenticationRequest.getUsername();
-        String password = authenticationRequest.getPassword();
-        String firstName = authenticationRequest.getFirstName();
-        String lastName = authenticationRequest.getLastName();
-        String school = authenticationRequest.getSchool();
-
-        UserModel userModel = new UserModel();
-        userModel.setUsername(username);
-        userModel.setFirstName(firstName);
-        userModel.setLastName(lastName);
-        userModel.setSchool(school);
-        userModel.setPassword(passwordEncoder.encode(password));
-
-        try {
-            userRepository.save(userModel);
-            return ResponseEntity.ok(new AuthenticationResponse("Successfully Registered " + username, null));
-        } catch (Exception e) {
-            return ResponseEntity.ok(new AuthenticationResponse("Error During Registration of user: " + username, null));
-        }
+        // The supported public registration flow uses verified Stripe provisioning.
+        throw new org.springframework.security.access.AccessDeniedException("Legacy registration is disabled");
     }
 
     @PostMapping("/auth")
@@ -289,8 +272,8 @@ public class AuthControllers {
         String email = forgotPasswordRequest.getEmail();
         UserModel user = userRepository.findByUsername(email);
 
-        if (user == null) {
-            return ResponseEntity.badRequest().body("User not found for email " + email);
+        if (user == null || !user.isEnabled()) {
+            return ResponseEntity.badRequest().body("Account unavailable");
         }
 
         String resetToken = UUID.randomUUID().toString();
@@ -324,9 +307,10 @@ public class AuthControllers {
             return ResponseEntity.badRequest().body("Invalid or expired token");
         }
 
-        UserModel user = passwordResetToken.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+        UserModel snapshot = passwordResetToken.getUser();
+        if (snapshot == null || snapshot.getId() == null
+                || userRepository.updatePasswordIfEnabled(snapshot.getId(), passwordEncoder.encode(newPassword)) != 1)
+            return ResponseEntity.badRequest().body("Invalid or expired token");
         passwordResetTokenRepository.delete(passwordResetToken);
 
         return ResponseEntity.ok("Password reset successfully");
