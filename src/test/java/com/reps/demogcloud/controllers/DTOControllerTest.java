@@ -37,6 +37,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 class DTOControllerTest {
+    @MockitoBean private com.reps.demogcloud.services.WorkflowAccessService access;
+    // Response mapping only; WorkflowSecurityTest exercises the real policy and filter chain.
+    @org.junit.jupiter.api.BeforeEach void responseMappingPolicy() {
+        org.mockito.Mockito.when(access.canReadCase(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(access.scopeAdminOverview(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.when(access.scopeTeacherOverview(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.when(access.scopeStudentOverview(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
 
     private final AdminOverviewDTO adminOverviewDTO = new AdminOverviewDTO();
     private final TeacherOverviewDTO teacherOverviewDTO = new TeacherOverviewDTO(null, null, null, null, null, null);

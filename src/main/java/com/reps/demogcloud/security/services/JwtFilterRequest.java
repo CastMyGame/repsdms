@@ -103,7 +103,6 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         if (path.startsWith("/forgot-password")) return true;
         if (path.startsWith("/reset-password")) return true;
 
-        // Your template endpoint
-        return path.startsWith("/assignments/v1/templates");
+        return false;
     }
 }
