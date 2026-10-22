@@ -27,6 +27,28 @@ import java.util.List;
 @Slf4j
 public class GoogleMailService {
 
+    public enum FailureReason {
+        INVALID_AUTHORIZATION, INSUFFICIENT_SCOPE, SERVICE_DISABLED, DOMAIN_POLICY,
+        QUOTA_EXCEEDED, RATE_LIMITED, FORBIDDEN, REQUEST_REJECTED, PROVIDER_UNCERTAIN
+    }
+
+    /** Contains only fixed classifications, never provider bodies or exception causes. */
+    public static final class SendFailure extends MessagingException {
+        private final int httpStatus;
+        private final FailureReason reason;
+        private SendFailure(int httpStatus, FailureReason reason) {
+            super((requiresReconnect(reason) ? "GMAIL_RECONNECT_REQUIRED: "
+                    : reason == FailureReason.PROVIDER_UNCERTAIN ? "GMAIL_SEND_UNCERTAIN: "
+                    : "GMAIL_SEND_REJECTED: ") + reason.name());
+            this.httpStatus = httpStatus; this.reason = reason;
+        }
+        public String diagnostic() { return "GMAIL_HTTP_" + httpStatus + "_" + reason.name(); }
+    }
+
+    private static boolean requiresReconnect(FailureReason reason) {
+        return reason == FailureReason.INVALID_AUTHORIZATION || reason == FailureReason.INSUFFICIENT_SCOPE;
+    }
+
     private static final String GMAIL_SEND_ENDPOINT = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
     private final GoogleOAuthTokenStore tokenStore;
@@ -98,18 +120,52 @@ public class GoogleMailService {
             } catch(Exception ignored) { /* HTTP success remains accepted even if optional metadata is absent. */ }
             return java.util.Map.of("provider","GMAIL","providerMessageId",id,"gmailThreadId",thread);
         } catch (HttpStatusCodeException ex) {
-            log.warn("Gmail provider returned HTTP {}", ex.getStatusCode().value());
-            if (ex.getStatusCode().value() == 401 || ex.getStatusCode().value() == 403) {
+            int status = ex.getStatusCode().value();
+            FailureReason reason = classify(status, ex.getResponseBodyAsString());
+            log.warn("Gmail provider returned HTTP {} reason={}", status, reason);
+            if (requiresReconnect(reason)) {
                 tokenStore.providerAuthorizationRejected(username, token.getAccessToken());
-                throw new MessagingException("GMAIL_RECONNECT_REQUIRED: provider denied sending authorization");
             }
-            if (ex.getStatusCode().is4xxClientError()) {
-                throw new MessagingException("GMAIL_SEND_REJECTED: provider did not accept the request");
-            }
-            throw new MessagingException("GMAIL_SEND_UNCERTAIN: do not resend automatically");
+            throw new SendFailure(status, reason);
         } catch (RestClientException ex) {
-            throw new MessagingException("GMAIL_SEND_UNCERTAIN: do not resend automatically");
+            throw new SendFailure(0, FailureReason.PROVIDER_UNCERTAIN);
         }
+    }
+
+    private static FailureReason classify(int status, String body) {
+        if (status == 401) return FailureReason.INVALID_AUTHORIZATION;
+        if (status == 429) return FailureReason.RATE_LIMITED;
+        if (status == 403) {
+            // Inspect only structured reason codes. Never use/log free-text messages,
+            // metadata, headers, credentials, or any part of the submitted MIME.
+            if (body != null && body.length() <= 65536) try {
+                var error = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).path("error");
+                for (var detail : error.path("details")) {
+                    if ("type.googleapis.com/google.rpc.ErrorInfo".equals(detail.path("@type").asText())) {
+                        FailureReason known = knownReason(detail.path("reason").asText());
+                        if (known != null) return known;
+                    }
+                }
+                for (var item : error.path("errors")) {
+                    FailureReason known = knownReason(item.path("reason").asText());
+                    if (known != null) return known;
+                }
+            } catch (Exception ignored) { /* Unknown bodies remain generic; never log parsing exceptions. */ }
+            return FailureReason.FORBIDDEN;
+        }
+        if (status >= 400 && status < 500 && status != 408) return FailureReason.REQUEST_REJECTED;
+        return FailureReason.PROVIDER_UNCERTAIN;
+    }
+
+    private static FailureReason knownReason(String reason) {
+        return switch (reason) {
+            case "ACCESS_TOKEN_SCOPE_INSUFFICIENT", "insufficientPermissions" -> FailureReason.INSUFFICIENT_SCOPE;
+            case "SERVICE_DISABLED", "accessNotConfigured" -> FailureReason.SERVICE_DISABLED;
+            case "domainPolicy", "DOMAIN_POLICY" -> FailureReason.DOMAIN_POLICY;
+            case "dailyLimitExceeded", "QUOTA_EXCEEDED" -> FailureReason.QUOTA_EXCEEDED;
+            case "rateLimitExceeded", "userRateLimitExceeded", "RATE_LIMIT_EXCEEDED" -> FailureReason.RATE_LIMITED;
+            default -> null;
+        };
     }
 
     private String buildMimeMessage(

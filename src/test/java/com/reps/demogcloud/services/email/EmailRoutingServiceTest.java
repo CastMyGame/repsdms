@@ -101,6 +101,19 @@ class EmailRoutingServiceTest {
     }
 
     @Test
+    void phase1KnownGmailRejectionNeverFallsBackOrChangesItsClassification() throws Exception {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(true);
+        var rejected = new MessagingException("GMAIL_SEND_REJECTED: SERVICE_DISABLED");
+        doThrow(rejected).when(googleMailService).sendEmailOnBehalf(anyString(), any());
+        var actual = assertThrows(MessagingException.class, () -> emailRoutingService.sendEmail("p@test.com", "s", "b", "admin@test.com", true));
+        assertSame(rejected, actual);
+        verifyNoInteractions(javaMailSender);
+        verify(tokenStore, never()).providerAuthorizationRejected(anyString(), anyString());
+    }
+
+    @Test
     void phase1NeverConnectedAndExplicitlyDisconnectedUseVerifiedSmtpReplyTo() throws Exception {
         phase1Staff();
         when(javaMailSender.createMimeMessage()).thenReturn(mimeMessage);

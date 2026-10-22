@@ -322,9 +322,15 @@ public class RequiredNotificationService {
             if(outcomes.containsValue("ACCEPTED")) state="UNCERTAIN";
             else if(intent.getRecipients()!=null && !outcomes.isEmpty() && outcomes.keySet().containsAll(intent.getRecipients())) state="FAILED";
             boolean safe=!"UNCERTAIN".equals(state);
-            try { update(kind,caseId,notificationId,"DISPATCHING",attempt,new Update().set("requiredNotifications.$.state",state)
-                    .set("requiredNotifications.$.retrySafe",safe).set("requiredNotifications.$.reason",attempted?"PROVIDER_"+state:"AUTHORIZATION_OR_RECIPIENT_VALIDATION")
-                    .set("requiredNotifications.$.recipientOutcomes",outcomes)); } catch(Exception ignored) { /* Claim remains recoverable as UNCERTAIN. Never resend here. */ }
+            String reason = attempted ? "PROVIDER_"+state : "AUTHORIZATION_OR_RECIPIENT_VALIDATION";
+            Update failureUpdate = new Update().set("requiredNotifications.$.state",state)
+                    .set("requiredNotifications.$.retrySafe",safe).set("requiredNotifications.$.recipientOutcomes",outcomes);
+            if (failure instanceof com.reps.demogcloud.security.services.GoogleMailService.SendFailure gmail) {
+                reason = gmail.diagnostic(); failureUpdate.set("requiredNotifications.$.provider","GMAIL");
+            }
+            failureUpdate.set("requiredNotifications.$.reason",reason);
+            try { update(kind,caseId,notificationId,"DISPATCHING",attempt,failureUpdate); }
+            catch(Exception ignored) { /* Claim remains recoverable as UNCERTAIN. Never resend here. */ }
         }
     }
     private String address(String email) throws Exception {

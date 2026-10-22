@@ -13,6 +13,8 @@ import com.reps.demogcloud.utils.PunishmentUtils;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.data.mongodb.core.*;
 import org.springframework.data.mongodb.core.convert.*;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
@@ -169,6 +171,34 @@ class RequiredNotificationServiceTest {
     @Test void gmailAuthorizationFailureRemainsUnresolved() throws Exception {
         create(); doThrow(new MessagingException("GMAIL_RECONNECT_REQUIRED: synthetic grant revoked")).when(router).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
         dispatchLast(); assertEquals("RECONNECT_REQUIRED",last().getState()); assertTrue(last().isRetrySafe()); service.dispatchPending(); assertEquals(1,last().getAttempts());
+    }
+    @ParameterizedTest
+    @CsvSource({"401,invalid,RECONNECT_REQUIRED,true,INVALID_AUTHORIZATION", "403,accessNotConfigured,FAILED,true,SERVICE_DISABLED",
+            "403,domainPolicy,FAILED,true,DOMAIN_POLICY", "403,userRateLimitExceeded,FAILED,true,RATE_LIMITED",
+            "429,quota,FAILED,true,RATE_LIMITED", "503,temporary,UNCERTAIN,false,PROVIDER_UNCERTAIN"})
+    void structuredGmailFailurePersistsProviderAndSafeReasonWithoutAutomaticRetry(int status, String reason, String state, boolean retrySafe, String classification) throws Exception {
+        var tokenStore=mock(com.reps.demogcloud.security.services.GoogleOAuthTokenStore.class);
+        when(tokenStore.getToken(TEACHER)).thenReturn(Optional.of(new com.reps.demogcloud.security.services.GoogleOAuthTokenStore.GoogleOAuthToken(
+                "synthetic-access",Instant.now().plusSeconds(3600),"synthetic-refresh",Set.of(com.reps.demogcloud.security.services.GoogleOAuthTokenStore.GMAIL_SCOPE))));
+        var http=new org.springframework.web.client.RestTemplate();
+        var provider=org.springframework.test.web.client.MockRestServiceServer.bindTo(http).build();
+        provider.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.anything())
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withStatus(org.springframework.http.HttpStatus.valueOf(status))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .body("{\"error\":{\"errors\":[{\"reason\":\""+reason+"\"}],\"message\":\"private provider details\"}}"));
+        var gmail=new com.reps.demogcloud.security.services.GoogleMailService(tokenStore,http);
+        var request=new com.reps.demogcloud.security.models.gmail.GoogleMailSendRequest();
+        request.setFrom(TEACHER);request.setTo("recipient@example.test");request.setSubject("Synthetic");request.setBody("Synthetic");
+        var failure=assertThrows(com.reps.demogcloud.security.services.GoogleMailService.SendFailure.class,()->gmail.sendWithReceipt(TEACHER,request));
+        create(); doThrow(failure).when(router).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
+        dispatchLast(); service.dispatchPending();
+        assertEquals(state,last().getState()); assertEquals(retrySafe,last().isRetrySafe());
+        assertEquals("GMAIL",last().getProvider()); assertEquals("GMAIL_HTTP_"+status+"_"+classification,last().getReason());
+        assertNotNull(read()); assertEquals(ID,read().getPunishmentId());
+        verify(router,times(1)).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
+        if(retrySafe) { service.retry("punishment",ID,last().getNotificationId()); assertEquals("PENDING",last().getState()); }
+        else assertThrows(IllegalStateException.class,()->service.retry("punishment",ID,last().getNotificationId()));
+        provider.verify();
     }
     @Test void interruptedClaimIsUncertainAfterRecoveryNotSentAgain() {
         create(); var n=notifications().get(0); n.put("state","DISPATCHING"); n.put("attemptId","crashed-worker"); n.put("claimedAt",Date.from(Instant.now().minusSeconds(600)));

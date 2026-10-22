@@ -7,6 +7,9 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -118,9 +121,58 @@ class GoogleMailServiceTest {
         server.expect(anything()).andRespond(withStatus(HttpStatus.FORBIDDEN).body("sensitive-provider-body"));
         MessagingException failure = assertThrows(MessagingException.class,
                 () -> service.sendEmailOnBehalf("staff@example.test", message()));
-        assertEquals("GMAIL_RECONNECT_REQUIRED: provider denied sending authorization", failure.getMessage());
+        assertEquals("GMAIL_SEND_REJECTED: FORBIDDEN", failure.getMessage());
         assertNull(failure.getCause());
+        org.mockito.Mockito.verify(store, org.mockito.Mockito.never()).providerAuthorizationRejected(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
         server.verify();
+    }
+
+    static java.util.stream.Stream<Arguments> providerFailures() {
+        return java.util.stream.Stream.of(
+                Arguments.of(401, "{}", "INVALID_AUTHORIZATION", true),
+                Arguments.of(403, legacyError("insufficientPermissions"), "INSUFFICIENT_SCOPE", true),
+                Arguments.of(403, modernError("ACCESS_TOKEN_SCOPE_INSUFFICIENT"), "INSUFFICIENT_SCOPE", true),
+                Arguments.of(403, legacyError("accessNotConfigured"), "SERVICE_DISABLED", false),
+                Arguments.of(403, modernError("SERVICE_DISABLED"), "SERVICE_DISABLED", false),
+                Arguments.of(403, legacyError("domainPolicy"), "DOMAIN_POLICY", false),
+                Arguments.of(403, legacyError("dailyLimitExceeded"), "QUOTA_EXCEEDED", false),
+                Arguments.of(403, legacyError("userRateLimitExceeded"), "RATE_LIMITED", false),
+                Arguments.of(403, legacyError("rateLimitExceeded"), "RATE_LIMITED", false),
+                Arguments.of(429, "{}", "RATE_LIMITED", false),
+                Arguments.of(403, "not-json", "FORBIDDEN", false),
+                Arguments.of(403, legacyError("private-recipient@example.test"), "FORBIDDEN", false),
+                Arguments.of(503, "{}", "PROVIDER_UNCERTAIN", false),
+                Arguments.of(408, "{}", "PROVIDER_UNCERTAIN", false));
+    }
+    private static String legacyError(String reason) {
+        return "{\"error\":{\"errors\":[{\"reason\":\"" + reason + "\"}],\"message\":\"synthetic-access private-recipient@example.test\"}}";
+    }
+    private static String modernError(String reason) {
+        return "{\"error\":{\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"" + reason
+                + "\",\"metadata\":{\"private\":\"synthetic-refresh private-recipient@example.test\"}}]}}";
+    }
+    @ParameterizedTest @MethodSource("providerFailures")
+    void classifiesProviderFailuresWithoutInvalidatingUnrelatedGrantsOrExposingResponse(int status, String body, String reason, boolean reconnect) {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(GoogleMailService.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start(); logger.addAppender(appender);
+        try {
+            server.expect(anything()).andRespond(withStatus(HttpStatus.valueOf(status)).contentType(MediaType.APPLICATION_JSON).body(body));
+            var failure = assertThrows(GoogleMailService.SendFailure.class,
+                    () -> service.sendWithReceipt("staff@example.test", message()));
+            assertEquals("GMAIL_HTTP_" + status + "_" + reason, failure.diagnostic());
+            assertEquals(reconnect, failure.getMessage().startsWith("GMAIL_RECONNECT_REQUIRED"));
+            assertNull(failure.getCause()); assertNull(failure.getNextException());
+            org.mockito.Mockito.verify(store, org.mockito.Mockito.times(reconnect ? 1 : 0))
+                    .providerAuthorizationRejected("staff@example.test", "synthetic-access");
+            for (var entry : appender.list) {
+                String logged = entry.getFormattedMessage();
+                assertFalse(logged.contains("synthetic-access")); assertFalse(logged.contains("synthetic-refresh"));
+                assertFalse(logged.contains("private-recipient@example.test")); assertNull(entry.getThrowableProxy());
+            }
+            assertTrue(appender.list.stream().anyMatch(entry -> entry.getFormattedMessage().contains("reason=" + reason)));
+            server.verify();
+        } finally { logger.detachAppender(appender); appender.stop(); }
     }
 
     @Test
