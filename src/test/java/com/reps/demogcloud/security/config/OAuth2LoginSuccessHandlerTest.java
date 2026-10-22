@@ -79,14 +79,12 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @Test
-    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeAndStoreToken() throws Exception {
+    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeWithoutLinkingGmail() throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.of(authorizedClientService),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -95,28 +93,14 @@ class OAuth2LoginSuccessHandlerTest {
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(authentication.getPrincipal()).thenReturn(oidcUser);
-        when(authentication.getName()).thenReturn("Teacher@Test.com");
         when(oidcUser.getEmail()).thenReturn("Teacher@Test.com ");
 
         UserModel userModel = buildUser("teacher@test.com", true, "TEACHER");
         when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(null);
         when(customUserDetailsService.loadUserByUsername("teacher@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt-token");
+        when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("jwt-token");
         when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("http://localhost:3000/oauth-success");
-
-        OAuth2AuthorizedClient client = mock(OAuth2AuthorizedClient.class);
-        OAuth2AccessToken accessToken = new OAuth2AccessToken(
-                OAuth2AccessToken.TokenType.BEARER,
-                "access-token",
-                Instant.now(),
-                Instant.now().plusSeconds(3600)
-        );
-        OAuth2RefreshToken refreshToken = new OAuth2RefreshToken("refresh-token", Instant.now());
-
-        when(authorizedClientService.loadAuthorizedClient("google", "Teacher@Test.com")).thenReturn(client);
-        when(client.getAccessToken()).thenReturn(accessToken);
-        when(client.getRefreshToken()).thenReturn(refreshToken);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -124,7 +108,7 @@ class OAuth2LoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authentication);
 
         verify(employeeRepository).save(any(Employee.class));
-        verify(tokenStore).storeToken(eq("teacher@test.com"), any(GoogleOAuthTokenStore.GoogleOAuthToken.class));
+        verifyNoInteractions(tokenStore, authorizedClientService);
 
         ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
         verify(redirectStrategy).sendRedirect(eq(request), eq(response), redirectCaptor.capture());
@@ -145,8 +129,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -160,7 +142,7 @@ class OAuth2LoginSuccessHandlerTest {
         when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
         when(customUserDetailsService.loadUserByUsername("student@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("student-jwt");
+        when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("student-jwt");
         when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("");
 
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -178,14 +160,12 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @Test
-    void onAuthenticationSuccess_shouldReturnJsonWhenAuthorizedClientServicePresentButClientNull() throws Exception {
+    void onAuthenticationSuccess_shouldReturnJsonWithoutSendingAuthorization() throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.of(authorizedClientService),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -193,16 +173,14 @@ class OAuth2LoginSuccessHandlerTest {
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(authentication.getPrincipal()).thenReturn(oidcUser);
-        when(authentication.getName()).thenReturn("student@test.com");
         when(oidcUser.getEmail()).thenReturn("student@test.com");
 
         UserModel userModel = buildUser("student@test.com", true, "STUDENT");
         when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(new Student());
         when(customUserDetailsService.loadUserByUsername("student@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt");
+        when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("jwt");
         when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("");
-        when(authorizedClientService.loadAuthorizedClient("google", "student@test.com")).thenReturn(null);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -213,14 +191,12 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @Test
-    void onAuthenticationSuccess_shouldReturnJsonWhenAuthorizedClientHasNullAccessToken() throws Exception {
+    void onAuthenticationSuccess_shouldNotRequireGmailAuthorizationToLogIn() throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.of(authorizedClientService),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -228,19 +204,14 @@ class OAuth2LoginSuccessHandlerTest {
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(authentication.getPrincipal()).thenReturn(oidcUser);
-        when(authentication.getName()).thenReturn("student@test.com");
         when(oidcUser.getEmail()).thenReturn("student@test.com");
 
         UserModel userModel = buildUser("student@test.com", true, "STUDENT");
         when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(new Student());
         when(customUserDetailsService.loadUserByUsername("student@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt");
+        when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("jwt");
         when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("");
-
-        OAuth2AuthorizedClient client = mock(OAuth2AuthorizedClient.class);
-        when(authorizedClientService.loadAuthorizedClient("google", "student@test.com")).thenReturn(client);
-        when(client.getAccessToken()).thenReturn(null);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -251,14 +222,12 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @Test
-    void onAuthenticationSuccess_shouldSwallowTokenStoreExceptions() throws Exception {
+    void onAuthenticationSuccess_shouldKeepLoginIndependentOfGmail() throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.of(authorizedClientService),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -266,17 +235,14 @@ class OAuth2LoginSuccessHandlerTest {
 
         OidcUser oidcUser = mock(OidcUser.class);
         when(authentication.getPrincipal()).thenReturn(oidcUser);
-        when(authentication.getName()).thenReturn("student@test.com");
         when(oidcUser.getEmail()).thenReturn("student@test.com");
 
         UserModel userModel = buildUser("student@test.com", true, "STUDENT");
         when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(new Student());
         when(customUserDetailsService.loadUserByUsername("student@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt");
+        when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("jwt");
         when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("");
-        when(authorizedClientService.loadAuthorizedClient("google", "student@test.com"))
-                .thenThrow(new RuntimeException("boom"));
 
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -293,8 +259,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -319,8 +283,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -345,8 +307,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -369,8 +329,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -396,8 +354,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -425,8 +381,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -458,8 +412,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -489,8 +441,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -522,8 +472,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository
@@ -555,8 +503,6 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                Optional.empty(),
-                tokenStore,
                 objectMapper,
                 studentRepository,
                 employeeRepository

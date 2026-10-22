@@ -3,6 +3,9 @@ package com.reps.demogcloud.services.email;
 import com.reps.demogcloud.security.models.gmail.GoogleMailSendRequest;
 import com.reps.demogcloud.security.services.GoogleMailService;
 import com.reps.demogcloud.security.services.GoogleOAuthTokenStore;
+import com.reps.demogcloud.services.UserContextService;
+import jakarta.mail.MessagingException;
+import org.springframework.security.access.AccessDeniedException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,14 +40,153 @@ class EmailRoutingServiceTest {
     @Mock
     private GoogleOAuthTokenStore tokenStore;
 
+    @Mock
+    private UserContextService userContextService;
+
     @InjectMocks
     private EmailRoutingService emailRoutingService;
 
     private MimeMessage mimeMessage;
 
+    @Test
+    void recordedSmtpUsesActingAdministratorReplyToAndStableThreadHeadersWithoutRequestContext() throws Exception {
+        phase1();
+        when(env.getProperty("reps.email.notifications.enabled", "false")).thenReturn("true");
+        when(env.getProperty("mail.service.provider", "smtp")).thenReturn("hybrid");
+        when(env.getProperty("mail.service.user-emails.enabled", "false")).thenReturn("true");
+        when(userContextService.getVerifiedStaffEmail("admin@test.com")).thenReturn("admin@test.com");
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.NEVER_CONNECTED);
+        when(javaMailSender.createMimeMessage()).thenReturn(mimeMessage);
+        var receipt=emailRoutingService.sendRequiredNotification("parent@test.com",List.of("teacher@test.com"),"REPS case 123 update","<p>Updated</p>",
+                List.of(),"admin@test.com",false,"<new@notifications.repsdiscipline.com>","<prior@notifications.repsdiscipline.com>",null);
+        assertEquals("admin@test.com",mimeMessage.getReplyTo()[0].toString()); assertEquals("<new@notifications.repsdiscipline.com>",mimeMessage.getMessageID());
+        assertEquals("<prior@notifications.repsdiscipline.com>",mimeMessage.getHeader("In-Reply-To",null));
+        assertEquals("15000",mimeMessage.getSession().getProperties().getProperty("mail.smtp.timeout"));
+        assertEquals("SMTP",receipt.get("provider")); verify(userContextService,never()).getCurrentStaffEmail(); verifyNoInteractions(googleMailService);
+    }
+
+    @Test
+    void recordedConnectedActorUsesOwnGmailGrantAndPersistsProviderReceipt() throws Exception {
+        phase1();
+        when(env.getProperty("reps.email.notifications.enabled", "false")).thenReturn("true");
+        when(env.getProperty("mail.service.provider", "smtp")).thenReturn("gmail-api");
+        when(userContextService.getVerifiedStaffEmail("admin@test.com")).thenReturn("admin@test.com");
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(true);
+        when(googleMailService.sendWithReceipt(eq("admin@test.com"),any())).thenReturn(java.util.Map.of("provider","GMAIL","providerMessageId","id","gmailThreadId","thread"));
+        var receipt=emailRoutingService.sendRequiredNotification("p@test.com",List.of(),"Subject","Body",List.of(),"admin@test.com",false,"<case@reps.test>",null,null);
+        assertEquals("id",receipt.get("providerMessageId")); verifyNoInteractions(javaMailSender); verify(userContextService,never()).getCurrentStaffEmail();
+    }
+
+    private void phase1() {
+        when(env.getProperty("reps.email.routing.phase1-enabled", "false")).thenReturn("true");
+    }
+
+    private void phase1Staff() {
+        phase1();
+        when(env.getProperty("mail.service.provider", "smtp")).thenReturn("hybrid");
+        when(env.getProperty("mail.service.user-emails.enabled", "false")).thenReturn("true");
+        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+    }
+
+    @Test
+    void phase1PasswordSessionWithConnectedGrantUsesGmailWithoutConsultingLoginMethod() throws Exception {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(true);
+        emailRoutingService.sendBulkEmail("parent@test.com", List.of("teacher@test.com"), "Subject", "Body",
+                null, "admin@test.com", true);
+        verify(googleMailService).sendEmailOnBehalf(eq("admin@test.com"), any());
+        verifyNoInteractions(javaMailSender);
+    }
+
+    @Test
+    void phase1KnownGmailRejectionNeverFallsBackOrChangesItsClassification() throws Exception {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(true);
+        var rejected = new MessagingException("GMAIL_SEND_REJECTED: SERVICE_DISABLED");
+        doThrow(rejected).when(googleMailService).sendEmailOnBehalf(anyString(), any());
+        var actual = assertThrows(MessagingException.class, () -> emailRoutingService.sendEmail("p@test.com", "s", "b", "admin@test.com", true));
+        assertSame(rejected, actual);
+        verifyNoInteractions(javaMailSender);
+        verify(tokenStore, never()).providerAuthorizationRejected(anyString(), anyString());
+    }
+
+    @Test
+    void phase1NeverConnectedAndExplicitlyDisconnectedUseVerifiedSmtpReplyTo() throws Exception {
+        phase1Staff();
+        when(javaMailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(tokenStore.getConnectionState("admin@test.com"))
+                .thenReturn(GoogleOAuthTokenStore.ConnectionState.NEVER_CONNECTED)
+                .thenReturn(GoogleOAuthTokenStore.ConnectionState.DISCONNECTED);
+        for (int i = 0; i < 2; i++) {
+            emailRoutingService.sendBulkEmail("parent@test.com", List.of("teacher@test.com"), "Subject", "<p>Body</p>",
+                    null, "admin@test.com", true);
+        }
+        assertEquals("admin@test.com", mimeMessage.getReplyTo()[0].toString());
+        assertTrue(mimeMessage.getFrom()[0].toString().contains("REPS Notifications"));
+        assertEquals("teacher@test.com", mimeMessage.getRecipients(jakarta.mail.Message.RecipientType.CC)[0].toString());
+        verify(javaMailSender, times(2)).send(mimeMessage);
+        verifyNoInteractions(googleMailService);
+    }
+
+    @Test
+    void phase1UnknownHistoryDoesNotPretendNeverConnected() {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.UNKNOWN);
+        MessagingException error = assertThrows(MessagingException.class, () ->
+                emailRoutingService.sendEmail("parent@test.com", "Subject", "Body", "admin@test.com", true));
+        assertTrue(error.getMessage().startsWith("GMAIL_CONNECTION_UNKNOWN"));
+        verifyNoInteractions(javaMailSender, googleMailService);
+    }
+
+    @Test
+    void phase1ExpiredOrScopeMissingGrantRequiresReconnectWithoutSmtp() {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(false);
+        assertThrows(MessagingException.class, () -> emailRoutingService.sendEmail("p@test.com", "s", "b", "admin@test.com", true));
+        verifyNoInteractions(javaMailSender, googleMailService);
+    }
+
+    @Test
+    void phase1AmbiguousGmailSendNeverFallsBackOrLeaksProviderPayload() throws Exception {
+        phase1Staff();
+        when(tokenStore.getConnectionState("admin@test.com")).thenReturn(GoogleOAuthTokenStore.ConnectionState.CONNECTED);
+        when(tokenStore.hasUsableGmailSendToken("admin@test.com")).thenReturn(true);
+        doThrow(new RuntimeException("sensitive-provider-body")).when(googleMailService).sendEmailOnBehalf(any(), any());
+        MessagingException error = assertThrows(MessagingException.class, () ->
+                emailRoutingService.sendEmail("p@test.com", "s", "b", "admin@test.com", true));
+        assertEquals("GMAIL_SEND_UNCERTAIN: no automatic retry or SMTP fallback", error.getMessage());
+        assertNull(error.getCause());
+        verifyNoInteractions(javaMailSender);
+    }
+
+    @Test
+    void phase1SpoofedSenderIsRejectedBeforeTransportSelection() {
+        phase1();
+        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+        assertThrows(AccessDeniedException.class, () ->
+                emailRoutingService.sendEmail("p@test.com", "s", "b", "teacher@test.com", true));
+        verifyNoInteractions(tokenStore, javaMailSender, googleMailService);
+    }
+
+    @Test
+    void phase1SystemMessageDoesNotBorrowAuthenticatedUsersGmail() throws Exception {
+        phase1();
+        when(env.getProperty("mail.service.provider", "smtp")).thenReturn("hybrid");
+        when(env.getProperty("mail.service.system-emails.provider", "smtp")).thenReturn("smtp");
+        when(javaMailSender.createMimeMessage()).thenReturn(mimeMessage);
+        emailRoutingService.sendEmail("p@test.com", "Reset", "Body", null, false);
+        assertNull(mimeMessage.getHeader("Reply-To"));
+        verifyNoInteractions(tokenStore, googleMailService, userContextService);
+    }
+
     @BeforeEach
     void setUp() {
         mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
+        lenient().when(env.getProperty("reps.email.routing.phase1-enabled", "false")).thenReturn("false");
     }
 
     @Test

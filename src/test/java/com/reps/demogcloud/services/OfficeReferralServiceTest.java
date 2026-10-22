@@ -39,6 +39,13 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OfficeReferralServiceTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.EmailSenderService emailSenderService;
+    @org.mockito.Mock
+    private UserContextService userContextService;
 
     @Mock
     private StudentRepository studentRepository;
@@ -60,6 +67,26 @@ class OfficeReferralServiceTest {
 
     @InjectMocks
     private OfficeReferralService officeReferralService;
+
+    @Test
+    void phase1CreationRecordsVerifiedActorInsteadOfFrontendTeacher() {
+        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
+        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+        Student student = new Student();
+        student.setStudentEmail("student@test.com");
+        student.setSchool("School");
+        School school = new School();
+        school.setSchoolName("School");
+        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
+        when(schoolRepository.findBySchoolNameIgnoreCase("School")).thenReturn(Optional.of(school));
+        when(officeReferralRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        OfficeReferralRequest request = new OfficeReferralRequest();
+        request.setStudentEmail("student@test.com");
+        request.setTeacherEmail("spoofed@test.com");
+        OfficeReferral saved = officeReferralService.createNewOfficeReferral(request);
+        assertEquals("admin@test.com", saved.getTeacherEmail());
+        verify(userContextService).requireStaffInStudentSchool("admin@test.com", student);
+    }
 
     @AfterEach
     void tearDown() {

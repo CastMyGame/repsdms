@@ -84,6 +84,13 @@ class AuthControllersTest {
     @MockitoBean
     private AuthenticationManager authenticationManager;
 
+    @MockitoBean
+    private com.reps.demogcloud.security.services.GoogleOAuthTokenStore googleOAuthTokenStore;
+    @MockitoBean
+    private com.reps.demogcloud.services.UserContextService userContextService;
+    @MockitoBean
+    private com.reps.demogcloud.services.email.EmailRoutingService emailRoutingService;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -202,7 +209,7 @@ class AuthControllersTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(new UsernamePasswordAuthenticationToken("teacher@test.com", "secret"));
         when(customUserDetailsService.loadUserByUsername("teacher@test.com")).thenReturn(userDetails);
-        when(jwtUtils.generateToken(userDetails)).thenReturn("jwt-token");
+        when(jwtUtils.generateToken(userDetails, "PASSWORD")).thenReturn("jwt-token");
         when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
 
         mockMvc.perform(post("/auth")

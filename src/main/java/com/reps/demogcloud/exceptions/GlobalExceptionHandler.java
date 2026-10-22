@@ -15,6 +15,11 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<String> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<String> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());

@@ -12,15 +12,22 @@ public class GoogleCloudTranslationService implements TranslationService {
 
     private static final String DEFAULT_LANGUAGE = "en";
 
-    private final Translate translate;
+    private volatile Translate translate;
 
     public GoogleCloudTranslationService() {
-        // Uses GOOGLE_APPLICATION_CREDENTIALS / ADC under the hood
-        this(TranslateOptions.getDefaultInstance().getService());
+        // English-only email and application startup do not need cloud credentials.
     }
 
     public GoogleCloudTranslationService(Translate translate) {
         this.translate = translate;
+    }
+
+    private synchronized Translate translationClient() {
+        if (translate == null) {
+            // Preserve ADC-based translation, but initialize only when needed.
+            translate = TranslateOptions.getDefaultInstance().getService();
+        }
+        return translate;
     }
 
     @Override
@@ -40,7 +47,7 @@ public class GoogleCloudTranslationService implements TranslationService {
         }
 
         try {
-            Translation translation = translate.translate(
+            Translation translation = translationClient().translate(
                     text,
                     sourceLang != null && !sourceLang.isBlank()
                             ? Translate.TranslateOption.sourceLanguage(sourceLang)

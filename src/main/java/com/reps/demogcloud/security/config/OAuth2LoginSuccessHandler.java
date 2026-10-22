@@ -9,7 +9,6 @@ import com.reps.demogcloud.security.models.AuthenticationResponse;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
 import com.reps.demogcloud.security.services.CustomUserDetailsService;
-import com.reps.demogcloud.security.services.GoogleOAuthTokenStore;
 import com.reps.demogcloud.security.services.UserAccountService;
 import com.reps.demogcloud.security.utils.JwtUtils;
 import jakarta.servlet.ServletException;
@@ -19,8 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -29,7 +26,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -39,8 +35,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final UserAccountService userAccountService;
     private final CustomUserDetailsService customUserDetailsService;
     private final Environment env;
-    private final Optional<OAuth2AuthorizedClientService> authorizedClientService;
-    private final GoogleOAuthTokenStore tokenStore;
+
     private final ObjectMapper objectMapper;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
@@ -107,7 +102,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
-        storeGoogleTokens(authentication, userModel);
+        // Gmail linking is a separate consent flow and never changes the REPS login.
 
         String token = jwtUtils.generateToken(userDetails, "GOOGLE");
 
@@ -161,33 +156,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         throw new ServletException("Unsupported OAuth principal type.");
-    }
-
-    private void storeGoogleTokens(Authentication authentication, UserModel userModel) {
-        try {
-            if (authorizedClientService.isEmpty()) {
-                return;
-            }
-
-            OAuth2AuthorizedClient authorizedClient =
-                    authorizedClientService.get().loadAuthorizedClient("google", authentication.getName());
-
-            if (authorizedClient != null && authorizedClient.getAccessToken() != null) {
-                tokenStore.storeToken(
-                        userModel.getUsername(),
-                        new GoogleOAuthTokenStore.GoogleOAuthToken(
-                                authorizedClient.getAccessToken().getTokenValue(),
-                                authorizedClient.getAccessToken().getExpiresAt(),
-                                authorizedClient.getRefreshToken() != null
-                                        ? authorizedClient.getRefreshToken().getTokenValue()
-                                        : null,
-                                authorizedClient.getAccessToken().getScopes()
-                        )
-                );
-            }
-        } catch (Exception ignored) {
-            // best effort only
-        }
     }
 
     private boolean hasRole(UserModel userModel, String roleName) {

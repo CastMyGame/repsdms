@@ -22,5 +22,9 @@ public class GoogleMailSendRequest {
 
     // Recommended: Use a List<String> for multiple BCC recipients
     private List<String> bcc;
+    private String rfcMessageId;
+    private String inReplyTo;
+    private String references;
+    private String threadId;
 }
 

@@ -12,6 +12,7 @@ import com.reps.demogcloud.models.officeReferral.OfficeReferralResponse;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.utils.OfficeReferralUtils;
+import com.reps.demogcloud.services.email.EmailSenderService;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,36 @@ public class OfficeReferralService {
     private final EmailService emailService;
     private final OfficeReferralUtils officeReferralUtils;
     private final MongoTemplate mongoTemplate;
+    private final UserContextService userContextService;
+    private final EmailSenderService emailSenderService;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
+    private OfficeReferral managedChange(String id, String event, String comment) {
+        OfficeReferral referral=officeReferralRepository.findByOfficeReferralId(id);
+        if(referral==null) throw new ResourceNotFoundException("Case not found");
+        if(("CLOSED".equals(event) && "CLOSED".equals(referral.getStatus()))
+                || ("REJECTED".equals(event) && "OPEN".equals(referral.getStatus()))
+                || ("SUBMITTED".equals(event) && "PENDING".equals(referral.getStatus()))) {
+            requiredNotifications.requireActionAccess(referral,event); return referral;
+        }
+        if("SUBMITTED".equals(event) && "CLOSED".equals(referral.getStatus())) throw new IllegalStateException("Closed cases cannot be submitted again");
+        if(!requiredNotifications.prepare(referral,event)) return referral;
+        if("CLOSED".equals(event)) {
+            referral.setStatus("CLOSED"); referral.setTimeClosed(LocalDate.now());
+            if(comment!=null && !comment.isBlank()) {
+                var description=new ArrayList<>(referral.getReferralDescription()==null?List.<String>of():referral.getReferralDescription());
+                description.add(comment); referral.setReferralDescription(description);
+            }
+        } else if("SUBMITTED".equals(event)) { referral.setStatus("PENDING"); referral.setTimeClosed(LocalDate.now()); }
+        else if("REJECTED".equals(event)) {
+            var description=referral.getReferralDescription();
+            if(description==null || description.isEmpty()) throw new IllegalArgumentException("Submitted answers are missing");
+            referral.setAnswerHistory(new Date(),new ArrayList<>(description.subList(1,description.size())));
+            referral.setReferralDescription(new ArrayList<>(List.of(description.get(0)))); referral.setStatus("OPEN"); referral.setMapIndex(0);
+        }
+        requiredNotifications.captureContent(referral);
+        return officeReferralRepository.save(referral);
+    }
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
         for (OfficeReferralRequest officeReferralRequest : officeReferralRequests) {
@@ -61,12 +91,25 @@ public class OfficeReferralService {
             throw new IllegalStateException("Student not found: " + officeReferralRequest.getStudentEmail());
         }
 
+        if (emailSenderService.isPhase1RoutingEnabled()) {
+            String actor = userContextService.getCurrentStaffEmail();
+            userContextService.requireStaffInStudentSchool(actor, findMe);
+            officeReferralRequest.setTeacherEmail(actor);
+        }
+
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
 
         School ourSchool = ourSchoolOpt.orElseThrow(() ->
                 new IllegalStateException("School not found: " + findMe.getSchool())
         );
 
+        String managedId = null;
+        if(requiredNotifications.isEnabled()) {
+            managedId = requiredNotifications.creationId("office", findMe.getStudentEmail(),java.util.Arrays.asList(
+                    officeReferralRequest.getReferralCode(),officeReferralRequest.getClassPeriod(),officeReferralRequest.getReferralDescription(),officeReferralRequest.getCurrency()));
+            OfficeReferral existing = requiredNotifications.existingCreation(managedId, OfficeReferral.class);
+            if(existing != null) return existing;
+        }
         OfficeReferral request = new OfficeReferral();
         request.setAdminEmail(findMe.getAdminEmail());
         request.setStudentEmail(findMe.getStudentEmail());
@@ -79,6 +122,9 @@ public class OfficeReferralService {
         request.setInfractionLevel("4");
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
+        if(requiredNotifications.isEnabled()) {
+            request.setOfficeReferralId(managedId); return (OfficeReferral) requiredNotifications.saveCreated(request);
+        }
         return officeReferralRepository.save(request);
     }
 
@@ -94,6 +140,7 @@ public class OfficeReferralService {
     }
 
     public OfficeReferral rejectAnswers(String referralId) throws MessagingException {
+        if(requiredNotifications.isEnabled()) return managedChange(referralId,"REJECTED",null);
         OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
         if (referral == null) {
             throw new ResourceNotFoundException("Office Referral not found for ID: " + referralId);
@@ -193,6 +240,9 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException {
+        if(requiredNotifications.isEnabled()) {
+            OfficeReferralResponse response=new OfficeReferralResponse(); response.setOfficeReferral(managedChange(request.getId(),"CLOSED",request.getComment())); return response;
+        }
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
 
         if (findMe == null) {
@@ -236,6 +286,9 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException {
+        if(requiredNotifications.isEnabled()) {
+            OfficeReferralResponse response=new OfficeReferralResponse(); response.setOfficeReferral(managedChange(referralId,"SUBMITTED",null)); return response;
+        }
         OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(referralId);
 
         if (findMe == null) {

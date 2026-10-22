@@ -65,6 +65,8 @@ class EmailControllerTest {
 
     @MockitoBean
     private EmailService emailService;
+    @MockitoBean
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
     @Test
     void sendClassAnnouncement_returnsOk() throws Exception {

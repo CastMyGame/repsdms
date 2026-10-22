@@ -61,21 +61,16 @@ public class JwtFilterRequest extends OncePerRequestFilter {
             String username = jwtUtils.extractUserName(jwtToken);
             UserDetails currentUserDetails = customUserDetailsService.loadUserByUsername(username);
 
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                Boolean tokenValidated = jwtUtils.validateToken(jwtToken, currentUserDetails);
-                if (tokenValidated) {
-                    UsernamePasswordAuthenticationToken authenticationToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    currentUserDetails, null, currentUserDetails.getAuthorities()
-                            );
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                } else {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("Invalid JWT token");
-                    return;
-                }
+            // An explicit bearer identity takes precedence over a remembered Google-login session.
+            if (!jwtUtils.validateToken(jwtToken, currentUserDetails)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid JWT token");
+                return;
             }
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    currentUserDetails, null, currentUserDetails.getAuthorities());
+            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
             filterChain.doFilter(request, response);
 

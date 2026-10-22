@@ -7,7 +7,7 @@ import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.models.student.Student;
 import com.reps.demogcloud.security.models.RoleModel;
 import com.reps.demogcloud.security.models.UserModel;
-import com.reps.demogcloud.security.services.UserAccountService;
+import com.reps.demogcloud.security.models.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.*;
 class UserContextServiceTest {
 
     @Mock
-    private UserAccountService userAccountService;
+    private UserRepository userRepository;
 
     @Mock
     private StudentRepository studentRepository;
@@ -40,6 +40,51 @@ class UserContextServiceTest {
 
     @InjectMocks
     private UserContextService userContextService;
+
+    @Test
+    void recordedOwnerIsAuthorizedWithoutBorrowingAuthorsIdentityAndNonAdminCannotResolve() {
+        Student student=staffCase("TEACHER");
+        userContextService.requireRecordedCaseCommunicationAccess("actor@test.com","original@test.com","actor@test.com",student);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->userContextService.requireAdministratorInSchool("School"));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->userContextService.requireRecordedCaseCommunicationAccess("actor@test.com","original@test.com","other-owner@test.com",student));
+    }
+
+    private Student staffCase(String role) {
+        setAuthenticatedUser("actor@test.com");
+        UserModel user = buildUser("actor@test.com", role);
+        user.setSchool("School");
+        Employee employee = new Employee();
+        employee.setEmail("actor@test.com");
+        employee.setSchool("School");
+        when(userRepository.findByUsername("actor@test.com")).thenReturn(user);
+        when(employeeRepository.findByEmailIgnoreCase("actor@test.com")).thenReturn(employee);
+        Student student = new Student();
+        student.setSchool("School");
+        return student;
+    }
+
+    @Test
+    void administratorCanCommunicateOnTeachersCaseWithoutBecomingItsOwner() {
+        Student student = staffCase("ADMIN");
+        userContextService.requireCaseCommunicationAccess("teacher@test.com", student);
+        assertEquals("actor@test.com", userContextService.getCurrentStaffEmail());
+    }
+
+    @Test
+    void unrelatedTeacherAndCrossSchoolAdministratorAreDenied() {
+        Student student = staffCase("TEACHER");
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> userContextService.requireCaseCommunicationAccess("other@test.com", student));
+        student.setSchool("Other school");
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> userContextService.requireCaseCommunicationAccess("actor@test.com", student));
+    }
+
+    @Test
+    void studentCannotImpersonateStaff() {
+        staffCase("STUDENT");
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> userContextService.getCurrentStaffEmail());
+    }
 
     @BeforeEach
     void setUp() {
@@ -58,7 +103,7 @@ class UserContextServiceTest {
         UserModel userModel = buildUser("student@test.com", "STUDENT");
         Student student = mock(Student.class);
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
         when(student.getSchool()).thenReturn("Lincoln High");
 
@@ -75,7 +120,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("student@test.com", "STUDENT");
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
 
         EntityNotFoundException ex = assertThrows(
@@ -95,7 +140,7 @@ class UserContextServiceTest {
         UserModel userModel = buildUser("teacher@test.com", "TEACHER");
         Employee employee = mock(Employee.class);
 
-        when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("teacher@test.com")).thenReturn(userModel);
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(employee);
         when(employee.getSchool()).thenReturn("Roosevelt High");
 
@@ -112,7 +157,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("teacher@test.com", "TEACHER");
 
-        when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("teacher@test.com")).thenReturn(userModel);
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(null);
 
         EntityNotFoundException ex = assertThrows(
@@ -140,7 +185,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("student@test.com", "STUDENT");
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
 
         boolean result = userContextService.isCurrentUserStudent();
 
@@ -153,7 +198,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("student@test.com", "student");
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
 
         boolean result = userContextService.isCurrentUserStudent();
 
@@ -166,7 +211,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("teacher@test.com", "TEACHER");
 
-        when(userAccountService.loadUserModelByUsername("teacher@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("teacher@test.com")).thenReturn(userModel);
 
         boolean result = userContextService.isCurrentUserStudent();
 
@@ -181,7 +226,7 @@ class UserContextServiceTest {
         userModel.setUsername("user@test.com");
         userModel.setRoles(null);
 
-        when(userAccountService.loadUserModelByUsername("user@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("user@test.com")).thenReturn(userModel);
 
         boolean result = userContextService.isCurrentUserStudent();
 
@@ -204,7 +249,7 @@ class UserContextServiceTest {
         UserModel userModel = buildUser("student@test.com", "STUDENT");
         Student student = mock(Student.class);
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
         when(student.getSchool()).thenReturn("Central High");
 
@@ -219,7 +264,7 @@ class UserContextServiceTest {
 
         UserModel userModel = buildUser("student@test.com", "STUDENT");
 
-        when(userAccountService.loadUserModelByUsername("student@test.com")).thenReturn(userModel);
+        when(userRepository.findByUsername("student@test.com")).thenReturn(userModel);
 
         boolean result = userContextService.isStudent();
 

@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/gmail/**").denyAll()
                         .requestMatchers(
                                 "/register",
                                 "/contact-us",

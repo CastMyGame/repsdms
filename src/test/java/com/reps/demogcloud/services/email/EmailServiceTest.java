@@ -23,6 +23,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailServiceTest {
+    @org.mockito.Mock
+    private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
+
 
     @Mock
     private EmailNotificationService emailNotificationService;
@@ -62,6 +65,7 @@ class EmailServiceTest {
                 )
         );
 
+        verify(emailSenderService).isPhase1RoutingEnabled();
         verify(emailSenderService, times(1)).sendDetailedEmail(
                 "parent@test.com",
                 "teacher@test.com",
@@ -96,6 +100,7 @@ class EmailServiceTest {
         );
 
         assertEquals("send failed", exception.getMessage());
+        verify(emailSenderService).isPhase1RoutingEnabled();
         verify(emailSenderService, times(1)).sendDetailedEmail(
                 "parent@test.com",
                 "teacher@test.com",
@@ -251,6 +256,7 @@ class EmailServiceTest {
                 emailService.sendEmailGeneric(ccEmails, "to@test.com", "subject", "message", "en")
         );
 
+        verify(emailSenderService).isPhase1RoutingEnabled();
         verify(emailSenderService, times(1)).sendGenericEmail(ccEmails, "to@test.com", "subject", "message", "en");
         verifyNoMoreInteractions(emailSenderService, emailNotificationService, emailReferralService);
     }
@@ -268,6 +274,7 @@ class EmailServiceTest {
         );
 
         assertEquals("generic failed", exception.getMessage());
+        verify(emailSenderService).isPhase1RoutingEnabled();
         verify(emailSenderService, times(1)).sendGenericEmail(ccEmails, "to@test.com", "subject", "message", "en");
         verifyNoMoreInteractions(emailSenderService, emailNotificationService, emailReferralService);
     }

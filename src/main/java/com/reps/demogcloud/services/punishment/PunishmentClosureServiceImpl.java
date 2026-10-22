@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,9 +30,50 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
     private final InfractionRepository infractionRepository;
     private final EmailService emailService;
     private final EmailTemplateBuilderService emailTemplateBuilderService;
+    private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
+    private Punishment managedChange(Punishment punishment, String event, List<StudentAnswer> answers, String explanation) {
+        if (punishment == null) throw new ResourceNotFoundException("Case not found");
+        if ((Set.of("CLOSED","COMPLETED").contains(event) && "CLOSED".equals(punishment.getStatus()))
+                || ("SUBMITTED".equals(event) && "PENDING".equals(punishment.getStatus()))
+                || ("REJECTED".equals(event) && "OPEN".equals(punishment.getStatus()))
+                || ("ARCHIVED".equals(event) && punishment.isArchived())
+                || ("RESTORED".equals(event) && !punishment.isArchived())) {
+            requiredNotifications.requireActionAccess(punishment, event);
+            return punishment;
+        }
+        if (!requiredNotifications.prepare(punishment, event)) return punishment;
+        switch (event) {
+            case "CLOSED", "COMPLETED" -> {
+                punishment.setStatus("CLOSED"); punishment.setClosedTimes(punishment.getClosedTimes()+1); punishment.setTimeClosed(LocalDate.now());
+            }
+            case "SUBMITTED" -> {
+                var description = new ArrayList<>(punishment.getInfractionDescription()==null?List.<String>of():punishment.getInfractionDescription());
+                if (answers != null) for(var answer:answers) description.add(answer.toString());
+                punishment.setInfractionDescription(description); punishment.setStatus("PENDING");
+            }
+            case "REJECTED" -> {
+                var description = punishment.getInfractionDescription();
+                if(description==null || description.size()<2) throw new IllegalArgumentException("Submitted answers are missing");
+                punishment.setAnswerHistory(new Date(),new ArrayList<>(description.subList(1,description.size())));
+                punishment.setInfractionDescription(new ArrayList<>(List.of("",description.get(1)))); punishment.setStatus("OPEN"); punishment.setMapIndex(0);
+            }
+            case "ARCHIVED" -> {
+                punishment.setArchived(true); punishment.setArchivedOn(LocalDate.now());
+                punishment.setArchivedBy(requiredNotifications.currentStaff()); punishment.setArchivedExplanation(explanation);
+            }
+            case "RESTORED" -> { punishment.setArchived(false); punishment.setArchivedOn(null); punishment.setArchivedBy(null); punishment.setArchivedExplanation(null); }
+            default -> throw new IllegalArgumentException("Unsupported disciplinary action");
+        }
+        requiredNotifications.captureContent(punishment);
+        return punishRepository.save(punishment);
+    }
     @Override
     public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws MessagingException {
+        if(requiredNotifications.isEnabled()) {
+            Punishment previous=requiredNotifications.previousSubmission(studentEmail,infractionName);
+            if(previous!=null) return requiredNotifications.response(previous);
+        }
         List<Punishment> openPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail, infractionName, "OPEN");
 
         // Filter out archived punishments
@@ -45,6 +87,8 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
         Punishment punishmentToClose = activeOpenPunishments.get(0);
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishmentToClose.getStudentEmail());
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(punishmentToClose,
+                studentAnswers != null && !studentAnswers.isEmpty() ? "SUBMITTED" : "COMPLETED", studentAnswers, null));
 
         if (!studentAnswers.isEmpty()) {
             // Add student answers to the infraction description
@@ -92,6 +136,8 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public PunishmentResponse closeByPunishmentId(String punishmentId) throws MessagingException {
+        if (requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(
+                punishRepository.findByPunishmentId(punishmentId), "CLOSED", null, null));
         Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
         if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
 
@@ -135,6 +181,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment rejectLevelThree(String punishmentId) throws MessagingException {
+        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "REJECTED", null, null);
         Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
         if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
 
@@ -187,6 +234,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment archiveRecord(String punishmentId, String userId, String explanation) throws MessagingException {
+        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "ARCHIVED", null, explanation);
         Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
         if (punishment == null) throw new ResourceNotFoundException("Punishment not found");
 
@@ -215,6 +263,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment restoreRecord(String punishmentId) throws MessagingException {
+        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "RESTORED", null, null);
         Punishment punishment = punishRepository.findByPunishmentIdAndArchived(punishmentId, true);
         if (punishment == null) throw new ResourceNotFoundException("Archived punishment not found");
 
