@@ -14,6 +14,8 @@ import com.reps.demogcloud.security.utils.JwtUtils;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -78,8 +80,9 @@ class OAuth2LoginSuccessHandlerTest {
                 .build();
     }
 
-    @Test
-    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeWithoutLinkingGmail() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost:3000/oauth-success", "https://repsdev.vercel.app"})
+    void onAuthenticationSuccess_shouldRedirectAndCreateEmployeeWithoutLinkingGmail(String frontend) throws Exception {
         OAuth2LoginSuccessHandler handler = new OAuth2LoginSuccessHandler(
                 jwtUtils,
                 userAccountService,
@@ -100,9 +103,11 @@ class OAuth2LoginSuccessHandlerTest {
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(null);
         when(customUserDetailsService.loadUserByUsername("teacher@test.com")).thenReturn(userDetails);
         when(jwtUtils.generateToken(userDetails, "GOOGLE")).thenReturn("jwt-token");
-        when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("http://localhost:3000/oauth-success");
+        when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn(frontend);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect_uri", "https://untrusted.example.test");
+        request.addParameter("next", "https://untrusted.example.test");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, authentication);
@@ -114,6 +119,8 @@ class OAuth2LoginSuccessHandlerTest {
         verify(redirectStrategy).sendRedirect(eq(request), eq(response), redirectCaptor.capture());
 
         String redirect = redirectCaptor.getValue();
+        assertTrue(redirect.startsWith(frontend + "?"));
+        assertFalse(redirect.contains("untrusted.example.test"));
         assertTrue(redirect.contains("token=jwt-token"));
         assertTrue(redirect.contains("userName=teacher%40test.com"));
         assertTrue(redirect.contains("schoolName=Test+School"));

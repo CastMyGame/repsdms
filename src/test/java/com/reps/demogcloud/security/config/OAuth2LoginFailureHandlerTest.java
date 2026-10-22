@@ -3,6 +3,8 @@ package com.reps.demogcloud.security.config;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -36,14 +38,16 @@ class OAuth2LoginFailureHandlerTest {
         handler.setRedirectStrategy(redirectStrategy);
     }
 
-    @Test
-    void onAuthenticationFailure_shouldRedirectWithEncodedError_whenRedirectUrlConfigured() throws Exception {
-        when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn("http://localhost:3000/login");
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost:3000/login", "https://repsdev.vercel.app"})
+    void onAuthenticationFailure_shouldRedirectWithEncodedError_whenRedirectUrlConfigured(String frontend) throws Exception {
+        when(env.getProperty("auth.sso.google.redirect-url", "")).thenReturn(frontend);
 
         AuthenticationException exception = new AuthenticationException("No account found for user@test.com") {
         };
 
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("next", "https://untrusted.example.test");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationFailure(request, response, exception);
@@ -52,7 +56,7 @@ class OAuth2LoginFailureHandlerTest {
         verify(redirectStrategy).sendRedirect(eq(request), eq(response), redirectCaptor.capture());
 
         String redirectUrl = redirectCaptor.getValue();
-        assertTrue(redirectUrl.startsWith("http://localhost:3000/login?error="));
+        assertTrue(redirectUrl.startsWith(frontend + "?error="));
         assertTrue(redirectUrl.contains("No+account+found+for+user%40test.com"));
         assertTrue(redirectUrl.endsWith("&errorType=UNAUTHORIZED"));
     }

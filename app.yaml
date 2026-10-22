@@ -6,3 +6,11 @@ automatic_scaling:
 
 env_variables:
   SPRING_PROFILES_ACTIVE: "dev"
+  SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: "https://repsdev31.ue.r.appspot.com/login/oauth2/code/google"
+  REPS_EMAIL_ROUTING_PHASE1_ENABLED: "true"
+  REPS_EMAIL_GMAIL_CONNECTION_ENABLED: "true"
+  REPS_EMAIL_NOTIFICATIONS_ENABLED: "true"
+  # Activate only after the persistent key, OAuth/SMTP and existing queue are reviewed.
+  REPS_EMAIL_NOTIFICATIONS_DISPATCH_ENABLED: "false"
+  REPS_EMAIL_GMAIL_REDIRECT_URI: "https://repsdev.vercel.app/account/gmail/callback"
+  REPS_EMAIL_GMAIL_ENCRYPTION_KEY: '${sm@reps-dev-gmail-encryption-key}'
