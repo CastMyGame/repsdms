@@ -24,6 +24,7 @@ public class UserAdministrationService {
     private final StudentRepository students;
     private final UserContextService context;
     private final WorkflowAccessService access;
+    private final com.reps.demogcloud.security.services.AccountAccessService accounts;
 
     private UserModel staff() {
         var user = users.findByUsername(context.getCurrentStaffEmail());
@@ -110,10 +111,14 @@ public class UserAdministrationService {
                 employees.updateRolesInSchool(employee.getEmployeeId(), employee.getSchool(), user.getRoles());
                 employees.updateArchivedInSchool(employee.getEmployeeId(), employee.getSchool(), false);
             }
+            accounts.revoke(user.getId()); // Re-enabling must never revive an old ticket.
             users.updateEnabledInSchool(user.getId(), user.getSchool(), true);
+            user.setEnabled(true);
+            if(!studentAccount && user.isPasswordSetupRequired()) accounts.createdStaff(user);
         } else {
             // Revoke login first; an archive failure must never keep the account enabled.
             users.updateEnabledInSchool(user.getId(), user.getSchool(), false);
+            accounts.revoke(user.getId());
             if (employee != null) employees.updateArchivedInSchool(employee.getEmployeeId(), employee.getSchool(), true);
         }
     }

@@ -55,6 +55,7 @@ class UserAdministrationSecurityTest {
             UserAccountService.class, AuthService.class, CustomUserDetailsService.class, GlobalExceptionHandler.class})
     static class App { @Bean AuthenticationProvider provider() { return mock(AuthenticationProvider.class); } }
     @Autowired WebApplicationContext context;
+    @MockitoBean com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     @MockitoBean CustomOAuth2UserService oidc;
     @MockitoBean OAuth2LoginSuccessHandler success;
     @MockitoBean OAuth2LoginFailureHandler failure;
@@ -271,18 +272,11 @@ class UserAdministrationSecurityTest {
             mvc.perform(put(path).with(user(ADMIN))).andExpect(status().isForbidden());
         verify(users,never()).save(any());verify(employees,never()).save(any());
     }
-    @Test void passwordResetCannotRestoreSnapshotRolesOrReactivateDeletedAccount() throws Exception {
-        var snapshot=new UserModel();snapshot.setId(TEACHER);snapshot.setUsername(TEACHER);snapshot.setRoles(roles("ADMIN"));
-        var token=new PasswordResetToken(snapshot,"synthetic-token",5);
-        when(resets.findByToken("synthetic-token")).thenReturn(token);
-        when(users.updatePasswordIfEnabled(TEACHER,"synthetic-encoded")).thenReturn(1L);
+    @Test void passwordResetUsesSetupServiceWithoutSavingUserSnapshots() throws Exception {
         mvc.perform(post("/reset-password").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\":\"synthetic-token\",\"newPassword\":\"synthetic\"}")).andExpect(status().isOk());
-        assertEquals(roles("TEACHER"),accounts.get(TEACHER).getRoles());
-        verify(users,never()).save(any());verify(users).updatePasswordIfEnabled(TEACHER,"synthetic-encoded");
-        when(users.updatePasswordIfEnabled(TEACHER,"synthetic-encoded")).thenReturn(0L);
-        mvc.perform(post("/reset-password").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"synthetic-token\",\"newPassword\":\"synthetic\"}")).andExpect(status().isBadRequest());
+        verify(accountAccess).complete(null,"synthetic-token","synthetic");
+        verify(users,never()).save(any());verifyNoInteractions(resets);
     }
     @Test void staleJwtAuthoritiesNeverOverrideCurrentPersistedTeacherRole() throws Exception {
         when(jwt.extractUserName("synthetic")).thenReturn(TEACHER);

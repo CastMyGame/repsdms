@@ -44,7 +44,7 @@ public class StudentMutationService {
 
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(studentRequest.getStudentEmail().toLowerCase());
-        authenticationRequest.setPassword(studentRequest.getStudentEmail().toLowerCase());
+        // Password setup is issued only through authorized school-assisted or private-email flows.
         authenticationRequest.setFirstName(studentRequest.getFirstName());
         authenticationRequest.setLastName(studentRequest.getLastName());
         authenticationRequest.setSchool(studentRequest.getSchool());

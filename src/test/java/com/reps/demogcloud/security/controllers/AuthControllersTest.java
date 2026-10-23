@@ -60,6 +60,7 @@ class AuthControllersTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     @MockitoBean
     private EmailService emailService;
 
@@ -273,113 +274,15 @@ class AuthControllersTest {
                 .andExpect(jsonPath("$.error", is("Token not found in Authorization header")));
     }
 
-    @Test
-    void forgotPassword_shouldReturnBadRequest_whenUserNotFound() throws Exception {
-        ForgotPasswordRequest request = new ForgotPasswordRequest();
-        request.setEmail("missing@test.com");
-
-        when(userRepository.findByUsername("missing@test.com")).thenReturn(null);
-
-        mockMvc.perform(post("/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Account unavailable"));
-
-        verify(passwordResetTokenRepository, never()).save(any());
-        verify(emailService, never()).sendEmail(anyString(), anyString(), anyString(), anyString());
+    @Test void resetRequestIsGenericAndDoesNotRevealAccountExistence() throws Exception {
+        mockMvc.perform(post("/forgot-password").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"student@example.test\"}"))
+                .andExpect(status().isAccepted());
+        verify(accountAccess).requestReset("student@example.test");
     }
-
-    @Test
-    void forgotPassword_shouldSaveTokenAndSendEmail_whenUserExists() throws Exception {
-        ForgotPasswordRequest request = new ForgotPasswordRequest();
-        request.setEmail("teacher@test.com");
-
-        UserModel user = new UserModel();
-        user.setUsername("teacher@test.com");
-
-        when(userRepository.findByUsername("teacher@test.com")).thenReturn(user);
-
-        mockMvc.perform(post("/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Password reset link sent to teacher@test.com"));
-
-        ArgumentCaptor<PasswordResetToken> captor = ArgumentCaptor.forClass(PasswordResetToken.class);
-        verify(passwordResetTokenRepository).save(captor.capture());
-
-        PasswordResetToken savedToken = captor.getValue();
-        assertNotNull(savedToken);
-        assertNotNull(savedToken.getToken());
-        assertEquals(user, savedToken.getUser());
-
-        verify(emailService).sendEmail(
-                eq("teacher@test.com"),
-                eq("Reset Your Password"),
-                contains("https://repsdiscipline.vercel.app/reset-password/"),
-                eq("en")
-        );
-    }
-
-    @Test
-    void resetPassword_shouldReturnBadRequest_whenTokenNotFound() throws Exception {
-        ResetPasswordRequest request = new ResetPasswordRequest();
-        request.setToken("bad-token");
-        request.setNewPassword("newPass123");
-
-        when(passwordResetTokenRepository.findByToken("bad-token")).thenReturn(null);
-
-        mockMvc.perform(post("/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Invalid or expired token"));
-    }
-
-    @Test
-    void resetPassword_shouldReturnBadRequest_whenTokenExpired() throws Exception {
-        ResetPasswordRequest request = new ResetPasswordRequest();
-        request.setToken("expired-token");
-        request.setNewPassword("newPass123");
-
-        PasswordResetToken passwordResetToken = mock(PasswordResetToken.class);
-        when(passwordResetTokenRepository.findByToken("expired-token")).thenReturn(passwordResetToken);
-        when(passwordResetToken.isExpired()).thenReturn(true);
-
-        mockMvc.perform(post("/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Invalid or expired token"));
-    }
-
-    @Test
-    void resetPassword_shouldUpdatePasswordAndDeleteToken_whenTokenValid() throws Exception {
-        ResetPasswordRequest request = new ResetPasswordRequest();
-        request.setToken("good-token");
-        request.setNewPassword("newPass123");
-
-        UserModel user = new UserModel();
-        user.setUsername("teacher@test.com");
-        user.setId("teacher-id");
-
-        PasswordResetToken passwordResetToken = mock(PasswordResetToken.class);
-        when(passwordResetTokenRepository.findByToken("good-token")).thenReturn(passwordResetToken);
-        when(passwordResetToken.isExpired()).thenReturn(false);
-        when(passwordResetToken.getUser()).thenReturn(user);
-        when(passwordEncoder.encode("newPass123")).thenReturn("encoded-new-pass");
-        when(userRepository.updatePasswordIfEnabled("teacher-id", "encoded-new-pass")).thenReturn(1L);
-
-        mockMvc.perform(post("/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Password reset successfully"));
-
-        verify(userRepository).updatePasswordIfEnabled("teacher-id", "encoded-new-pass");
-        verify(userRepository, never()).save(any());
-        verify(passwordResetTokenRepository).delete(passwordResetToken);
+    @Test void resetDelegatesToSingleUseService() throws Exception {
+        mockMvc.perform(post("/reset-password").contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"synthetic-token\",\"newPassword\":\"synthetic-password\"}"))
+                .andExpect(status().isOk());
+        verify(accountAccess).complete(null,"synthetic-token","synthetic-password");
     }
 
     @Test

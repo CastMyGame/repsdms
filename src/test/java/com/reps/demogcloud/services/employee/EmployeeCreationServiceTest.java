@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class EmployeeCreationServiceTest {
 
+    @Mock com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     @Mock
     private EmployeeRepository employeeRepository;
 
@@ -69,7 +70,7 @@ class EmployeeCreationServiceTest {
         AuthenticationRequest capturedAuthRequest = authCaptor.getValue();
         assertEquals("johndoe@school.com", capturedAuthRequest.getUsername());
         assertNotEquals("JohnDoe", capturedAuthRequest.getPassword());
-        assertDoesNotThrow(() -> java.util.UUID.fromString(capturedAuthRequest.getPassword()));
+        assertNull(capturedAuthRequest.getPassword()); // AuthService owns secure credential generation.
         assertEquals("John", capturedAuthRequest.getFirstName());
         assertEquals("Doe", capturedAuthRequest.getLastName());
         assertEquals("Test School", capturedAuthRequest.getSchool());
