@@ -232,18 +232,18 @@ class AuthControllersTest {
     @Test
     void getTokenStatus_shouldReturnBadRequest_whenHeaderMissing() throws Exception {
         mockMvc.perform(get("/v1/token-status"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Token not found in Authorization header"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Authentication required"));
     }
 
     @Test
     void getTokenStatus_shouldReturnBadRequest_whenTokenParsingFails() throws Exception {
-        when(jwtUtils.getTokenStatus("bad-token")).thenThrow(new RuntimeException("bad token"));
+        when(jwtUtils.getTokenStatus("bad-token")).thenThrow(new io.jsonwebtoken.JwtException("bad token"));
 
         mockMvc.perform(get("/v1/token-status")
                         .header("Authorization", "Bearer bad-token"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Invalid token or error parsing token"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Invalid or expired token"));
     }
 
     @Test
@@ -259,19 +259,19 @@ class AuthControllersTest {
 
     @Test
     void renewToken_shouldReturnBadRequest_whenRenewFails() throws Exception {
-        when(jwtUtils.renewTokenWithBlacklist("old-token")).thenThrow(new RuntimeException("renew failed"));
+        when(jwtUtils.renewTokenWithBlacklist("old-token")).thenThrow(new io.jsonwebtoken.JwtException("renew failed"));
 
         mockMvc.perform(post("/v1/renew-token")
                         .header("Authorization", "Bearer old-token"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error", is("Token renewal failed")));
     }
 
     @Test
     void renewToken_shouldReturnBadRequest_whenHeaderMissing() throws Exception {
         mockMvc.perform(post("/v1/renew-token"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error", is("Token not found in Authorization header")));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error", is("Authentication required")));
     }
 
     @Test void resetRequestIsGenericAndDoesNotRevealAccountExistence() throws Exception {

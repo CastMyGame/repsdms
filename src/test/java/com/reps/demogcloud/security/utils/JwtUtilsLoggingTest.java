@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JwtUtilsLoggingTest {
     @Test
     void blacklistChecksDoNotPrintBearerTokens() {
-        JwtUtils jwt = new JwtUtils();
+        JwtUtils jwt = com.reps.demogcloud.security.utils.JwtTestSupport.jwt();
         String token = jwt.generateToken(User.withUsername("synthetic@example.test")
                 .password("unused").roles("TEACHER").build());
         PrintStream previous = System.out;

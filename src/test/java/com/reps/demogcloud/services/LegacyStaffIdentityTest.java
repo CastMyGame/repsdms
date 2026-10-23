@@ -110,7 +110,7 @@ class LegacyStaffIdentityTest {
     @ParameterizedTest @ValueSource(strings = {"PASSWORD", "GOOGLE"})
     void legacyTeacherReachesAtomicCaptureAndCorrectMockedTransport(String loginMethod) throws Exception {
         var details = new CustomUserDetailsService(users);
-        var jwt = new JwtUtils();
+        var jwt = com.reps.demogcloud.security.utils.JwtTestSupport.jwt();
         var request = new MockHttpServletRequest("POST", "/punish/v1/startPunish/formList");
         request.addHeader("Authorization", "Bearer " + jwt.generateToken(details.loadUserByUsername(EMAIL), loginMethod));
         request.addHeader("X-REPS-Action-Id", UUID.randomUUID().toString());
