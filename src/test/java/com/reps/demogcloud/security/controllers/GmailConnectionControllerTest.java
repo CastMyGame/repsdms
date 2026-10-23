@@ -33,7 +33,7 @@ class GmailConnectionControllerTest {
     @Mock CustomUserDetailsService customUserDetailsService;
     @Mock UserRepository userRepository;
     @Mock UserAccountService userAccountService;
-    @Spy JwtUtils jwtUtils = new JwtUtils();
+    @Spy JwtUtils jwtUtils = com.reps.demogcloud.security.utils.JwtTestSupport.jwt();
     @InjectMocks AuthControllers controller;
     private final UserDetails details=User.withUsername("staff@example.test").password("unused").roles("TEACHER").build();
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }

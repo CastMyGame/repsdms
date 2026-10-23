@@ -36,6 +36,10 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, failure) -> {
+                    response.setStatus(401);
+                    response.getWriter().write("Authentication required");
+                }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/gmail/**", "/register").denyAll()
                         .requestMatchers(

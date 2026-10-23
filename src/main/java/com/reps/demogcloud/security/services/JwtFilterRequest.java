@@ -52,17 +52,12 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         String jwtToken = authorizationHeader.substring(7);
 
         try {
-            if (jwtUtils.isTokenBlacklisted(jwtToken)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Your session has expired. Please login again to continue");
-                return;
-            }
-
             String username = jwtUtils.extractUserName(jwtToken);
             UserDetails currentUserDetails = customUserDetailsService.loadUserByUsername(username);
 
             // An explicit bearer identity takes precedence over a remembered Google-login session.
             if (!currentUserDetails.isAccountNonLocked() || !jwtUtils.validateToken(jwtToken, currentUserDetails)) {
+                SecurityContextHolder.clearContext();
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid JWT token");
                 return;
@@ -72,12 +67,19 @@ public class JwtFilterRequest extends OncePerRequestFilter {
             authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
-            filterChain.doFilter(request, response);
-
-        } catch (Exception e) {
+        } catch (org.springframework.dao.DataAccessException unavailable) {
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.getWriter().write("Authentication temporarily unavailable");
+            return;
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException | org.springframework.security.core.AuthenticationException invalid) {
+            SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired JWT token");
+            return;
         }
+        // Authorization/controller failures must retain their own status, not become expired sessions.
+        filterChain.doFilter(request, response);
     }
 
     private boolean isPublicPath(String path) {

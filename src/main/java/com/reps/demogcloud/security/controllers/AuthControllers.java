@@ -235,12 +235,12 @@ public class AuthControllers {
                 response.put("isExpired", tokenStatus.isExpired());
                 response.put("timeUntilExpiration", tokenStatus.getTimeUntilExpiration());
 
-                return ResponseEntity.ok(response);
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().body("Invalid token or error parsing token");
+                return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(response);
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+                return ResponseEntity.status(401).body("Invalid or expired token");
             }
         } else {
-            return ResponseEntity.badRequest().body("Token not found in Authorization header");
+            return ResponseEntity.status(401).body("Authentication required");
         }
     }
 
@@ -258,13 +258,16 @@ public class AuthControllers {
                 response.put("newToken", newToken);
 
                 return ResponseEntity.ok()
+                        .cacheControl(org.springframework.http.CacheControl.noStore())
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(response);
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Token renewal failed"));
+            } catch (org.springframework.dao.DataAccessException unavailable) {
+                return ResponseEntity.status(503).body(Collections.singletonMap("error", "Authentication temporarily unavailable"));
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException invalid) {
+                return ResponseEntity.status(401).body(Collections.singletonMap("error", "Token renewal failed"));
             }
         } else {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Token not found in Authorization header"));
+            return ResponseEntity.status(401).body(Collections.singletonMap("error", "Authentication required"));
         }
     }
 
