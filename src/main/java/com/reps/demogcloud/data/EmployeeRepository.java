@@ -10,6 +10,13 @@ import java.util.List;
 
 @Repository
 public interface EmployeeRepository extends MongoRepository<Employee, String> {
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0}")
+    @org.springframework.data.mongodb.repository.Update("{'$set': {'currency': ?1}}")
+    void setCurrency(String id, Integer currency);
+
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0, 'currency': {'$gte': ?1}}")
+    @org.springframework.data.mongodb.repository.Update("{'$inc': {'currency': ?2}}")
+    long debitCurrency(String id, int minimum, int delta);
     //Select everything from students where last name is equal to our first argument
     List<Employee> findByLastName(String lastName);
     Employee findByEmailIgnoreCase(String email);

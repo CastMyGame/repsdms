@@ -125,7 +125,7 @@ class DtoUtilsTest {
 
         List<TeacherDTO> punishments = List.of(dto1, dto2, dto3, dto4, dto5);
 
-        when(employeeRepository.save(any(Employee.class))).thenReturn(teacher);
+
 
         dtoUtils.updateWeeklyPunishmentsForTeacherClasses(teacher, punishments);
 
@@ -133,7 +133,7 @@ class DtoUtilsTest {
         assertEquals(1, secondPeriod.getPunishmentsThisWeek());
         assertEquals(0, thirdPeriod.getPunishmentsThisWeek());
 
-        verify(employeeRepository, times(1)).save(teacher);
+        verify(employeeRepository, never()).save(any());
     }
 
     @Test
@@ -151,14 +151,14 @@ class DtoUtilsTest {
         rosters.add(secondPeriod);
         teacher.setClasses(rosters);
 
-        when(employeeRepository.save(any(Employee.class))).thenReturn(teacher);
+
 
         dtoUtils.updateWeeklyPunishmentsForTeacherClasses(teacher, null);
 
         assertEquals(0, firstPeriod.getPunishmentsThisWeek());
         assertEquals(0, secondPeriod.getPunishmentsThisWeek());
 
-        verify(employeeRepository, times(1)).save(teacher);
+        verify(employeeRepository, never()).save(any());
     }
 
     @Test
@@ -202,16 +202,16 @@ class DtoUtilsTest {
         punishments.add(validDto);
         punishments.add(nullClassPeriodDto);
 
-        when(employeeRepository.save(any(Employee.class))).thenReturn(teacher);
+
 
         dtoUtils.updateWeeklyPunishmentsForTeacherClasses(teacher, punishments);
 
         assertEquals(1, firstPeriod.getPunishmentsThisWeek());
-        verify(employeeRepository, times(1)).save(teacher);
+        verify(employeeRepository, never()).save(any());
     }
 
     @Test
-    void updateWeeklyPunishmentsForTeacherClasses_shouldSaveUpdatedTeacherObject() {
+    void updateWeeklyPunishmentsForTeacherClasses_shouldOnlyUpdateResponseProjection() {
         Employee teacher = new Employee();
         List<Employee.ClassRoster> rosters = new ArrayList<>();
 
@@ -224,16 +224,11 @@ class DtoUtilsTest {
         dto.setClassPeriod("1st");
         dto.setTimeCreated(LocalDate.now());
 
-        when(employeeRepository.save(any(Employee.class))).thenReturn(teacher);
+
 
         dtoUtils.updateWeeklyPunishmentsForTeacherClasses(teacher, List.of(dto));
 
-        ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(captor.capture());
-
-        Employee savedTeacher = captor.getValue();
-        assertNotNull(savedTeacher);
-        assertNotNull(savedTeacher.getClasses());
-        assertEquals(1, savedTeacher.getClasses().get(0).getPunishmentsThisWeek());
+        verifyNoInteractions(employeeRepository);
+        assertEquals(1, teacher.getClasses().get(0).getPunishmentsThisWeek());
     }
 }

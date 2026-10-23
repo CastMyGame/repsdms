@@ -63,6 +63,6 @@ public class DtoUtils {
             classRoster.setPunishmentsThisWeek(writeupCount);
         }
 
-        employeeRepository.save(teacher);
+        // This is a response projection. A dashboard GET must never persist its stale employee snapshot.
     }
 }

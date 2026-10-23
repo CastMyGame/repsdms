@@ -1,289 +1,96 @@
 package com.reps.demogcloud.services.employee;
 
 import com.reps.demogcloud.data.EmployeeRepository;
-import com.reps.demogcloud.exceptions.ResourceNotFoundException;
-import com.reps.demogcloud.models.employee.ClassRequest;
-import com.reps.demogcloud.models.employee.Employee;
-import org.junit.jupiter.api.Test;
+import com.reps.demogcloud.models.employee.*;
+import com.reps.demogcloud.utils.DtoUtils;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import org.springframework.data.mongodb.core.*;
+import org.springframework.data.mongodb.core.query.*;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmployeeClassServiceTest {
-
-    @Mock
-    private EmployeeRepository employeeRepository;
-
-    @InjectMocks
-    private EmployeeClassService employeeClassService;
-
-    @Test
-    void addOrUpdateClassToEmployee_shouldInitializeClassesAndAddNewClass_whenTeacherClassesAreNull() {
-        String teacherEmail = "teacher@school.com";
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(null);
-
-        Employee.ClassRoster newRoster = new Employee.ClassRoster();
-        newRoster.setClassName("Math");
-        newRoster.setClassPeriod("1");
-        newRoster.setClassRoster(List.of("student1@school.com", "student2@school.com"));
-        newRoster.setPunishmentsThisWeek(2);
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(newRoster);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-        when(employeeRepository.save(teacher)).thenReturn(teacher);
-
-        Employee result = employeeClassService.addOrUpdateClassToEmployee(teacherEmail, request);
-
-        assertNotNull(result);
-        assertNotNull(result.getClasses());
-        assertEquals(1, result.getClasses().size());
-        assertEquals("Math", result.getClasses().get(0).getClassName());
-        assertEquals("1", result.getClasses().get(0).getClassPeriod());
-        assertEquals(2, result.getClasses().get(0).getPunishmentsThisWeek());
-        assertEquals(2, result.getClasses().get(0).getClassRoster().size());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, times(1)).save(teacher);
-        verifyNoMoreInteractions(employeeRepository);
+    @Mock EmployeeRepository employees;
+    @Mock MongoTemplate mongo;
+    @InjectMocks EmployeeClassService service;
+    Employee teacher;
+    Employee.ClassRoster roster(String period, String... students) {
+        var c = new Employee.ClassRoster(); c.setClassName("Math"); c.setClassPeriod(period); c.setClassRoster(List.of(students)); return c;
     }
-
-    @Test
-    void addOrUpdateClassToEmployee_shouldAddNewClass_whenTeacherExistsAndClassDoesNotExist() {
-        String teacherEmail = "teacher@school.com";
-
-        Employee.ClassRoster existingRoster = new Employee.ClassRoster();
-        existingRoster.setClassName("Science");
-        existingRoster.setClassPeriod("2");
-        existingRoster.setClassRoster(new ArrayList<>());
-        existingRoster.setPunishmentsThisWeek(0);
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(new ArrayList<>(List.of(existingRoster)));
-
-        Employee.ClassRoster newRoster = new Employee.ClassRoster();
-        newRoster.setClassName("Math");
-        newRoster.setClassPeriod("1");
-        newRoster.setClassRoster(List.of("student1@school.com"));
-        newRoster.setPunishmentsThisWeek(1);
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(newRoster);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-        when(employeeRepository.save(teacher)).thenReturn(teacher);
-
-        Employee result = employeeClassService.addOrUpdateClassToEmployee(teacherEmail, request);
-
-        assertNotNull(result);
-        assertEquals(2, result.getClasses().size());
-        assertEquals("Science", result.getClasses().get(0).getClassName());
-        assertEquals("Math", result.getClasses().get(1).getClassName());
-        assertEquals("1", result.getClasses().get(1).getClassPeriod());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, times(1)).save(teacher);
-        verifyNoMoreInteractions(employeeRepository);
+    ClassRequest request(String period, boolean create) {
+        var r = new ClassRequest(roster(period, "new@example.test")); r.setExpectedRosterRevision(0L); r.setCreateOnly(create); return r;
     }
-
-    @Test
-    void addOrUpdateClassToEmployee_shouldUpdateExistingClass_whenClassAlreadyExists() {
-        String teacherEmail = "teacher@school.com";
-
-        Employee.ClassRoster existingRoster = new Employee.ClassRoster();
-        existingRoster.setClassName("Math");
-        existingRoster.setClassPeriod("1");
-        existingRoster.setClassRoster(new ArrayList<>(List.of("oldStudent@school.com")));
-        existingRoster.setPunishmentsThisWeek(0);
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(new ArrayList<>(List.of(existingRoster)));
-
-        Employee.ClassRoster updatedRoster = new Employee.ClassRoster();
-        updatedRoster.setClassName("Math");
-        updatedRoster.setClassPeriod("9");
-        updatedRoster.setClassRoster(List.of("newStudent1@school.com", "newStudent2@school.com"));
-        updatedRoster.setPunishmentsThisWeek(4);
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(updatedRoster);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-        when(employeeRepository.save(teacher)).thenReturn(teacher);
-
-        Employee result = employeeClassService.addOrUpdateClassToEmployee(teacherEmail, request);
-
-        assertNotNull(result);
-        assertEquals(1, result.getClasses().size());
-
-        Employee.ClassRoster savedRoster = result.getClasses().get(0);
-        assertEquals("Math", savedRoster.getClassName());
-        assertEquals("1", savedRoster.getClassPeriod());
-        assertEquals(4, savedRoster.getPunishmentsThisWeek());
-        assertEquals(2, savedRoster.getClassRoster().size());
-        assertEquals("newStudent1@school.com", savedRoster.getClassRoster().get(0));
-        assertEquals("newStudent2@school.com", savedRoster.getClassRoster().get(1));
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, times(1)).save(teacher);
-        verifyNoMoreInteractions(employeeRepository);
+    @BeforeEach void setup() {
+        teacher = new Employee(); teacher.setEmployeeId("teacher"); teacher.setEmail("teacher@example.test"); teacher.setSchool("Testing");
+        teacher.setClasses(new ArrayList<>(List.of(roster("period1", "old@example.test"))));
+        lenient().when(employees.findByEmailIgnoreCase(teacher.getEmail())).thenReturn(teacher);
     }
-
-    @Test
-    void addOrUpdateClassToEmployee_shouldThrowResourceNotFoundException_whenTeacherDoesNotExist() {
-        String teacherEmail = "missing@school.com";
-
-        Employee.ClassRoster roster = new Employee.ClassRoster();
-        roster.setClassName("Math");
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(roster);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(null);
-
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> employeeClassService.addOrUpdateClassToEmployee(teacherEmail, request)
-        );
-
-        assertEquals("Teacher with email missing@school.com not found", exception.getMessage());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verifyNoMoreInteractions(employeeRepository);
+    void successfulWrite() { when(mongo.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(Employee.class))).thenReturn(teacher); }
+    @SuppressWarnings("unchecked") List<Employee.ClassRoster> writtenClasses() {
+        var update = ArgumentCaptor.forClass(Update.class);
+        verify(mongo).findAndModify(any(Query.class), update.capture(), any(FindAndModifyOptions.class), eq(Employee.class));
+        assertEquals(Set.of("classes"), ((org.bson.Document) update.getValue().getUpdateObject().get("$set")).keySet());
+        return (List<Employee.ClassRoster>) ((org.bson.Document) update.getValue().getUpdateObject().get("$set")).get("classes");
     }
-
-    @Test
-    void removeClassFromEmployee_shouldRemoveClassAndSave_whenClassExists() throws ResourceNotFoundException {
-        String teacherEmail = "teacher@school.com";
-
-        Employee.ClassRoster math = new Employee.ClassRoster();
-        math.setClassName("Math");
-        math.setClassPeriod("1");
-
-        Employee.ClassRoster science = new Employee.ClassRoster();
-        science.setClassName("Science");
-        science.setClassPeriod("2");
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(new ArrayList<>(List.of(math, science)));
-
-        Employee.ClassRoster classToDelete = new Employee.ClassRoster();
-        classToDelete.setClassName("Math");
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(classToDelete);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-        when(employeeRepository.save(teacher)).thenReturn(teacher);
-
-        Employee result = employeeClassService.removeClassFromEmployee(teacherEmail, request);
-
-        assertNotNull(result);
-        assertEquals(1, result.getClasses().size());
-        assertEquals("Science", result.getClasses().get(0).getClassName());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, times(1)).save(teacher);
-        verifyNoMoreInteractions(employeeRepository);
+    @Test void sameNameDifferentPeriodCreatesSeparateClass() {
+        successfulWrite(); service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period2", true));
+        assertEquals(2, writtenClasses().size()); verify(employees, never()).save(any());
     }
-
-    @Test
-    void removeClassFromEmployee_shouldThrowResourceNotFoundException_whenTeacherHasNoClasses() {
-        String teacherEmail = "teacher@school.com";
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(null);
-
-        Employee.ClassRoster classToDelete = new Employee.ClassRoster();
-        classToDelete.setClassName("Math");
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(classToDelete);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> employeeClassService.removeClassFromEmployee(teacherEmail, request)
-        );
-
-        assertEquals("Teacher teacher@school.com has no classes to remove.", exception.getMessage());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verifyNoMoreInteractions(employeeRepository);
+    @Test void editOnlyReplacesRequestedPeriodAndNormalizesDuplicates() {
+        teacher.getClasses().add(roster("period2", "second@example.test"));
+        var r = request("period1", false); r.getClassToUpdate().setClassRoster(List.of(" NEW@example.test ", "new@example.test"));
+        successfulWrite(); service.addOrUpdateClassToEmployee(teacher.getEmail(), r);
+        var saved = writtenClasses(); assertEquals(List.of("new@example.test"), saved.get(0).getClassRoster());
+        assertEquals(List.of("second@example.test"), saved.get(1).getClassRoster());
     }
-
-    @Test
-    void removeClassFromEmployee_shouldThrowResourceNotFoundException_whenClassDoesNotExist() {
-        String teacherEmail = "teacher@school.com";
-
-        Employee.ClassRoster science = new Employee.ClassRoster();
-        science.setClassName("Science");
-        science.setClassPeriod("2");
-
-        Employee teacher = new Employee();
-        teacher.setEmail(teacherEmail);
-        teacher.setClasses(new ArrayList<>(List.of(science)));
-
-        Employee.ClassRoster classToDelete = new Employee.ClassRoster();
-        classToDelete.setClassName("Math");
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(classToDelete);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(teacher);
-
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> employeeClassService.removeClassFromEmployee(teacherEmail, request)
-        );
-
-        assertEquals("Class with name Math not found for teacher teacher@school.com", exception.getMessage());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verifyNoMoreInteractions(employeeRepository);
+    @Test void removalKeepsOtherPeriodAndStudentAccounts() {
+        teacher.getClasses().add(roster("period2")); successfulWrite(); service.removeClassFromEmployee(teacher.getEmail(), request("period1", false));
+        assertEquals("period2", writtenClasses().get(0).getClassPeriod()); verifyNoMoreInteractions(mongo);
     }
-
-    @Test
-    void removeClassFromEmployee_shouldThrowResourceNotFoundException_whenTeacherDoesNotExist() {
-        String teacherEmail = "missing@school.com";
-
-        Employee.ClassRoster classToDelete = new Employee.ClassRoster();
-        classToDelete.setClassName("Math");
-
-        ClassRequest request = new ClassRequest();
-        request.setClassToUpdate(classToDelete);
-
-        when(employeeRepository.findByEmailIgnoreCase(teacherEmail)).thenReturn(null);
-
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> employeeClassService.removeClassFromEmployee(teacherEmail, request)
-        );
-
-        assertEquals("Teacher with email missing@school.com not found.", exception.getMessage());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase(teacherEmail);
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verifyNoMoreInteractions(employeeRepository);
+    @Test void emptyClassIsSupported() {
+        var r = request("period1", false); r.getClassToUpdate().setClassRoster(List.of()); successfulWrite();
+        service.addOrUpdateClassToEmployee(teacher.getEmail(), r); assertTrue(writtenClasses().get(0).getClassRoster().isEmpty());
+    }
+    @Test void staleOrMissingRevisionReturns409WithoutWriting() {
+        var r = request("period1", false); r.setExpectedRosterRevision(null);
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.addOrUpdateClassToEmployee(teacher.getEmail(), r)).getStatusCode().value());
+        r.setExpectedRosterRevision(2L); assertThrows(ResponseStatusException.class, () -> service.addOrUpdateClassToEmployee(teacher.getEmail(), r)); verifyNoInteractions(mongo);
+    }
+    @Test void duplicateLegacyIdentityIsRejectedRatherThanMerged() {
+        teacher.getClasses().add(roster(" PERIOD1 "));
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period1", false))).getStatusCode().value());
+        verifyNoInteractions(mongo);
+    }
+    @Test void duplicateCreateDoesNotOverwriteRoster() {
+        assertThrows(ResponseStatusException.class, () -> service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period1", true))); verifyNoInteractions(mongo);
+    }
+    @Test void legacyMissingRevisionUsesGuardedZeroAndOnlyRosterFields() {
+        successfulWrite(); service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period1", false));
+        var query = ArgumentCaptor.forClass(Query.class); verify(mongo).findAndModify(query.capture(), any(Update.class), any(FindAndModifyOptions.class), eq(Employee.class));
+        String guard = query.getValue().getQueryObject().toJson(); assertTrue(guard.contains("$exists")); assertTrue(guard.contains("rosterRevision")); assertTrue(guard.contains("Testing"));
+    }
+    @Test void simultaneousStaleSnapshotsHaveExactlyOneWinner() throws Exception {
+        var barrier = new CyclicBarrier(2); var writes = new AtomicInteger();
+        when(employees.findByEmailIgnoreCase(teacher.getEmail())).thenAnswer(i -> { barrier.await(5, TimeUnit.SECONDS); return teacher; });
+        when(mongo.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(Employee.class)))
+            .thenAnswer(i -> writes.getAndIncrement() == 0 ? teacher : null);
+        var pool = Executors.newFixedThreadPool(2);
+        Callable<Integer> edit = () -> { try { service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period1", false)); return 200; } catch(ResponseStatusException e) { return e.getStatusCode().value(); } };
+        try { var a = pool.submit(edit); var b = pool.submit(edit); assertEquals(Set.of(200,409), Set.of(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS))); }
+        finally { pool.shutdownNow(); }
+        verify(employees, never()).save(any());
+    }
+    @Test void staleDashboardReadCannotOverwriteConcurrentRosterWrite() {
+        successfulWrite(); service.addOrUpdateClassToEmployee(teacher.getEmail(), request("period1", false));
+        new DtoUtils(employees).updateWeeklyPunishmentsForTeacherClasses(teacher, List.of());
+        verify(employees, never()).save(any()); verify(mongo,times(1)).findAndModify(any(),any(),any(FindAndModifyOptions.class),eq(Employee.class));
     }
 }

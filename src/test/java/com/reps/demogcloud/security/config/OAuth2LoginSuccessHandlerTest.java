@@ -158,7 +158,10 @@ class OAuth2LoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(new MockHttpServletRequest(), response, authentication);
 
-        verify(studentRepository).save(any(Student.class));
+        var saved = org.mockito.ArgumentCaptor.forClass(Student.class);
+        verify(studentRepository).insert(saved.capture());
+        assertEquals(com.reps.demogcloud.security.services.AuthService.studentProvisioningId("student@test.com"), saved.getValue().getStudentIdNumber());
+        assertEquals(0, saved.getValue().getCurrency());
         verifyNoInteractions(tokenStore);
 
         assertEquals(200, response.getStatus());

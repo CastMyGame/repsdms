@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface UserRepository extends MongoRepository<UserModel,String> {
     List<UserModel> findBySchool(String school);
 UserModel findByUsername(String username);
+UserModel findByUsernameIgnoreCase(String username);
 Boolean existsByUsername(String username);
 
     @org.springframework.data.mongodb.repository.Query("{'_id': ?0, '$or': [{'school': ?1}, {'school': null, 'schoolName': ?1}]}")

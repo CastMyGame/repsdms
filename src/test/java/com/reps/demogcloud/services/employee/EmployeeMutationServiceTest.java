@@ -166,8 +166,8 @@ class EmployeeMutationServiceTest {
         employee2.setCurrency(12);
 
         when(employeeRepository.findBySchool("Test School")).thenReturn(List.of(employee1, employee2));
-        when(employeeRepository.save(employee1)).thenReturn(employee1);
-        when(employeeRepository.save(employee2)).thenReturn(employee2);
+        employee1.setEmployeeId("one");
+        employee2.setEmployeeId("two");
 
         List<Employee> result = employeeMutationService.editSchool("Test School");
 
@@ -180,8 +180,8 @@ class EmployeeMutationServiceTest {
         assertEquals(5, employee2.getCurrency());
 
         verify(employeeRepository, times(1)).findBySchool("Test School");
-        verify(employeeRepository, times(1)).save(employee1);
-        verify(employeeRepository, times(1)).save(employee2);
+        verify(employeeRepository).setCurrency("one",5);
+        verify(employeeRepository).setCurrency("two",5);
         verifyNoMoreInteractions(employeeRepository);
         verifyNoInteractions(studentRepository);
     }
@@ -218,17 +218,17 @@ class EmployeeMutationServiceTest {
 
         when(employeeRepository.findByEmailIgnoreCase("teacher@school.com")).thenReturn(teacher);
         when(studentRepository.findByStudentEmailIgnoreCase("student@school.com")).thenReturn(student);
-        when(employeeRepository.save(teacher)).thenReturn(teacher);
+        when(employeeRepository.debitCurrency(any(),anyInt(),anyInt())).thenReturn(1L);
         when(studentRepository.save(student)).thenReturn(student);
 
         assertDoesNotThrow(() -> employeeMutationService.transferCurrency(request));
 
-        assertEquals(15, teacher.getCurrency());
+        assertEquals(20, teacher.getCurrency());
         assertEquals(12, student.getCurrency());
 
         verify(employeeRepository, times(1)).findByEmailIgnoreCase("teacher@school.com");
         verify(studentRepository, times(1)).findByStudentEmailIgnoreCase("student@school.com");
-        verify(employeeRepository, times(1)).save(teacher);
+        verify(employeeRepository).debitCurrency(eq(teacher.getEmployeeId()),anyInt(),anyInt());
         verify(studentRepository, times(1)).save(student);
         verifyNoMoreInteractions(employeeRepository, studentRepository);
     }

@@ -48,7 +48,7 @@ public class EmployeeMutationService {
         List<Employee> updated = new ArrayList<>();
         for (Employee employee : employees) {
             employee.setCurrency(5);
-            employeeRepository.save(employee);
+            employeeRepository.setCurrency(employee.getEmployeeId(), 5);
             updated.add(employee);
         }
 
@@ -61,8 +61,9 @@ public class EmployeeMutationService {
         if (teacher.getCurrency() < request.getCurrencyTransferred()) {
             throw new ResourceNotFoundException("You do not have enough currency to give");
         }
-        teacher.setCurrency(teacher.getCurrency() - request.getCurrencyTransferred());
-        employeeRepository.save(teacher);
+        if (request.getCurrencyTransferred() < 0 || employeeRepository.debitCurrency(teacher.getEmployeeId(),
+                request.getCurrencyTransferred(), -request.getCurrencyTransferred()) != 1)
+            throw new IllegalArgumentException("Currency changed; reload before retrying");
         student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
         studentRepository.save(student);
     }

@@ -55,21 +55,28 @@ public class UserAccountService {
             String email = student.getStudentEmail() == null ? null : student.getStudentEmail().trim().toLowerCase();
             if (email == null || email.isBlank()) continue;
 
-            UserModel userExists = userRepository.findByUsername(email);
+            UserModel userExists = userRepository.findByUsernameIgnoreCase(email);
             if (userExists == null) {
                 UserModel newUser = new UserModel();
                 String password = AccountAccessService.unusablePassword();
                 newUser.setPasswordSetupRequired(true);
 
                 newUser.setUsername(email);
+                newUser.setId(AuthService.studentProvisioningId(email));
                 newUser.setSchool(school);
                 newUser.setFirstName(student.getFirstName());
                 newUser.setLastName(student.getLastName());
                 newUser.setRoles(studentRoles);
                 newUser.setPassword(passwordEncoder.encode(password));
 
-                userRepository.save(newUser);
-                createdUsers.add(newUser);
+                try { createdUsers.add(userRepository.insert(newUser)); }
+                catch (org.springframework.dao.DuplicateKeyException concurrentProvisioning) {
+                    // Another request owns this deterministic identity. Never save over it.
+                    var saved = userRepository.findByUsernameIgnoreCase(email);
+                    if (saved == null || !school.equalsIgnoreCase(saved.getSchool()))
+                        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                                "Student account provisioning requires administrator review");
+                }
             }
         }
         return createdUsers;

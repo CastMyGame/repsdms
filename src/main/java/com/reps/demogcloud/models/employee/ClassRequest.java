@@ -14,4 +14,10 @@ import java.util.List;
 @NoArgsConstructor
 public class ClassRequest {
     private Employee.ClassRoster classToUpdate;
+    private Long expectedRosterRevision;
+    private boolean createOnly;
+
+    public ClassRequest(Employee.ClassRoster classToUpdate) {
+        this.classToUpdate = classToUpdate;
+    }
 }

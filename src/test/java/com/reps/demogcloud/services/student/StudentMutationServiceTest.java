@@ -39,122 +39,46 @@ class StudentMutationServiceTest {
     @InjectMocks
     private StudentMutationService studentMutationService;
 
-    @Test
-    void createNewStudent_shouldThrow_whenStudentEmailAlreadyExists() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-
-        when(studentRepository.existsByStudentEmail("student@test.com")).thenReturn(true);
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> studentMutationService.createNewStudent(student)
-        );
-
-        assertEquals("A student with this email already exists.", exception.getMessage());
-
-        verify(studentRepository, times(1)).existsByStudentEmail("student@test.com");
-        verify(userRepository, never()).existsByUsername(anyString());
-        verify(authService, never()).createEmployeeUser(any(AuthenticationRequest.class));
-        verify(studentRepository, never()).save(any(Student.class));
-        verifyNoMoreInteractions(studentRepository, userRepository, authService, studentQueryService);
+    Student input() {
+        var s = new Student(); s.setStudentEmail("Student@example.test"); s.setFirstName("Synthetic"); s.setLastName("Child"); s.setSchool("Testing"); return s;
     }
-
-    @Test
-    void createNewStudent_shouldThrow_whenUserEmailAlreadyExists() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-
-        when(studentRepository.existsByStudentEmail("student@test.com")).thenReturn(false);
-        when(userRepository.existsByUsername("student@test.com")).thenReturn(true);
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> studentMutationService.createNewStudent(student)
-        );
-
-        assertEquals("A user with this email has already been registered.", exception.getMessage());
-
-        verify(studentRepository, times(1)).existsByStudentEmail("student@test.com");
-        verify(userRepository, times(1)).existsByUsername("student@test.com");
-        verify(authService, never()).createEmployeeUser(any(AuthenticationRequest.class));
-        verify(studentRepository, never()).save(any(Student.class));
-        verifyNoMoreInteractions(studentRepository, userRepository, authService, studentQueryService);
+    @Test void creationUsesInsertAndCannotInjectIdentifiersOrBalances() {
+        var s = input(); s.setStudentIdNumber("another-student"); s.setCurrency(1000); s.setArchived(true);
+        when(studentRepository.insert(any(Student.class))).thenAnswer(i -> i.getArgument(0));
+        var result = studentMutationService.createNewStudent(s).getStudent();
+        assertEquals(AuthService.studentProvisioningId(s.getStudentEmail()), result.getStudentIdNumber());
+        assertEquals("student@example.test",result.getStudentEmail()); assertFalse(result.isArchived()); assertEquals(0,result.getCurrency());
+        verify(authService).provisionStudent(any()); verify(studentRepository,never()).save(any());
     }
-
-    @Test
-    void createNewStudent_shouldCreateStudentAndReturnResponse_whenValid() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-        student.setFirstName("John");
-        student.setLastName("Doe");
-        student.setSchool("Burke High");
-
-        Student savedStudent = new Student();
-        savedStudent.setStudentEmail("student@test.com");
-        savedStudent.setFirstName("John");
-        savedStudent.setLastName("Doe");
-        savedStudent.setSchool("Burke High");
-        savedStudent.setPoints(0);
-
-        when(studentRepository.existsByStudentEmail("student@test.com")).thenReturn(false);
-        when(userRepository.existsByUsername("student@test.com")).thenReturn(false);
-        when(studentRepository.save(student)).thenReturn(savedStudent);
-
-        StudentResponse result = studentMutationService.createNewStudent(student);
-
-        assertNotNull(result);
-        assertEquals("", result.getError());
-        assertNotNull(result.getStudent());
-        assertEquals("student@test.com", result.getStudent().getStudentEmail());
-        assertEquals(0, student.getPoints());
-
-        ArgumentCaptor<AuthenticationRequest> authCaptor = ArgumentCaptor.forClass(AuthenticationRequest.class);
-        verify(authService, times(1)).createEmployeeUser(authCaptor.capture());
-
-        AuthenticationRequest authRequest = authCaptor.getValue();
-        assertEquals("student@test.com", authRequest.getUsername());
-        assertNull(authRequest.getPassword()); // Secure generation belongs to AuthService.
-        assertEquals("John", authRequest.getFirstName());
-        assertEquals("Doe", authRequest.getLastName());
-        assertEquals("Burke High", authRequest.getSchool());
-
-        Set<RoleModel> roles = authRequest.getRoles();
-        assertNotNull(roles);
-        assertEquals(1, roles.size());
-        assertEquals("STUDENT", roles.iterator().next().getRole());
-
-        verify(studentRepository, times(1)).existsByStudentEmail("student@test.com");
-        verify(userRepository, times(1)).existsByUsername("student@test.com");
-        verify(studentRepository, times(1)).save(student);
-        verifyNoMoreInteractions(studentRepository, userRepository, authService, studentQueryService);
+    @Test void matchingExistingStudentIsIdempotentAndNotOverwritten() {
+        var existing = input(); existing.setCurrency(45);
+        when(studentRepository.findByStudentEmailIgnoreCase("student@example.test")).thenReturn(existing);
+        assertSame(existing,studentMutationService.createNewStudent(input()).getStudent());
+        assertEquals(45,existing.getCurrency()); verifyNoInteractions(authService); verify(studentRepository,never()).insert(any(Student.class));
     }
-
-    @Test
-    void createNewStudent_shouldReturnErrorResponse_whenAuthServiceThrowsIllegalArgumentException() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-        student.setFirstName("John");
-        student.setLastName("Doe");
-        student.setSchool("Burke High");
-
-        when(studentRepository.existsByStudentEmail("student@test.com")).thenReturn(false);
-        when(userRepository.existsByUsername("student@test.com")).thenReturn(false);
-        doThrow(new IllegalArgumentException("Auth creation failed"))
-                .when(authService).createEmployeeUser(any(AuthenticationRequest.class));
-
-        StudentResponse result = studentMutationService.createNewStudent(student);
-
-        assertNotNull(result);
-        assertEquals("Auth creation failed", result.getError());
-        assertNull(result.getStudent());
-        assertEquals(0, student.getPoints());
-
-        verify(studentRepository, times(1)).existsByStudentEmail("student@test.com");
-        verify(userRepository, times(1)).existsByUsername("student@test.com");
-        verify(authService, times(1)).createEmployeeUser(any(AuthenticationRequest.class));
-        verify(studentRepository, never()).save(any(Student.class));
-        verifyNoMoreInteractions(studentRepository, userRepository, authService, studentQueryService);
+    @Test void foreignArchivedOrDifferentStudentRequiresExplicitResolution() {
+        var existing=input(); existing.setSchool("Other school");
+        when(studentRepository.findByStudentEmailIgnoreCase("student@example.test")).thenReturn(existing);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->studentMutationService.createNewStudent(input()));
+        existing.setSchool("Testing");existing.setArchived(true);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->studentMutationService.createNewStudent(input()));
+        existing.setArchived(false);existing.setFirstName("Different");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->studentMutationService.createNewStudent(input()));
+        verifyNoInteractions(authService);
+    }
+    @Test void failedProfileInsertCanBeRetriedWithoutAccountOrStudentOverwrite() {
+        when(studentRepository.insert(any(Student.class))).thenThrow(new IllegalStateException("synthetic persistence failure")).thenAnswer(i->i.getArgument(0));
+        assertThrows(IllegalStateException.class,()->studentMutationService.createNewStudent(input()));
+        assertNotNull(studentMutationService.createNewStudent(input()).getStudent());
+        verify(authService,times(2)).provisionStudent(any()); verify(studentRepository,never()).save(any());
+    }
+    @Test void concurrentDuplicateInsertReturnsMatchingSavedProfile() {
+        when(studentRepository.findByStudentEmailIgnoreCase("student@example.test")).thenReturn(null,input());
+        when(studentRepository.insert(any(Student.class))).thenThrow(new org.springframework.dao.DuplicateKeyException("synthetic race"));
+        assertNotNull(studentMutationService.createNewStudent(input()).getStudent());
+    }
+    @Test void missingRequiredIdentityIsRejectedBeforeWrites() {
+        var s=input();s.setFirstName("");assertThrows(IllegalArgumentException.class,()->studentMutationService.createNewStudent(s));verifyNoInteractions(authService,studentRepository);
     }
 
     @Test

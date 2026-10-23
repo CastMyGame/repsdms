@@ -27,6 +27,7 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final com.reps.demogcloud.services.UserAdministrationService administration;
 
     //---------------------------------GET Controllers--------------------------------
     @GetMapping("/")
@@ -47,6 +48,7 @@ public class StudentController {
 
     @GetMapping("/allStudents")
     public ResponseEntity<List<Student>> findAllStudents () {
+        administration.requireStaff();
         var findAll = studentService.getAllStudents(false);
 
         return ResponseEntity
@@ -122,7 +124,7 @@ public class StudentController {
     //-----------------------------POST Controllers-----------------------------------
     @PostMapping("/newStudent")
     public ResponseEntity<StudentResponse> createStudent (@RequestBody Student studentRequest) {
-        StudentResponse studentResponse = studentService.createNewStudent(studentRequest);
+        StudentResponse studentResponse = studentService.createNewStudent(administration.prepareStudentCreation(studentRequest));
         return studentResponse.getStudent() == null
                 ? new ResponseEntity<>(studentResponse, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(studentResponse, HttpStatus.CREATED);
@@ -131,6 +133,7 @@ public class StudentController {
     @PostMapping("/addStudents")
     public ResponseEntity<List<StudentResponse>> addAllStudents(@RequestBody List<Student> students) {
         List<StudentResponse> processedStudents = new ArrayList<>();
+        students.forEach(administration::prepareStudentCreation);
         for(Student student: students) {
             processedStudents.add(studentService.createNewStudent(student));
         }
@@ -167,6 +170,7 @@ public class StudentController {
 
     @PostMapping("/getByEmailList")
     public ResponseEntity<List<Student>> getStudentByEmail (@RequestBody List<String> email) throws Exception {
+        email.forEach(administration::requireStudentAccess);
         var message = studentService.findByStudentEmailList(email);
 
         return ResponseEntity
