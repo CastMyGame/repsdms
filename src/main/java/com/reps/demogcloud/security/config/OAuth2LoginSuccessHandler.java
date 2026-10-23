@@ -37,6 +37,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final Environment env;
 
     private final ObjectMapper objectMapper;
+    private final com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
@@ -102,6 +103,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             throw new ServletException("No valid role assigned for " + email + ".");
         }
 
+        boolean verified = authentication.getPrincipal() instanceof org.springframework.security.oauth2.core.oidc.user.OidcUser oidc
+                && Boolean.TRUE.equals(oidc.getEmailVerified());
+        accountAccess.googleEstablished(userModel,verified);
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
         // Gmail linking is a separate consent flow and never changes the REPS login.
 

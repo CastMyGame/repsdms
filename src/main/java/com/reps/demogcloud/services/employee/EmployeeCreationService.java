@@ -21,6 +21,7 @@ public class EmployeeCreationService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final EmployeeRepository employeeRepository;
     private final AuthService authService;
+    private final com.reps.demogcloud.security.services.AccountAccessService accounts;
 
     public EmployeeResponse createNewEmployee(Employee request) {
         //Check it email exist in system
@@ -29,15 +30,17 @@ public class EmployeeCreationService {
         Employee doesEmployeeExist = employeeRepository.findByEmailIgnoreCase(request.getEmail());
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
         authenticationRequest.setUsername(request.getEmail().toLowerCase());
-        authenticationRequest.setPassword(java.util.UUID.randomUUID().toString());
+        // AuthService creates an undisclosed random password; setup is separate.
         authenticationRequest.setFirstName(request.getFirstName());
         authenticationRequest.setLastName(request.getLastName());
         authenticationRequest.setSchool(request.getSchool());
         authenticationRequest.setRoles(request.getRoles());
         if (doesEmployeeExist == null) {
             try {
-                authService.createEmployeeUser(authenticationRequest);
-                return new EmployeeResponse("", employeeRepository.save(request));
+                var user=authService.createEmployeeUser(authenticationRequest);
+                var employee=employeeRepository.save(request);
+                accounts.createdStaff(user);
+                return new EmployeeResponse("", employee);
             } catch (IllegalArgumentException e) {
                 logger.error(e.getMessage());
                 return new EmployeeResponse(e.getMessage(), null);

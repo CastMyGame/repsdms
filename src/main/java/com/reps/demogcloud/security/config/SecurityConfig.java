@@ -42,6 +42,7 @@ public class SecurityConfig {
                                 "/contact-us",
                                 "/auth",
                                 "/forgot-password",
+                                "/account-access/complete",
                                 "/reset-password",
                                 "/student/v1/points/transfer",
                                 "/oauth2/**",

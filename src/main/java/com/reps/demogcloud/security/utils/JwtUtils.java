@@ -24,11 +24,16 @@ public class JwtUtils {
     public String generateToken(UserDetails userDetails, String loginMethod) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("loginMethod", loginMethod);
+        if(userDetails instanceof com.reps.demogcloud.security.models.AccountPrincipal account) claims.put("credentialVersion",account.credentialVersion);
         return createToken(claims, userDetails.getUsername());
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
         String userName = extractUserName(token);
+        if(userDetails instanceof com.reps.demogcloud.security.models.AccountPrincipal account) {
+            Number version=extractClaim(token,c -> c.get("credentialVersion",Number.class));
+            if((version==null?0:version.longValue())!=account.credentialVersion) return false;
+        }
         return userName.equals(userDetails.getUsername()) && !isTokenExpired(token) && !isTokenBlacklisted(token);
     }
 
@@ -63,6 +68,7 @@ public class JwtUtils {
 
             Map<String, Object> claims = new HashMap<>();
             claims.put("loginMethod", extractLoginMethod(oldToken));
+            claims.put("credentialVersion",extractClaim(oldToken,c -> c.get("credentialVersion",Number.class)));
             return createToken(claims, username);
         } else {
             throw new RuntimeException("Token is either expired or blacklisted");

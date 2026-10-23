@@ -62,7 +62,7 @@ public class JwtFilterRequest extends OncePerRequestFilter {
             UserDetails currentUserDetails = customUserDetailsService.loadUserByUsername(username);
 
             // An explicit bearer identity takes precedence over a remembered Google-login session.
-            if (!jwtUtils.validateToken(jwtToken, currentUserDetails)) {
+            if (!currentUserDetails.isAccountNonLocked() || !jwtUtils.validateToken(jwtToken, currentUserDetails)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid JWT token");
                 return;
@@ -100,6 +100,7 @@ public class JwtFilterRequest extends OncePerRequestFilter {
         // Keep the credential-login endpoint public, but protect sub-routes
         // such as /auth/capabilities with the JWT filter.
         if ("/auth".equals(path)) return true;
+        if ("/account-access/complete".equals(path)) return true;
         if (path.startsWith("/forgot-password")) return true;
         if (path.startsWith("/reset-password")) return true;
 

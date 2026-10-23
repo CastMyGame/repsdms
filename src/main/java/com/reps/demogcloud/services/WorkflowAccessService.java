@@ -30,7 +30,7 @@ public class WorkflowAccessService {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) denied();
         var user = users.findByUsername(auth.getName());
-        if (user == null || !user.isEnabled() || !text(user.getSchool())
+        if (user == null || !user.isEnabled() || user.isPasswordSetupRequired() || !text(user.getSchool())
                 || !same(user.getUsername(), auth.getName())) denied();
         return user;
     }

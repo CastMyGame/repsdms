@@ -114,7 +114,7 @@ class StudentMutationServiceTest {
 
         AuthenticationRequest authRequest = authCaptor.getValue();
         assertEquals("student@test.com", authRequest.getUsername());
-        assertEquals("student@test.com", authRequest.getPassword());
+        assertNull(authRequest.getPassword()); // Secure generation belongs to AuthService.
         assertEquals("John", authRequest.getFirstName());
         assertEquals("Doe", authRequest.getLastName());
         assertEquals("Burke High", authRequest.getSchool());

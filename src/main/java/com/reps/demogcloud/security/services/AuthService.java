@@ -23,13 +23,14 @@ public class AuthService {
             throw new IllegalArgumentException("User with this email already exists.");
         }
         String username = authenticationRequest.getUsername();
-        String password = authenticationRequest.getPassword();
+        String password = AccountAccessService.unusablePassword();
         String firstName = authenticationRequest.getFirstName();
         String lastName = authenticationRequest.getLastName();
         String school = authenticationRequest.getSchool();
         Set<RoleModel> roles = authenticationRequest.getRoles();
 
         UserModel userModel = new UserModel();
+        userModel.setPasswordSetupRequired(true);
         userModel.setUsername(username);
         userModel.setFirstName(firstName);
         userModel.setLastName(lastName);

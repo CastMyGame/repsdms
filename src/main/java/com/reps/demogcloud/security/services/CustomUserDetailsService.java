@@ -40,14 +40,6 @@ public class CustomUserDetailsService implements UserDetailsService {
             }
         }
 
-        return new User(
-                foundUser.getUsername(),
-                foundUser.getPassword(),
-                true,
-                true,
-                true,
-                true,
-                authorities
-        );
+        return new com.reps.demogcloud.security.models.AccountPrincipal(foundUser,authorities);
     }
 }

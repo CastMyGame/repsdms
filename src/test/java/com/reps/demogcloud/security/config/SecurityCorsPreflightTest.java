@@ -61,6 +61,7 @@ class SecurityCorsPreflightTest {
     }
     @Autowired WebApplicationContext context;
     @Autowired AuthenticationProvider passwordProvider;
+    @MockitoBean com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     @MockitoBean CustomOAuth2UserService oidc;
     @MockitoBean OAuth2LoginSuccessHandler success;
     @MockitoBean OAuth2LoginFailureHandler failure;

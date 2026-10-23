@@ -53,6 +53,7 @@ public class AuthControllers {
     private final UserAccountService userAccountService;
     private final CustomUserDetailsService customUserDetailsService;
     private final PasswordEncoder passwordEncoder;
+    private final com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     private final JwtUtils jwtUtils;
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -158,12 +159,12 @@ public class AuthControllers {
         String username = authenticationRequest.getUsername().toLowerCase();
         String password = authenticationRequest.getPassword();
 
-        log.info("Password authentication request received for username={}", username);
+        log.info("Password authentication requested");
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         } catch (Exception e) {
-            log.warn("Password authentication failed for username={}: {}", username, e.getMessage());
+            log.warn("Password authentication failed");
             return ResponseEntity.ok(new AuthenticationResponse("Error Authenticating user: " + username, null));
         }
 
@@ -172,11 +173,11 @@ public class AuthControllers {
             String generatedToken = jwtUtils.generateToken(loadedUser, "PASSWORD");
             UserModel userModel = userAccountService.loadUserModelByUsername(username);
 
-            log.info("Password authentication succeeded for username={}", username);
+            log.info("Password authentication succeeded");
             AuthenticationResponse response = new AuthenticationResponse(generatedToken, userModel);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Authentication succeeded but session creation failed for username={}", username, e);
+            log.error("Session creation failed");
             throw e;
         }
     }
@@ -269,50 +270,13 @@ public class AuthControllers {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) throws MessagingException {
-        String email = forgotPasswordRequest.getEmail();
-        UserModel user = userRepository.findByUsername(email);
-
-        if (user == null || !user.isEnabled()) {
-            return ResponseEntity.badRequest().body("Account unavailable");
-        }
-
-        String resetToken = UUID.randomUUID().toString();
-
-        PasswordResetToken passwordResetToken = new PasswordResetToken();
-        passwordResetToken.setUser(user);
-        passwordResetToken.setToken(resetToken);
-        passwordResetToken.setExpiryDate(24 * 60);
-
-        passwordResetTokenRepository.save(passwordResetToken);
-
-        String link = "https://repsdiscipline.vercel.app/reset-password/" + resetToken;
-        emailService.sendEmail(
-                user.getUsername(),
-                "Reset Your Password",
-                "Click the Link Below to Reset Your Password " + link,
-                "en"
-        );
-
-        return ResponseEntity.ok("Password reset link sent to " + email);
+        accountAccess.requestReset(forgotPasswordRequest.getEmail());
+        return ResponseEntity.accepted().body("If account access is available, setup instructions have been requested. Students without private email should ask their school.");
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
-        String token = resetPasswordRequest.getToken();
-        String newPassword = resetPasswordRequest.getNewPassword();
-
-        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token);
-
-        if (passwordResetToken == null || passwordResetToken.isExpired()) {
-            return ResponseEntity.badRequest().body("Invalid or expired token");
-        }
-
-        UserModel snapshot = passwordResetToken.getUser();
-        if (snapshot == null || snapshot.getId() == null
-                || userRepository.updatePasswordIfEnabled(snapshot.getId(), passwordEncoder.encode(newPassword)) != 1)
-            return ResponseEntity.badRequest().body("Invalid or expired token");
-        passwordResetTokenRepository.delete(passwordResetToken);
-
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        accountAccess.complete(null,request.getToken(),request.getNewPassword());
         return ResponseEntity.ok("Password reset successfully");
     }
 

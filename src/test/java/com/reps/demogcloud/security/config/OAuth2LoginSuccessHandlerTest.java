@@ -90,7 +90,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -138,7 +138,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -175,7 +175,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -206,7 +206,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -237,7 +237,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -268,7 +268,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -292,7 +292,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -316,7 +316,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -338,7 +338,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -363,7 +363,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -390,7 +390,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -421,7 +421,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -450,7 +450,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -481,7 +481,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );
@@ -512,7 +512,7 @@ class OAuth2LoginSuccessHandlerTest {
                 userAccountService,
                 customUserDetailsService,
                 env,
-                objectMapper,
+                objectMapper, mock(com.reps.demogcloud.security.services.AccountAccessService.class),
                 studentRepository,
                 employeeRepository
         );

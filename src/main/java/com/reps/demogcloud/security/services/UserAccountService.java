@@ -58,7 +58,8 @@ public class UserAccountService {
             UserModel userExists = userRepository.findByUsername(email);
             if (userExists == null) {
                 UserModel newUser = new UserModel();
-                String password = student.getLastName().toLowerCase() + student.getSchool().toLowerCase();
+                String password = AccountAccessService.unusablePassword();
+                newUser.setPasswordSetupRequired(true);
 
                 newUser.setUsername(email);
                 newUser.setSchool(school);
@@ -83,20 +84,6 @@ public class UserAccountService {
     }
 
     public List<UserModel> lowerCaseThemAll(String school) {
-        List<UserModel> users = userRepository.findBySchool(school);
-        List<UserModel> updatedUsers = new ArrayList<>();
-
-        for (UserModel user : users) {
-            RoleModel student = new RoleModel();
-            student.setRole("STUDENT");
-
-            if (user.getRoles().contains(student)) {
-                user.setPassword(passwordEncoder.encode(user.getUsername()));
-                userRepository.save(user);
-                updatedUsers.add(user);
-            }
-        }
-
-        return updatedUsers;
+        throw new org.springframework.security.access.AccessDeniedException("Legacy password maintenance is disabled");
     }
 }

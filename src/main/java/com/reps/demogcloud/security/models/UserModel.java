@@ -36,6 +36,24 @@ public class UserModel {
 
     private Set<RoleModel> roles;
     private boolean enabled = true; // Default to true for existing users, can be set to false to disable access
+    // Missing fields preserve existing accounts. Never serialize bearer setup authority.
+    private boolean passwordSetupRequired;
+    private long credentialVersion;
+    private String invitationStatus;
+    private java.time.Instant invitationExpiresAt;
+    private java.time.Instant setupCompletedAt;
+    private boolean privateEmailSetupAllowed;
+    @com.fasterxml.jackson.annotation.JsonIgnore @lombok.ToString.Exclude
+    private AccessTicket accessTicket;
+    @Data @NoArgsConstructor
+    public static class AccessTicket {
+        private String digest;
+        private String purpose;
+        private String environment;
+        private String issueId;
+        private java.time.Instant expiresAt;
+        private int attempts;
+    }
     private boolean paid = false;
     private java.time.Instant accessEndsAt;
     private String stripeCustomerId;

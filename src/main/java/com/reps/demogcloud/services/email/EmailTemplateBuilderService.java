@@ -11,6 +11,8 @@ import static com.reps.demogcloud.models.email.EmailTemplates.*;
 @Slf4j
 @RequiredArgsConstructor
 public class EmailTemplateBuilderService {
+    @org.springframework.beans.factory.annotation.Value("${reps.accounts.public-base-url:}")
+    private String accountBaseUrl;
 
     private final TranslationService translationService;
 
@@ -33,7 +35,7 @@ public class EmailTemplateBuilderService {
 
         String translatedDescription = translateDescriptionIfNeeded(description, language);
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName,
                 "infractionLevel", infractionLevel,
                 "infractionName", infractionName,
@@ -56,7 +58,7 @@ public class EmailTemplateBuilderService {
         String template = "es".equals(language) ? TEXT_ES : TEXT_EN;
         String translatedDescription = translateDescriptionIfNeeded(description, language);
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName,
                 "infractionLevel", infractionLevel,
                 "infractionName", infractionName,
@@ -77,12 +79,17 @@ public class EmailTemplateBuilderService {
 
         String template = "es".equals(language) ? CFR_ES : CFR_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName,
                 "infractionName", infractionName,
                 "teacherEmail", teacherEmail,
                 "studentEmail", studentEmail
         ));
+    }
+
+    private String loginUrl() {
+        // Never substitute a link to a different deployment when configuration is absent.
+        return accountBaseUrl == null || accountBaseUrl.isBlank() ? "your school REPS login page" : accountBaseUrl.replaceAll("/$", "") + "/login";
     }
 
     public String replaceString(String input) {
@@ -144,7 +151,7 @@ public class EmailTemplateBuilderService {
             template = "es".equals(language) ? SUBJECT_REFERRAL_ES : SUBJECT_REFERRAL_EN;
         }
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "schoolName", schoolName,
                 "studentFullName", studentFullName
         ));
@@ -165,7 +172,7 @@ public class EmailTemplateBuilderService {
         String language = normalizeLanguage(targetLanguageCode);
         String template = "es".equals(language) ? OFFICE_REFERRAL_MSG_ES : OFFICE_REFERRAL_MSG_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFirstName + " " + studentLastName,
                 "infractionName", infractionName,
                 "summary", summary
@@ -189,7 +196,7 @@ public class EmailTemplateBuilderService {
             template = "es".equals(language) ? SUBJECT_COMPLETION_ES : SUBJECT_COMPLETION_EN;
         }
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "schoolName", schoolName == null ? "" : schoolName,
                 "studentFullName", studentFullName
         ));
@@ -207,7 +214,7 @@ public class EmailTemplateBuilderService {
 
         String template = "es".equals(language) ? COMPLETION_MSG_ES : COMPLETION_MSG_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName,
                 "infractionName", infractionName == null ? "" : infractionName,
                 "teacherEmail", teacherEmail == null ? "" : teacherEmail
@@ -224,7 +231,7 @@ public class EmailTemplateBuilderService {
 
         String template = "es".equals(language) ? SUBJECT_L3_REJECT_ES : SUBJECT_L3_REJECT_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName
         ));
     }
@@ -234,7 +241,7 @@ public class EmailTemplateBuilderService {
         String feedbackTranslated = translateUserInput(feedbackRaw, language);
         String template = "es".equals(language) ? L3_REJECT_MSG_ES : L3_REJECT_MSG_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "feedback", feedbackTranslated == null ? "" : feedbackTranslated
         ));
     }
@@ -252,7 +259,7 @@ public class EmailTemplateBuilderService {
                 ? SUBJECT_PUNISHMENT_DELETED_ES
                 : SUBJECT_PUNISHMENT_DELETED_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "schoolName", schoolName == null ? "" : schoolName,
                 "studentFullName", studentFullName
         ));
@@ -274,7 +281,7 @@ public class EmailTemplateBuilderService {
                 ? PUNISHMENT_DELETED_MSG_ES
                 : PUNISHMENT_DELETED_MSG_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName,
                 "infractionName", infractionName == null ? "" : infractionName,
                 "infractionLevel", infractionLevel == null ? "" : infractionLevel,
@@ -295,7 +302,7 @@ public class EmailTemplateBuilderService {
                 ? SUBJECT_PUNISHMENT_RESTORED_ES
                 : SUBJECT_PUNISHMENT_RESTORED_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "schoolName", schoolName == null ? "" : schoolName,
                 "studentFullName", studentFullName
         ));
@@ -313,7 +320,7 @@ public class EmailTemplateBuilderService {
                 ? PUNISHMENT_RESTORED_MSG_ES
                 : PUNISHMENT_RESTORED_MSG_EN;
 
-        return fillTemplate(template, java.util.Map.of(
+        return fillTemplate(template.replace("{{loginUrl}}", loginUrl()), java.util.Map.of(
                 "studentFullName", studentFullName
         ));
     }

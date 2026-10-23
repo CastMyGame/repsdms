@@ -164,6 +164,7 @@ public class StripeProvisioningService {
             newUser.setSchool(schoolName);
             // Payment does not prove school membership. A school administrator must activate the account.
             newUser.setEnabled(false);
+            newUser.setPasswordSetupRequired(true);
             newUser.setRoles(teacherRoles());
 
             newUser.setPaid(true);
