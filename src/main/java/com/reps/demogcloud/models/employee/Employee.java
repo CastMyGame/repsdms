@@ -35,6 +35,8 @@ public class Employee {
     private Integer currency;
     private Integer stateEmployeeId;
     private List<ClassRoster> classes;
+    // Missing on legacy documents: interpreted as revision zero until the first roster write.
+    private long rosterRevision;
     @Data
     public static class ClassRoster {
         private String className;

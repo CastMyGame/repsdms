@@ -48,7 +48,7 @@ class UserAdministrationSecurityTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
     @ComponentScan(basePackageClasses=SecurityConfig.class, useDefaultFilters=false,
             includeFilters=@ComponentScan.Filter(type=FilterType.ASSIGNABLE_TYPE, classes=SecurityConfig.class))
-    @Import({JwtFilterRequest.class, UserControllers.class, EmployeeController.class, AuthControllers.class,
+    @Import({com.reps.demogcloud.controllers.StudentController.class, JwtFilterRequest.class, UserControllers.class, EmployeeController.class, AuthControllers.class,
             UserAdministrationService.class, WorkflowAccessService.class, UserContextService.class,
             EmployeeService.class, EmployeeCreationService.class, EmployeeMutationService.class,
             EmployeeClassService.class, EmployeeQueryService.class, SchoolUtils.class,
@@ -60,6 +60,8 @@ class UserAdministrationSecurityTest {
     @MockitoBean OAuth2LoginSuccessHandler success;
     @MockitoBean OAuth2LoginFailureHandler failure;
     @MockitoBean JwtUtils jwt;
+    @MockitoBean org.springframework.data.mongodb.core.MongoTemplate mongo;
+    @MockitoBean StudentService studentService;
     @MockitoBean UserRepository users;
     @MockitoBean EmployeeRepository employees;
     @MockitoBean StudentRepository students;
@@ -99,6 +101,8 @@ class UserAdministrationSecurityTest {
         when(students.findByStudentEmailIgnoreCase(CHILD)).thenReturn(child);
         when(students.findBySchool(SCHOOL)).thenReturn(List.of(child));
         when(users.findByUsername(anyString())).thenAnswer(i -> accounts.get(i.getArgument(0)));
+        when(users.findByUsernameIgnoreCase(anyString())).thenAnswer(i -> accounts.get(i.getArgument(0)));
+        when(users.insert(any(UserModel.class))).thenAnswer(i -> {UserModel u=i.getArgument(0);accounts.put(u.getUsername(),u);return u;});
         when(users.findById(anyString())).thenAnswer(i -> Optional.ofNullable(accounts.get(i.getArgument(0))));
         when(users.findAll()).thenAnswer(i -> new ArrayList<>(accounts.values()));
         when(users.existsByUsername(anyString())).thenAnswer(i -> accounts.containsKey(i.getArgument(0)));
@@ -239,7 +243,8 @@ class UserAdministrationSecurityTest {
         verify(users,never()).updateRolesInSchool(any(),any(),any());
     }
     @Test void teacherCanEditOwnClassButNotOtherEmployeesOrForeignStudentReferences() throws Exception {
-        String body="{\"classToUpdate\":{\"className\":\"Synthetic\",\"classRoster\":[\"student@example.test\"]}}";
+        when(mongo.findAndModify(any(),any(),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Employee.class))).thenReturn(staff.get(TEACHER));
+        String body="{\"expectedRosterRevision\":0,\"createOnly\":true,\"classToUpdate\":{\"className\":\"Synthetic\",\"classPeriod\":\"period1\",\"classRoster\":[\"student@example.test\"]}}";
         mvc.perform(json(put("/employees/v1/updateClass/"+TEACHER),TEACHER,body)).andExpect(status().isOk());
         mvc.perform(json(put("/employees/v1/updateClass/guidance@example.test"),TEACHER,body)).andExpect(status().isForbidden());
         var foreign=new Student(); foreign.setStudentEmail("foreignstudent@example.test"); foreign.setSchool("Other school");
@@ -247,7 +252,7 @@ class UserAdministrationSecurityTest {
         mvc.perform(json(put("/employees/v1/updateClass/"+TEACHER),TEACHER,body.replace(CHILD,foreign.getStudentEmail())))
                 .andExpect(status().isForbidden());
         mvc.perform(json(post("/employees/v1/deleteClass/guidance@example.test"),TEACHER,body)).andExpect(status().isForbidden());
-        verify(employees,times(1)).save(any());
+        verify(employees,never()).save(any());
     }
     @Test void staffDirectoryAndSelfReadRespectEstablishedRolesAndSchools() throws Exception {
         mvc.perform(get("/employees/v1/employees").with(user(TEACHER))).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
@@ -311,12 +316,13 @@ class UserAdministrationSecurityTest {
         verify(users,never()).updateRolesInSchool(any(),any(),any());
     }
     @Test void administratorCanEditSameSchoolClassButCannotResetOtherSchoolCurrency() throws Exception {
-        String body="{\"classToUpdate\":{\"className\":\"Synthetic\",\"classRoster\":[\"student@example.test\"]}}";
+        String body="{\"expectedRosterRevision\":0,\"createOnly\":true,\"classToUpdate\":{\"className\":\"Synthetic\",\"classPeriod\":\"period1\",\"classRoster\":[\"student@example.test\"]}}";
+        when(mongo.findAndModify(any(),any(),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Employee.class))).thenReturn(staff.get(TEACHER));
         mvc.perform(json(put("/employees/v1/updateClass/"+TEACHER),ADMIN,body)).andExpect(status().isOk());
         mvc.perform(json(put("/employees/v1/updateClass/foreign@example.test"),ADMIN,body)).andExpect(status().isForbidden());
         mvc.perform(put("/employees/v1/Other school").with(user(ADMIN))).andExpect(status().isForbidden());
         mvc.perform(put("/employees/v1/Testing").with(user(TEACHER))).andExpect(status().isForbidden());
-        verify(employees,times(1)).save(any());
+        verify(employees,never()).save(any());
     }
     @Test void activationCannotGrantAccessToForeignOrMissingStudentProfile() throws Exception {
         var child=students.findByStudentEmailIgnoreCase(CHILD); child.setSchool("Other school");
@@ -347,4 +353,46 @@ class UserAdministrationSecurityTest {
         assertFalse(accounts.containsKey("inactive@example.test"));
         assertEquals(roles("STUDENT"),accounts.get("newstudent@example.test").getRoles());
     }
+    @Test void anonymousAndStudentsCannotModifyRostersOrProvisionAccounts() throws Exception {
+        String body="{\"expectedRosterRevision\":0,\"createOnly\":true,\"classToUpdate\":{\"className\":\"Math\",\"classPeriod\":\"period1\",\"classRoster\":[\"student@example.test\"]}}";
+        for (var path:List.of("/employees/v1/updateClass/"+TEACHER,"/employees/v1/deleteClass/"+TEACHER)) {
+            var req=path.contains("deleteClass")?post(path):put(path);
+            mvc.perform(json(req,CHILD,body)).andExpect(status().isForbidden());
+        }
+        int anonymous=mvc.perform(put("/employees/v1/updateClass/"+TEACHER).contentType(MediaType.APPLICATION_JSON).content(body)).andReturn().getResponse().getStatus();
+        assertTrue(anonymous==302||anonymous==401||anonymous==403);
+        mvc.perform(json(post("/student/v1/newStudent"),CHILD,"{\"studentEmail\":\"new@example.test\"}")).andExpect(status().isForbidden());
+        verifyNoInteractions(mongo,studentService);
+    }
+    @Test void provisioningDerivesSchoolAndRejectsForeignSchoolBeforeCreation() throws Exception {
+        when(studentService.createNewStudent(any())).thenAnswer(i -> new com.reps.demogcloud.models.student.StudentResponse("",i.getArgument(0)));
+        mvc.perform(json(post("/student/v1/newStudent"),TEACHER,"{\"studentEmail\":\"new@example.test\",\"firstName\":\"Synthetic\",\"lastName\":\"Child\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.student.school").value(SCHOOL));
+        mvc.perform(json(post("/student/v1/newStudent"),TEACHER,"{\"studentEmail\":\"new@example.test\",\"school\":\"Other school\"}"))
+            .andExpect(status().isForbidden());
+        verify(studentService,times(1)).createNewStudent(any());
+    }
+    @Test void guidanceOwnClassesRemainSupportedAndForeignOrArchivedStudentsCannotEnroll() throws Exception {
+        String body="{\"expectedRosterRevision\":0,\"createOnly\":true,\"classToUpdate\":{\"className\":\"Math\",\"classPeriod\":\"period1\",\"classRoster\":[\"student@example.test\"]}}";
+        when(mongo.findAndModify(any(),any(),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Employee.class))).thenReturn(staff.get("guidance@example.test"));
+        mvc.perform(json(put("/employees/v1/updateClass/guidance@example.test"),"guidance@example.test",body)).andExpect(status().isOk());
+        var child=students.findByStudentEmailIgnoreCase(CHILD);child.setArchived(true);
+        mvc.perform(json(put("/employees/v1/updateClass/"+TEACHER),TEACHER,body)).andExpect(status().isForbidden());
+        verify(mongo,times(1)).findAndModify(any(),any(),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Employee.class));
+    }
+    @Test void staleRosterRevisionReturnsConflictThroughActualChain() throws Exception {
+        staff.get(TEACHER).setRosterRevision(3);
+        mvc.perform(json(put("/employees/v1/updateClass/"+TEACHER),TEACHER,"{\"expectedRosterRevision\":2,\"classToUpdate\":{\"className\":\"Math\",\"classPeriod\":\"period1\",\"classRoster\":[]}}"))
+            .andExpect(status().isConflict()); verifyNoInteractions(mongo);
+    }
+
+    @Test void creationPreservesVerifiedGuidanceButRejectsForgedSchoolRelationships() throws Exception {
+        when(studentService.createNewStudent(any())).thenAnswer(i -> new com.reps.demogcloud.models.student.StudentResponse("",i.getArgument(0)));
+        mvc.perform(json(post("/student/v1/newStudent"),TEACHER,"{\"studentEmail\":\"new@example.test\",\"guidanceEmail\":\"GUIDANCE@example.test\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.student.guidanceEmail").value("guidance@example.test"));
+        mvc.perform(json(post("/student/v1/newStudent"),TEACHER,"{\"studentEmail\":\"new@example.test\",\"guidanceEmail\":\"foreign@example.test\"}"))
+            .andExpect(status().isForbidden());
+        verify(studentService,times(1)).createNewStudent(any());
+    }
+
 }

@@ -94,7 +94,15 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 newStudent.setFirstName(userModel.getFirstName());
                 newStudent.setLastName(userModel.getLastName());
                 newStudent.setSchool(userModel.getSchool());
-                studentRepository.save(newStudent);
+                newStudent.setStudentIdNumber(com.reps.demogcloud.security.services.AuthService.studentProvisioningId(email));
+                newStudent.setPoints(0); newStudent.setCurrency(0);
+                try { studentRepository.insert(newStudent); }
+                catch (org.springframework.dao.DuplicateKeyException concurrentProvisioning) {
+                    var saved = studentRepository.findByStudentEmailIgnoreCase(email);
+                    if (saved == null || saved.isArchived() || !email.equalsIgnoreCase(saved.getStudentEmail())
+                            || !userModel.getSchool().equalsIgnoreCase(saved.getSchool()))
+                        throw new ServletException("Student profile could not be confirmed. Contact your school administrator.");
+                }
             } else if (student.isArchived()) {
                 throw new ServletException("Student profile is archived for " + email + ".");
             }

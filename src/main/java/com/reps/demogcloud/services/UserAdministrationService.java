@@ -157,9 +157,29 @@ public class UserAdministrationService {
         if (request == null || request.getClassToUpdate() == null) throw new IllegalArgumentException("Class is required");
         var roster = request.getClassToUpdate().getClassRoster();
         if (roster != null) for (String studentEmail : roster) {
+            if (studentEmail == null || studentEmail.isBlank()) throw new IllegalArgumentException("Student identifier is required");
+            studentEmail = studentEmail.trim().toLowerCase(Locale.ROOT);
             var student = students.findByStudentEmailIgnoreCase(studentEmail);
             if (student == null || student.isArchived() || !same(staff().getSchool(), student.getSchool())) denied();
         }
+    }
+    public com.reps.demogcloud.models.student.Student prepareStudentCreation(com.reps.demogcloud.models.student.Student input) {
+        var actor = staff();
+        if (input == null) throw new IllegalArgumentException("Student is required");
+        if (input.getSchool() != null && !input.getSchool().isBlank() && !same(input.getSchool(), actor.getSchool())) denied();
+        input.setSchool(actor.getSchool());
+        input.setGuidanceEmail(studentStaffReference(input.getGuidanceEmail(), actor.getSchool(), "GUIDANCE"));
+        input.setAdminEmail(studentStaffReference(input.getAdminEmail(), actor.getSchool(), "ADMIN"));
+        return input;
+    }
+    private String studentStaffReference(String email, String school, String role) {
+        if (email == null || email.isBlank()) return null;
+        String normalized = email.trim().toLowerCase(Locale.ROOT);
+        var account = users.findByUsername(normalized);
+        var employee = employees.findByEmailIgnoreCase(normalized);
+        if (account == null || !account.isEnabled() || !same(account.getSchool(), school) || !hasRole(account.getRoles(), role)
+                || employee == null || employee.isArchived() || !same(employee.getSchool(), school)) denied();
+        return normalized;
     }
     public Employee prepareEmployee(Employee input) {
         String school = requireSchoolAdmin(input.getSchool());

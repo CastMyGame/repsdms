@@ -1,89 +1,70 @@
 package com.reps.demogcloud.services.student;
 
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentRequest;
-import com.reps.demogcloud.models.student.StudentResponse;
-import com.reps.demogcloud.security.models.AuthenticationRequest;
-import com.reps.demogcloud.security.models.RoleModel;
-import com.reps.demogcloud.security.models.UserRepository;
+import com.reps.demogcloud.models.student.*;
+import com.reps.demogcloud.security.models.*;
 import com.reps.demogcloud.security.services.AuthService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DuplicateKeyException;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class StudentMutationService {
-
     private final StudentRepository studentRepository;
     private final AuthService authService;
     private final UserRepository userRepository;
     private final StudentQueryService studentQueryService;
 
-    public StudentResponse createNewStudent(Student studentRequest) {
-        // Check if a student with the same email already exists
-        if (studentRepository.existsByStudentEmail(studentRequest.getStudentEmail().toLowerCase())) {
-            throw new IllegalArgumentException("A student with this email already exists.");
-        }
-
-        // Check if a user with the same email (username) already exists
-        if (userRepository.existsByUsername(studentRequest.getStudentEmail().toLowerCase())) {
-            throw new IllegalArgumentException("A user with this email has already been registered.");
-        }
-
-        Set<RoleModel> roles = new HashSet<>();
-        RoleModel student = new RoleModel();
-        student.setRole("STUDENT");
-        roles.add(student);
-
-        AuthenticationRequest authenticationRequest = new AuthenticationRequest();
-        authenticationRequest.setUsername(studentRequest.getStudentEmail().toLowerCase());
-        // Password setup is issued only through authorized school-assisted or private-email flows.
-        authenticationRequest.setFirstName(studentRequest.getFirstName());
-        authenticationRequest.setLastName(studentRequest.getLastName());
-        authenticationRequest.setSchool(studentRequest.getSchool());
-        authenticationRequest.setRoles(roles);
-
-        studentRequest.setPoints(0);
-
-        try {
-            authService.createEmployeeUser(authenticationRequest);
-            return new StudentResponse("", studentRepository.save(studentRequest));
-        } catch (IllegalArgumentException e) {
-            log.error(e.getMessage());
-            return new StudentResponse(e.getMessage(), null);
+    public StudentResponse createNewStudent(Student input) {
+        if (input == null || input.getStudentEmail() == null || input.getStudentEmail().isBlank()
+                || input.getFirstName() == null || input.getFirstName().isBlank()
+                || input.getLastName() == null || input.getLastName().isBlank()
+                || input.getSchool() == null || input.getSchool().isBlank())
+            throw new IllegalArgumentException("Student identifier, name and school are required");
+        String email = input.getStudentEmail().trim().toLowerCase(Locale.ROOT);
+        var existing = studentRepository.findByStudentEmailIgnoreCase(email);
+        if (existing != null) return compatible(existing, input);
+        var request = new AuthenticationRequest();
+        request.setUsername(email); request.setFirstName(input.getFirstName().trim()); request.setLastName(input.getLastName().trim());
+        request.setSchool(input.getSchool()); request.setRoles(Set.of(new RoleModel(null, "STUDENT")));
+        authService.provisionStudent(request);
+        // Never accept caller IDs, archived state, points, currency, notes or staff relationships.
+        var student = new Student();
+        student.setStudentIdNumber(AuthService.studentProvisioningId(email)); student.setStudentEmail(email);
+        student.setFirstName(request.getFirstName()); student.setLastName(request.getLastName()); student.setSchool(request.getSchool());
+        student.setGrade(input.getGrade()); student.setAddress(input.getAddress()); student.setParentEmail(input.getParentEmail());
+        // The HTTP boundary verifies these persisted same-school staff references.
+        student.setGuidanceEmail(input.getGuidanceEmail()); student.setAdminEmail(input.getAdminEmail());
+        student.setParentPhoneNumber(input.getParentPhoneNumber()); student.setStudentPhoneNumber(input.getStudentPhoneNumber());
+        student.setPreferredLanguage(input.getPreferredLanguage()); student.setPoints(0); student.setCurrency(0);
+        try { return new StudentResponse("", studentRepository.insert(student)); }
+        catch (DuplicateKeyException race) {
+            return compatible(studentRepository.findByStudentEmailIgnoreCase(email), input);
         }
     }
 
-    public String deleteStudent(StudentRequest studentRequest) throws Exception {
-        try {
-            studentRepository.delete(studentRequest.getStudent());
-        } catch (Exception e) {
-            throw new Exception("That student does not exist");
-        }
-
-        return studentRequest.getStudent().getFirstName()
-                + " "
-                + studentRequest.getStudent().getLastName()
-                + " has been deleted";
+    private StudentResponse compatible(Student existing, Student input) {
+        if (existing == null || existing.isArchived() || !input.getSchool().equalsIgnoreCase(existing.getSchool())
+                || !input.getFirstName().trim().equalsIgnoreCase(existing.getFirstName())
+                || !input.getLastName().trim().equalsIgnoreCase(existing.getLastName()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already exists; use existing-student enrollment or request administrator review");
+        // Existing profile/account state is never overwritten by a creation retry.
+        return new StudentResponse("", existing);
     }
 
+    public String deleteStudent(StudentRequest request) throws Exception {
+        try { studentRepository.delete(request.getStudent()); }
+        catch (Exception e) { throw new Exception("That student does not exist"); }
+        return request.getStudent().getFirstName() + " " + request.getStudent().getLastName() + " has been deleted";
+    }
     public Student archiveRecord(String studentId) {
-        // Check for existing record
-        Student existingRecord = studentQueryService.findByStudentId(studentId);
-
-        // Updated Record
-        existingRecord.setArchived(true);
-        LocalDate createdOn = LocalDate.now();
-        existingRecord.setArchivedOn(createdOn);
-        existingRecord.setArchivedBy(studentId);
-
-        return studentRepository.save(existingRecord);
+        var record = studentQueryService.findByStudentId(studentId);
+        record.setArchived(true); record.setArchivedOn(LocalDate.now()); record.setArchivedBy(studentId);
+        return studentRepository.save(record);
     }
 }

@@ -45,6 +45,7 @@ public class StudentControllerTest {
 
     @MockitoBean
     private StudentService studentService;
+    @MockitoBean private com.reps.demogcloud.services.UserAdministrationService administration;
 
     @MockitoBean
     private JwtUtils jwtUtils;
@@ -57,6 +58,7 @@ public class StudentControllerTest {
 
     @BeforeEach
     void setup() {
+        lenient().when(administration.prepareStudentCreation(any())).thenAnswer(i -> i.getArgument(0));
         student = new Student();
         student.setStudentEmail("student@example.com");
         student.setStudentIdNumber("123");
