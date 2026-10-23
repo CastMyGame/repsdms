@@ -68,7 +68,8 @@ class EmployeeCreationServiceTest {
 
         AuthenticationRequest capturedAuthRequest = authCaptor.getValue();
         assertEquals("johndoe@school.com", capturedAuthRequest.getUsername());
-        assertEquals("JohnDoe", capturedAuthRequest.getPassword());
+        assertNotEquals("JohnDoe", capturedAuthRequest.getPassword());
+        assertDoesNotThrow(() -> java.util.UUID.fromString(capturedAuthRequest.getPassword()));
         assertEquals("John", capturedAuthRequest.getFirstName());
         assertEquals("Doe", capturedAuthRequest.getLastName());
         assertEquals("Test School", capturedAuthRequest.getSchool());

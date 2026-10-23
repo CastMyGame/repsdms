@@ -20,4 +20,12 @@ public interface EmployeeRepository extends MongoRepository<Employee, String> {
     List<Employee> findByArchivedAndSchool(boolean bool, String school);
 
     List<Employee> findBySchool (String school);
+
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0, 'school': ?1}")
+    @org.springframework.data.mongodb.repository.Update("{'$set': {'roles': ?2}}")
+    void updateRolesInSchool(String id, String school, java.util.Set<com.reps.demogcloud.security.models.RoleModel> roles);
+
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0, 'school': ?1}")
+    @org.springframework.data.mongodb.repository.Update("{'$set': {'archived': ?2}}")
+    void updateArchivedInSchool(String id, String school, boolean archived);
 }

@@ -82,7 +82,29 @@ public class StripeProvisioningService {
             }
 
             // make sure school exists (you said you prefer fail fast if not)
-            requireSchoolExists(schoolIdNumber);
+            School school = requireSchoolExists(schoolIdNumber);
+            if (!schoolName.equalsIgnoreCase(school.getSchoolName()))
+                throw new IllegalStateException("Registration school does not match its identifier");
+            // A public checkout may not transfer, reactivate or promote an existing account.
+            UserModel existingUser = userRepository.findByUsername(email);
+            Employee existingEmployee = employeeRepository.findByEmailIgnoreCase(email);
+            boolean pendingSameCheckout = existingUser != null && !existingUser.isEnabled() && existingUser.isPaid()
+                    && stripeCustomerId.equals(existingUser.getStripeCustomerId())
+                    && stripeSubscriptionId.equals(existingUser.getStripeSubscriptionId())
+                    && existingUser.getRoles() != null && !existingUser.getRoles().isEmpty()
+                    && existingUser.getRoles().stream().allMatch(r -> r != null && "TEACHER".equalsIgnoreCase(r.getRole()));
+            // A retry may finish recording the same pending checkout, but must never enable the account.
+            if (existingUser != null && ((!existingUser.isEnabled() && !pendingSameCheckout) || !schoolName.equalsIgnoreCase(existingUser.getSchool())
+                    || existingUser.getRoles() == null || existingUser.getRoles().isEmpty()
+                    || existingUser.getRoles().stream().anyMatch(r -> r == null
+                    || r.getRole() == null || !Set.of("TEACHER", "GUIDANCE", "ADMIN")
+                    .contains(r.getRole().toUpperCase(java.util.Locale.ROOT)))))
+                throw new IllegalStateException("Existing account requires school administrator review");
+            if (existingUser != null && existingEmployee == null)
+                throw new IllegalStateException("Existing account profile requires school administrator review");
+            if (existingEmployee != null && (existingEmployee.isArchived()
+                    || !schoolName.equalsIgnoreCase(existingEmployee.getSchool())))
+                throw new IllegalStateException("Existing employee requires school administrator review");
 
             ensureEmployeeTeacherExists(email, firstName, lastName, schoolName);
             ensureUserModelTeacherExists(email, schoolName, stripeCustomerId, stripeSubscriptionId, stripePriceId);
@@ -123,15 +145,6 @@ public class StripeProvisioningService {
             newEmp.setArchived(false);
             newEmp.setRoles(teacherRoles());
             employeeRepository.save(newEmp);
-        } else {
-            emp.setArchived(false);
-            emp.setSchool(schoolName);
-
-            if (!isBlank(firstName) && isBlank(emp.getFirstName())) emp.setFirstName(firstName);
-            if (!isBlank(lastName) && isBlank(emp.getLastName())) emp.setLastName(lastName);
-
-            ensureRole(emp.getRoles(), "TEACHER");
-            employeeRepository.save(emp);
         }
     }
 
@@ -149,7 +162,8 @@ public class StripeProvisioningService {
             UserModel newUser = new UserModel();
             newUser.setUsername(email);
             newUser.setSchool(schoolName);
-            newUser.setEnabled(true);
+            // Payment does not prove school membership. A school administrator must activate the account.
+            newUser.setEnabled(false);
             newUser.setRoles(teacherRoles());
 
             newUser.setPaid(true);
@@ -162,20 +176,8 @@ public class StripeProvisioningService {
             newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
             userRepository.save(newUser);
         } else {
-            user.setEnabled(true);
-            user.setSchool(schoolName);
-            user.setPaid(true);
-            user.setStripeCustomerId(stripeCustomerId);
-            user.setStripeSubscriptionId(stripeSubscriptionId);
-            user.setStripePriceId(stripePriceId);
-            user.setStripeStatus("active");
-            user.setLastPaymentAt(now);
-
-            if (user.getRoles() != null) ensureRole(user.getRoles(), "TEACHER");
-            if (isBlank(user.getPassword())) {
-                user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-            }
-            userRepository.save(user);
+            userRepository.updateBillingIfEnabled(user.getId(), user.getSchool(),
+                    stripeCustomerId, stripeSubscriptionId, stripePriceId, now);
         }
     }
 
@@ -185,16 +187,6 @@ public class StripeProvisioningService {
         teacher.setRole("TEACHER");
         roles.add(teacher);
         return roles;
-    }
-
-    private void ensureRole(Set<RoleModel> roles, String roleName) {
-        if (roles == null) return;
-        boolean has = roles.stream().anyMatch(r -> r != null && roleName.equalsIgnoreCase(r.getRole()));
-        if (!has) {
-            RoleModel rm = new RoleModel();
-            rm.setRole(roleName);
-            roles.add(rm);
-        }
     }
 
     private String safeTrim(String s) { return s == null ? null : s.trim(); }

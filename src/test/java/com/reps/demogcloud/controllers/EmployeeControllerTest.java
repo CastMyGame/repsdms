@@ -44,6 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 class EmployeeControllerTest {
+    @MockitoBean private com.reps.demogcloud.services.UserAdministrationService administration;
+
 
     @Autowired
     private MockMvc mockMvc;
@@ -65,6 +67,11 @@ class EmployeeControllerTest {
 
     @BeforeEach
     void setUp() {
+        // Response mapping only; real policy/filter coverage lives in UserAdministrationSecurityTest.
+        when(administration.visibleEmployees(any())).thenAnswer(i -> i.getArgument(0));
+        when(administration.prepareEmployee(any())).thenAnswer(i -> i.getArgument(0));
+        when(administration.prepareEmployees(any())).thenAnswer(i -> i.getArgument(0));
+        when(administration.requireSchoolAdmin(any())).thenAnswer(i -> i.getArgument(0));
         employee = new Employee();
         employee.setEmployeeId("123");
         employee.setEmail("teacher@example.com");
@@ -193,8 +200,7 @@ class EmployeeControllerTest {
         Set<RoleModel> roles = Set.of(role);
         employee.setRoles(roles);
 
-        when(employeeRepository.findById("123")).thenReturn(Optional.of(employee));
-        when(employeeRepository.save(any())).thenReturn(employee);
+        when(administration.updateEmployeeRoles(eq("123"), any())).thenReturn(employee);
 
         mockMvc.perform(put("/employees/v1/employees/123/roles")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -205,7 +211,8 @@ class EmployeeControllerTest {
 
     @Test
     void updateEmployeesRole_notFound() throws Exception {
-        when(employeeRepository.findById("123")).thenReturn(Optional.empty());
+        when(administration.updateEmployeeRoles(eq("123"), any()))
+                .thenThrow(new com.reps.demogcloud.exceptions.ResourceNotFoundException("Employee not found"));
 
         mockMvc.perform(put("/employees/v1/employees/123/roles")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -262,33 +269,28 @@ class EmployeeControllerTest {
     }
 
     @Test
-    void updateAllEmployees_success_and_failure() throws Exception {
-        when(employeeService.updateAllEmployees()).thenReturn(List.of(employee));
-
-        mockMvc.perform(put("/employees/v1/updateAll"))
-                .andExpect(status().isOk());
-
-        when(employeeService.updateAllEmployees()).thenReturn(null);
-
-        mockMvc.perform(put("/employees/v1/updateAll"))
-                .andExpect(status().isBadRequest());
+    void globalMaintenanceIsDeniedBeforeMutation() throws Exception {
+        doThrow(new org.springframework.security.access.AccessDeniedException("Access denied"))
+                .when(administration).denyMaintenance();
+        mockMvc.perform(put("/employees/v1/updateAll")).andExpect(status().isForbidden());
+        verifyNoInteractions(employeeService, employeeRepository);
     }
 
     // ---------- DELETE TESTS ----------
 
     @Test
     void deleteEmployee_success_and_notFound() throws Exception {
-        doNothing().when(employeeService).deleteEmployee("123");
+        doNothing().when(administration).deactivateEmployee("123");
 
         mockMvc.perform(delete("/employees/v1/employees/123"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Employee with ID 123 has been deleted."));
+                .andExpect(content().string("Account deactivated; employee archived; records retained."));
 
-        doThrow(new RuntimeException("not found"))
-                .when(employeeService).deleteEmployee("123");
+        doThrow(new com.reps.demogcloud.exceptions.ResourceNotFoundException("Employee not found"))
+                .when(administration).deactivateEmployee("123");
 
         mockMvc.perform(delete("/employees/v1/employees/123"))
                 .andExpect(status().isNotFound())
-                .andExpect(content().string("Employee with ID 123 not found."));
+                .andExpect(content().string("Employee not found"));
     }
 }
