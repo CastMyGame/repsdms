@@ -10,6 +10,7 @@ import lombok.*;
 public class ClassAnnouncementRequest {
     private String teacherEmail;
     private String className;
+    private String classPeriod;
     private String subject;
     private String msg;
     private String preferredLanguage;

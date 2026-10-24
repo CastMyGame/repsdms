@@ -385,7 +385,7 @@ class EmailServiceTest {
     }
 
     @Test
-    void sendCFREmailBasedOnType_shouldDelegateToReferralService() {
+    void sendCFREmailBasedOnType_shouldDelegateToReferralService() throws Exception {
         Punishment punishment = new Punishment();
         PunishmentResponse response = new PunishmentResponse();
 

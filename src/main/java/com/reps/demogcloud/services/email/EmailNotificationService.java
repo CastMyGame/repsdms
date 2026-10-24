@@ -76,22 +76,19 @@ public class EmailNotificationService {
     }
 
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
-        boolean phase1 = emailSenderService.isPhase1RoutingEnabled();
-        if (phase1 && !userContextService.getCurrentStaffEmail().equalsIgnoreCase(request.getTeacherEmail())) {
+        if (!userContextService.getCurrentStaffEmail().equalsIgnoreCase(request.getTeacherEmail())) {
             throw new AccessDeniedException("Class announcement sender must be the acting staff member");
         }
         var teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
 
-        if (teacher == null || teacher.getClasses() == null) return;
-
-        var optionalClass = teacher.getClasses().stream()
-                .filter(c -> c.getClassName().equals(request.getClassName()))
-                .findFirst();
-
-        if (optionalClass.isEmpty()) return;
-
-        List<String> rosterEmails = optionalClass.get().getClassRoster();
-        if (rosterEmails == null || rosterEmails.isEmpty()) return;
+        if (teacher == null || teacher.getClasses() == null) throw new IllegalArgumentException("Class is unavailable");
+        var matches = teacher.getClasses().stream()
+                .filter(c -> Objects.equals(c.getClassName(),request.getClassName()))
+                .filter(c -> request.getClassPeriod()==null || Objects.equals(c.getClassPeriod(),request.getClassPeriod())).toList();
+        if(matches.isEmpty()) throw new IllegalArgumentException("Class is unavailable");
+        if(matches.size()!=1) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Choose the class period before sending an announcement");
+        List<String> rosterEmails = matches.get(0).getClassRoster();
+        if (rosterEmails == null || rosterEmails.isEmpty()) throw new IllegalArgumentException("Class has no recipients");
 
         Map<String, List<String>> recipientsByLang = new HashMap<>();
 
@@ -99,8 +96,8 @@ public class EmailNotificationService {
             if (email == null || email.isBlank()) continue;
 
             Student s = studentRepository.findByStudentEmailIgnoreCase(email);
-            if (phase1 && (s == null || s.isArchived() || s.getSchool() == null
-                    || !s.getSchool().equalsIgnoreCase(teacher.getSchool()))) {
+            if (s == null || s.isArchived() || s.getSchool() == null
+                    || !s.getSchool().equalsIgnoreCase(teacher.getSchool())) {
                 throw new AccessDeniedException("Class recipients must be active students in the staff member's school");
             }
             String lang = (s == null)
@@ -131,7 +128,7 @@ public class EmailNotificationService {
                     request.getTeacherEmail(),
                     recipients,
                     subjectByLang.get(lang),
-                    bodyByLang.get(lang)
+                    EmailContent.render("<p style=\"white-space:pre-wrap\">{{message}}</p>",Map.of("message",bodyByLang.get(lang)),true)
             );
         }
     }
@@ -140,17 +137,13 @@ public class EmailNotificationService {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         if (student == null) return;
 
-        String detentionType = alertType.equals("ISS") ? "ISS" : "lunch detention";
-
-        String message = "Hello, This message is to inform you that "
-                + student.getFirstName() + " " + student.getLastName()
-                + " has an assignment that they have yet to complete in REPS. If they do not complete this assignment by the beginning of the school day tomorrow they will receive "
-                + detentionType
-                + " and must complete it during that time.";
+        String message=templateBuilderService.buildCaseMessage("punishment","REMINDER_"+("ISS".equals(alertType)?"ISS":"DETENTION"),
+                Map.of("infractionName",Objects.toString(punishment.getInfractionName(),"")),student.getFirstName(),student.getLastName(),punishment.getTeacherEmail(),student.getPreferredLanguage());
+        String reminderSubject=templateBuilderService.buildCommunicationSubject("punishment",Map.of(),student.getSchool(),student.getFirstName(),student.getLastName(),student.getPreferredLanguage());
 
         if (emailSenderService.isPhase1RoutingEnabled()) {
             sendVerifiedPts(student, student.getParentEmail(), punishment.getTeacherEmail(),
-                    student.getStudentEmail(), message, alertType + " REMINDER", true);
+                    student.getStudentEmail(), message, reminderSubject, true);
             return;
         }
         sendPtsEmail(
@@ -158,8 +151,8 @@ public class EmailNotificationService {
                 punishment.getTeacherEmail(),
                 student.getStudentEmail(),
                 message,
-                alertType + " REMINDER",
-                languageCode
+                reminderSubject,
+                student.getPreferredLanguage()
         );
     }
 
@@ -170,7 +163,7 @@ public class EmailNotificationService {
                 student.getLastName(),
                 infraction.getInfractionLevel(),
                 infraction.getInfractionName(),
-                templateBuilderService.replaceString(punishment.getInfractionDescription().get(0)),
+                punishment.getInfractionDescription().get(0),
                 student.getStudentEmail(),
                 student.getPreferredLanguage()
         );

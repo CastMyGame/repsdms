@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
-import java.net.URI;
 import java.security.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -38,16 +37,10 @@ public class AccountAccessService {
         catch(NoSuchAlgorithmException impossible) { throw new IllegalStateException("Digest unavailable"); }
     }
     public String publicBaseUrl() {
-        try {
-            URI uri=URI.create(environment.getProperty("reps.accounts.public-base-url", ""));
-            boolean local=Set.of("localhost","127.0.0.1").contains(Objects.toString(uri.getHost(),""))
-                    && !Arrays.asList(environment.getActiveProfiles()).contains("prod");
-            if(uri.getHost()==null || uri.getRawUserInfo()!=null || uri.getRawQuery()!=null || uri.getRawFragment()!=null
-                    || !(uri.getPath().isEmpty() || uri.getPath().equals("/"))
-                    || !("https".equals(uri.getScheme()) || (local && "http".equals(uri.getScheme())))) throw new IllegalArgumentException();
-            return uri.toString().replaceAll("/$", "");
-        } catch(Exception invalid) { throw new IllegalStateException("Account setup URL is not configured safely"); }
+        return com.reps.demogcloud.services.email.FrontendLinks.origin(environment.getProperty("reps.accounts.public-base-url", ""),
+                Arrays.asList(environment.getActiveProfiles()).contains("prod"));
     }
+
     private boolean student(UserModel user) { return user.getRoles()!=null && user.getRoles().stream().anyMatch(r->r!=null && "STUDENT".equalsIgnoreCase(r.getRole())); }
     private UserModel enabled(UserModel user) { if(user==null || !user.isEnabled()) throw invalid(); return user; }
     private static ResponseStatusException invalid() { return new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid, expired or unavailable setup credential. Ask for a new one."); }
