@@ -48,6 +48,8 @@ public class PunishControllerTest {
 
     @MockitoBean
     private PunishmentService punishmentService;
+    @MockitoBean private com.reps.demogcloud.services.WorkflowAccessService access;
+    @MockitoBean private com.reps.demogcloud.services.UserContextService users;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -57,6 +59,7 @@ public class PunishControllerTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(access.canReadCase(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         punishment = new Punishment();
         punishment.setPunishmentId("123");
         punishment.setStudentEmail("test@student.com");

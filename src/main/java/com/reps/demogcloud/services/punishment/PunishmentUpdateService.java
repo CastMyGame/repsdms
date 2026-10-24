@@ -21,15 +21,12 @@ public class PunishmentUpdateService {
     private final PunishRepository punishRepository;
     private final InfractionRepository infractionRepository;
     private final StudentRepository studentRepository;
+    private final com.reps.demogcloud.services.WorkflowAccessService access;
 
     public Punishment updateMapIndex(String id, int index) {
-        Punishment punishment = punishRepository.findByPunishmentId(id);
-        if (punishment == null) {
-            throw new ResourceNotFoundException("No Punishment with Id " + id + " number exist");
-        }
-
-        punishment.setMapIndex(index);
-        return punishRepository.save(punishment);
+        access.requireCase(id);
+        access.requireStaff();
+        throw new IllegalArgumentException("Save assignment answers and progress together through the case page");
     }
 
     public List<Punishment> updateTimeCreated() {

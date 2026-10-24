@@ -49,7 +49,7 @@ class WorkflowSecurityTest {
     @ComponentScan(basePackageClasses = SecurityConfig.class, useDefaultFilters = false,
             includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class))
     @Import({DTOController.class, AssignmentController.class, AssignmentBindingController.class,
-            WorkflowAccessService.class, UserContextService.class, AssignmentService.class,
+            WorkflowAccessService.class, UserContextService.class, AssignmentService.class, AssignmentResolver.class,
             JwtFilterRequest.class, GlobalExceptionHandler.class})
     static class App {
         @Bean AuthenticationProvider provider() { return mock(AuthenticationProvider.class); }

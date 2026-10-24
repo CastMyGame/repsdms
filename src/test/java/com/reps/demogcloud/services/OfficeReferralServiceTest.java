@@ -39,6 +39,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OfficeReferralServiceTest {
+    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { org.mockito.Mockito.lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com"); }
     @org.mockito.Mock
     private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
@@ -70,7 +71,6 @@ class OfficeReferralServiceTest {
 
     @Test
     void phase1CreationRecordsVerifiedActorInsteadOfFrontendTeacher() {
-        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
         when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
         Student student = new Student();
         student.setStudentEmail("student@test.com");
@@ -192,110 +192,17 @@ class OfficeReferralServiceTest {
         assertEquals("Student not found: missing@test.com", ex.getMessage());
     }
 
-    @Test
-    void updateMapIndex_shouldUpdateAndReturnReferral() {
-        OfficeReferral referral = new OfficeReferral();
-        referral.setMapIndex(0);
 
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(referral);
-        when(officeReferralRepository.save(referral)).thenReturn(referral);
 
-        OfficeReferral result = officeReferralService.updateMapIndex("r1", 3);
 
-        assertEquals(3, result.getMapIndex());
-        verify(officeReferralRepository).save(referral);
-    }
 
-    @Test
-    void updateMapIndex_shouldThrow_whenReferralMissing() {
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(null);
 
-        assertThrows(ResourceNotFoundException.class, () -> officeReferralService.updateMapIndex("r1", 3));
-    }
 
-    @Test
-    void rejectAnswers_shouldResetReferralAndSendEmail() throws MessagingException {
-        OfficeReferral referral = new OfficeReferral();
-        referral.setOfficeReferralId("r1");
-        referral.setStudentEmail("student@test.com");
-        referral.setTeacherEmail("teacher@test.com");
-        referral.setReferralDescription(new ArrayList<>(List.of("prompt", "bad answer")));
 
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-        student.setFirstName("John");
-        student.setLastName("Doe");
-        student.setParentEmail("parent@test.com");
-        student.setPreferredLanguage("en");
 
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(referral);
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
-        when(officeReferralRepository.save(referral)).thenReturn(referral);
 
-        OfficeReferral result = officeReferralService.rejectAnswers("r1");
 
-        assertEquals("OPEN", result.getStatus());
-        assertEquals(0, result.getMapIndex());
-        assertEquals(List.of("prompt"), result.getReferralDescription());
-        assertNotNull(result.getAnswerHistory());
-        assertEquals(1, result.getAnswerHistory().size());
 
-        verify(emailService).sendPtsEmail(
-                eq("parent@test.com"),
-                eq("teacher@test.com"),
-                eq("student@test.com"),
-                any(String.class),
-                eq("Level Three Answers not accepted for John Doe"),
-                eq("en")
-        );
-        verify(officeReferralRepository).save(referral);
-    }
-
-    @Test
-    void rejectAnswers_shouldThrow_whenReferralMissing() {
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(null);
-
-        assertThrows(ResourceNotFoundException.class, () -> officeReferralService.rejectAnswers("r1"));
-    }
-
-    @Test
-    void rejectAnswers_shouldThrow_whenStudentMissing() {
-        OfficeReferral referral = new OfficeReferral();
-        referral.setOfficeReferralId("r1");
-        referral.setStudentEmail("missing@test.com");
-        referral.setReferralDescription(List.of("prompt", "reason"));
-
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(referral);
-        when(studentRepository.findByStudentEmailIgnoreCase("missing@test.com")).thenReturn(null);
-
-        IllegalStateException ex = assertThrows(
-                IllegalStateException.class,
-                () -> officeReferralService.rejectAnswers("r1")
-        );
-
-        assertEquals("Student not found: missing@test.com", ex.getMessage());
-    }
-
-    @Test
-    void rejectAnswers_shouldThrow_whenDescriptionMissing() {
-        OfficeReferral referral = new OfficeReferral();
-        referral.setOfficeReferralId("r1");
-        referral.setStudentEmail("student@test.com");
-        referral.setReferralDescription(new ArrayList<>());
-
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(referral);
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
-
-        IllegalStateException ex = assertThrows(
-                IllegalStateException.class,
-                () -> officeReferralService.rejectAnswers("r1")
-        );
-
-        assertEquals("Referral description is missing for referral: r1", ex.getMessage());
-    }
 
     @Test
     void findAll_shouldReturnAll() {
@@ -489,28 +396,9 @@ class OfficeReferralServiceTest {
         verify(officeReferralRepository, never()).save(r3);
     }
 
-    @Test
-    void submitByReferralId_shouldSetPendingAndSave() {
-        OfficeReferral referral = new OfficeReferral();
-        referral.setOfficeReferralId("r1");
 
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(referral);
-        when(officeReferralRepository.save(referral)).thenReturn(referral);
 
-        OfficeReferralResponse response = officeReferralService.submitByReferralId("r1");
 
-        assertNotNull(response);
-        assertSame(referral, response.getOfficeReferral());
-        assertEquals("PENDING", referral.getStatus());
-        assertNotNull(referral.getTimeClosed());
-    }
-
-    @Test
-    void submitByReferralId_shouldThrow_whenMissing() {
-        when(officeReferralRepository.findByOfficeReferralId("r1")).thenReturn(null);
-
-        assertThrows(ResourceNotFoundException.class, () -> officeReferralService.submitByReferralId("r1"));
-    }
 
     @Test
     void getTeacherResponse_shouldReturnEmptyList_whenInputEmpty() {
@@ -542,5 +430,11 @@ class OfficeReferralServiceTest {
         assertEquals("student@test.com", response.get(0).getStudentEmail());
         assertEquals("John", response.get(0).getStudentFirstName());
         assertEquals("Doe", response.get(0).getStudentLastName());
+    }
+    @Test void officeReferralsHaveNoStudentAssignmentWrites() {
+        assertThrows(IllegalArgumentException.class, () -> officeReferralService.updateMapIndex("case",1));
+        assertThrows(IllegalArgumentException.class, () -> officeReferralService.submitByReferralId("case"));
+        assertThrows(IllegalArgumentException.class, () -> officeReferralService.rejectAnswers("case"));
+        verifyNoInteractions(officeReferralRepository,emailService);
     }
 }

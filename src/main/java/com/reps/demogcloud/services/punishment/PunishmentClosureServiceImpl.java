@@ -69,76 +69,24 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
         return punishRepository.save(punishment);
     }
     @Override
-    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) throws MessagingException {
-        if(requiredNotifications.isEnabled()) {
-            Punishment previous=requiredNotifications.previousSubmission(studentEmail,infractionName);
-            if(previous!=null) return requiredNotifications.response(previous);
-        }
-        List<Punishment> openPunishments = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(studentEmail, infractionName, "OPEN");
-
-        // Filter out archived punishments
-        List<Punishment> activeOpenPunishments = openPunishments.stream()
-                .filter(p -> !p.isArchived())
-                .toList();
-
-        if (activeOpenPunishments.isEmpty()) {
-            throw new ResourceNotFoundException("No open punishments found for the given criteria.");
-        }
-
-        Punishment punishmentToClose = activeOpenPunishments.get(0);
-        Student student = studentRepository.findByStudentEmailIgnoreCase(punishmentToClose.getStudentEmail());
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(punishmentToClose,
-                studentAnswers != null && !studentAnswers.isEmpty() ? "SUBMITTED" : "COMPLETED", studentAnswers, null));
-
-        if (!studentAnswers.isEmpty()) {
-            // Add student answers to the infraction description
-            List<String> updatedDescriptions = new ArrayList<>(punishmentToClose.getInfractionDescription());
-            for (StudentAnswer answer : studentAnswers) {
-                updatedDescriptions.add(answer.toString());
-            }
-            punishmentToClose.setInfractionDescription(updatedDescriptions);
-            punishmentToClose.setStatus("PENDING");
-            punishRepository.save(punishmentToClose);
-
-            PunishmentResponse response = new PunishmentResponse();
-            response.setPunishment(punishmentToClose);
-            return response;
-        } else {
-            // Mark punishment as closed
-            punishmentToClose.setStatus("CLOSED");
-            punishmentToClose.setClosedTimes(punishmentToClose.getClosedTimes() + 1);
-            punishmentToClose.setTimeClosed(LocalDate.now());
-            punishRepository.save(punishmentToClose);
-
-            PunishmentResponse response = new PunishmentResponse();
-            response.setPunishment(punishmentToClose);
-
-            String message = emailTemplateBuilderService.buildCompletionMessage(student.getFirstName(), student.getLastName(), punishmentToClose.getInfractionName(), punishmentToClose.getTeacherEmail(), student.getPreferredLanguage());
-            String subject = emailTemplateBuilderService.buildCompletionSubject(student.getSchool(), student.getFirstName(), student.getLastName(), student.getPreferredLanguage(), true);
-            response.setMessage(message);
-            response.setSubject(subject);
-            response.setParentToEmail(student.getParentEmail());
-            response.setStudentToEmail(student.getStudentEmail());
-            response.setTeacherToEmail(punishmentToClose.getTeacherEmail());
-
-            emailService.sendPtsEmail(
-                    response.getParentToEmail(),
-                    response.getTeacherToEmail(),
-                    response.getStudentToEmail(),
-                    response.getMessage(),
-                    response.getSubject(),
-                    student.getPreferredLanguage()
-            );
-
-            return response;
-        }
+    public PunishmentResponse closePunishment(String infractionName, String studentEmail, List<StudentAnswer> studentAnswers) {
+        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                "Submit a specific assignment through its case page. Legacy work requires explicit staff recovery.");
     }
 
     @Override
     public PunishmentResponse closeByPunishmentId(String punishmentId) throws MessagingException {
+        Punishment checked = punishRepository.findByPunishmentId(punishmentId);
+        if(checked==null) throw new ResourceNotFoundException("Case not found");
+        requiredNotifications.requireActionAccess(checked,"CLOSED");
+        if("CLOSED".equals(checked.getStatus())) {
+            var response=new PunishmentResponse(); response.setPunishment(checked); return response;
+        }
+        if(checked.getAssignmentWork()!=null) throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT,"Review this assignment through its case page");
         if (requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(
                 punishRepository.findByPunishmentId(punishmentId), "CLOSED", null, null));
-        Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
+        Punishment punishment = checked;
         if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
@@ -180,56 +128,12 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
     }
 
     @Override
-    public Punishment rejectLevelThree(String punishmentId) throws MessagingException {
-        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "REJECTED", null, null);
-        Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
-        if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
-
-        Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-        List<String> infractionContext = punishment.getInfractionDescription();
-        String resetContext = infractionContext.get(1);
-        List<String> contextToStore = infractionContext.subList(1, infractionContext.size());
-
-        List<String> newDescription = new ArrayList<>();
-        newDescription.add("");
-        newDescription.add(resetContext);
-
-        punishment.setInfractionDescription(newDescription);
-        punishment.setStatus("OPEN");
-        punishment.setMapIndex(0);
-
-        Date currentDate = new Date();
-
-        punishment.getAnswerHistory().put(currentDate, new ArrayList<>(contextToStore));
-
-        punishRepository.save(punishment);
-
-        String languageCode = student.getPreferredLanguage();
-
-        String feedbackRaw = contextToStore.stream()
-                .map(s -> "- " + s)
-                .collect(java.util.stream.Collectors.joining("\n"));
-
-        String subject = emailTemplateBuilderService.buildLevelThreeRejectSubject(
-                student.getFirstName(),
-                student.getLastName(),
-                languageCode
-        );
-
-        String message = emailTemplateBuilderService.buildLevelThreeRejectMessage(
-                feedbackRaw,
-                languageCode
-        );
-
-        emailService.sendPtsEmail(
-                student.getParentEmail(),
-                punishment.getTeacherEmail(),
-                student.getStudentEmail(),
-                message,
-                subject,
-                languageCode
-        );
-        return punishment;
+    public Punishment rejectLevelThree(String punishmentId) {
+        Punishment checked=punishRepository.findByPunishmentId(punishmentId);
+        if(checked==null) throw new ResourceNotFoundException("Case not found");
+        requiredNotifications.requireActionAccess(checked,"REJECTED");
+        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                "Review or explicitly recover this assignment through its case page; existing history is preserved");
     }
 
     @Override

@@ -93,6 +93,15 @@ class RequiredNotificationServiceTest {
         p.setStatus("OPEN"); p.setInfractionDescription(new ArrayList<>(List.of("synthetic description"))); p.setInfractionName("Synthetic"); return p;
     }
     private Punishment create() { var p=fresh(); service.saveCreated(p); return read(); }
+    @Test void assignmentSnapshotAndRequiredIntentRoundTripInTheSameCaseDocument() {
+        var p=fresh();var template=new com.reps.demogcloud.models.assignments.AssignmentTemplate();template.setId("snapshot");
+        var q=new com.reps.demogcloud.models.assignments.AssignmentTemplate.TemplateQuestion();q.setType(com.reps.demogcloud.models.assignments.AssignmentTemplate.QuestionType.EXPLORATORY_OPEN);q.setPrompt("Synthetic reflection");
+        template.setQuestions(List.of(q));p.setAssignmentTemplateId("snapshot");p.setAssignmentWork(com.reps.demogcloud.models.assignments.AssignmentWork.assigned(template));
+        service.saveCreated(p);var recovered=read();
+        assertEquals("ASSIGNED",recovered.getAssignmentWork().getState());assertEquals("Synthetic reflection",recovered.getAssignmentWork().getTemplate().getQuestions().get(0).getPrompt());
+        assertEquals(1,recovered.getRequiredNotifications().size());assertEquals("snapshot",recovered.getAssignmentTemplateId());
+        verify(mongo,times(1)).insert(any(Punishment.class));
+    }
     @SuppressWarnings("unchecked") private List<Document> notifications() { return (List<Document>)(List<?>)database.get().getList("requiredNotifications",Document.class); }
     private int selected(Query query) {
         Object value=query.getQueryObject().get("requiredNotifications"); if(!(value instanceof Document doc)) return -1;

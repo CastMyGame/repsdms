@@ -214,7 +214,7 @@ class AssignmentControllerTest {
         punishment.setAssignmentTemplateId(templateId);
 
         when(punishRepository.findById(punishmentId)).thenReturn(Optional.of(punishment));
-        when(assignmentService.getTemplateById(templateId)).thenReturn(testTemplate);
+        when(assignmentService.buildAssignmentForPunishment(punishmentId)).thenReturn(testTemplate);
 
         mockMvc.perform(get("/assignments/v1/{id}/assignment-template", punishmentId))
                 .andExpect(status().isOk())

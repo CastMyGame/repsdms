@@ -148,6 +148,9 @@ public class RequiredNotificationService {
             content.put("feedback",history.entrySet().stream().max(java.util.Comparator.comparing(entry->((Date)entry.getKey())))
                     .map(entry->Objects.toString(entry.getValue(),"")).orElse(""));
         if(entity instanceof OfficeReferral office && office.getReferralCode()!=null) content.put("infractionName",Objects.toString(office.getReferralCode().getCodeName(),"School referral"));
+        if(entity instanceof Punishment punishment && punishment.getAssignmentWork()!=null
+                && punishment.getAssignmentWork().getFeedback()!=null)
+            content.put("feedback",punishment.getAssignmentWork().getFeedback());
         list.get(list.size()-1).setContent(content);
     }
     private String escape(String value) { return org.springframework.web.util.HtmlUtils.htmlEscape(Objects.toString(value,"")); }

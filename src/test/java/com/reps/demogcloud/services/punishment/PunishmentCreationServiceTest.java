@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentCreationServiceTest {
+    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@school.com"); }
     @org.mockito.Mock
     private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
@@ -45,14 +46,13 @@ class PunishmentCreationServiceTest {
     private PunishmentCreationService punishmentCreationService;
 
     @Test
-    void phase1CreationResolvesAuthorBeforeBuildingOrSavingReferral() {
+    void creationAlwaysResolvesAuthorBeforeBuildingOrSavingReferral() {
         PunishmentFormRequest request = new PunishmentFormRequest();
         request.setStudentEmail("student@test.com");
         request.setTeacherEmail("spoofed@test.com");
         Student student = new Student();
         student.setSchool("School");
         when(punishmentUtils.fetchStudent("student@test.com")).thenReturn(student);
-        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
         when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com");
         when(punishmentUtils.fetchSchool("School")).thenThrow(new IllegalStateException("Stop before persistence"));
         assertThrows(IllegalStateException.class, () -> punishmentCreationService.createNewPunishForm(request));
@@ -81,7 +81,6 @@ class PunishmentCreationServiceTest {
         punishment.setClosedTimes(0);
 
         AssignmentTemplate template = mock(AssignmentTemplate.class);
-        when(template.getId()).thenReturn("template-1");
 
         PunishmentResponse response = mock(PunishmentResponse.class);
 
@@ -90,23 +89,19 @@ class PunishmentCreationServiceTest {
         when(punishmentUtils.resolveInfraction(request, school, 4)).thenReturn(infraction);
         when(punishmentUtils.buildPunishment(eq(request), eq(infraction), eq(student), eq(4), any(LocalDate.class)))
                 .thenReturn(punishment);
-        when(assignmentService.resolveTemplateForInfraction("teacher@school.com", "Test School",
-                InfractionType.POSITIVE.getLabel(), 1)).thenReturn(template);
         when(punishmentUtils.handlePositiveShoutout(eq(request), eq(punishment), eq(student), any(LocalDate.class)))
                 .thenReturn(response);
 
         PunishmentResponse result = punishmentCreationService.createNewPunishForm(request);
 
         assertSame(response, result);
-        assertEquals("template-1", punishment.getAssignmentTemplateId());
+        assertNull(punishment.getAssignmentWork());
 
         verify(punishmentUtils).validateFormRequest(request);
         verify(punishmentUtils).fetchStudent("student@school.com");
         verify(punishmentUtils).fetchSchool("Test School");
         verify(punishmentUtils).resolveInfraction(request, school, 4);
         verify(punishmentUtils).buildPunishment(eq(request), eq(infraction), eq(student), eq(4), any(LocalDate.class));
-        verify(assignmentService).resolveTemplateForInfraction("teacher@school.com", "Test School",
-                InfractionType.POSITIVE.getLabel(), 1);
         verify(punishmentUtils).savePhoneLogIfNeeded(eq(request), eq(student), any(LocalDate.class));
         verify(punishmentUtils).handlePositiveShoutout(eq(request), eq(punishment), eq(student), any(LocalDate.class));
         verifyNoMoreInteractions(punishmentUtils, assignmentService);
@@ -230,28 +225,28 @@ class PunishmentCreationServiceTest {
         verify(punishmentUtils).handleDefaultOpen(request, punishment, student);
     }
 
-    @Test
-    void createNewPunishForm_shouldUseMaxLevelWhenPunishmentInfractionLevelIsNotNumeric() throws Exception {
-        PunishmentFormRequest request = baseRequest(false);
-        Student student = baseStudent();
-        School school = baseSchool(7);
-        Infraction infraction = baseInfraction("Tardy");
-        Punishment punishment = basePunishment("NOT_A_NUMBER", 0);
+    @Test void invalidLevelPreservesTheCaseButNeverSubstitutesTheMaximumLevel() throws Exception {
+        var request=baseRequest(false);var student=baseStudent();var school=baseSchool(7);var infraction=baseInfraction("Tardy");
+        var punishment=basePunishment("NOT_A_NUMBER",0);var response=mock(PunishmentResponse.class);
+        mockCommonFlow(request,student,school,infraction,punishment);
+        when(punishmentUtils.handleDefaultOpen(request,punishment,student)).thenReturn(response);
+        assertSame(response,punishmentCreationService.createNewPunishForm(request));
+        assertNull(punishment.getAssignmentTemplateId());assertEquals("UNAVAILABLE",punishment.getAssignmentWork().getState());
+        verifyNoInteractions(assignmentService);
+    }
 
-        PunishmentResponse response = mock(PunishmentResponse.class);
-        AssignmentTemplate template = mock(AssignmentTemplate.class);
-        when(template.getId()).thenReturn("template-max");
-
-        mockCommonFlow(request, student, school, infraction, punishment);
-        when(assignmentService.resolveTemplateForInfraction("teacher@school.com", "Test School", "Tardy", 7))
-                .thenReturn(template);
-        when(punishmentUtils.handleDefaultOpen(request, punishment, student)).thenReturn(response);
-
-        PunishmentResponse result = punishmentCreationService.createNewPunishForm(request);
-
-        assertSame(response, result);
-        assertEquals("template-max", punishment.getAssignmentTemplateId());
-        verify(assignmentService).resolveTemplateForInfraction("teacher@school.com", "Test School", "Tardy", 7);
+    @Test void issuedAssignmentIsSnapshottedBeforeTheCaseIsSaved() throws Exception {
+        var request=baseRequest(false);var student=baseStudent();var school=baseSchool(4);var infraction=baseInfraction("Horseplay");
+        var punishment=basePunishment("1",0);var response=mock(PunishmentResponse.class);
+        mockCommonFlow(request,student,school,infraction,punishment);
+        var template=new AssignmentTemplate();template.setId("original");template.setInfractionName("Horseplay");template.setLevel(1);
+        var q=new AssignmentTemplate.TemplateQuestion();q.setId("q1");q.setType(AssignmentTemplate.QuestionType.EXPLORATORY_OPEN);q.setPrompt("Original question");template.setQuestions(List.of(q));
+        when(assignmentService.resolveForCase("teacher@school.com","Test School","Horseplay",1)).thenReturn(template);
+        when(punishmentUtils.handleDefaultOpen(request,punishment,student)).thenAnswer(i -> {
+            assertEquals("original",punishment.getAssignmentTemplateId());assertEquals("ASSIGNED",punishment.getAssignmentWork().getState());return response;
+        });
+        assertSame(response,punishmentCreationService.createNewPunishForm(request));q.setPrompt("Later edit");
+        assertEquals("Original question",punishment.getAssignmentWork().getTemplate().getQuestions().get(0).getPrompt());
     }
 
     @Test
@@ -265,7 +260,7 @@ class PunishmentCreationServiceTest {
         PunishmentResponse response = mock(PunishmentResponse.class);
 
         mockCommonFlow(request, student, school, infraction, punishment);
-        when(assignmentService.resolveTemplateForInfraction("teacher@school.com", "Test School", "Tardy", 2))
+        when(assignmentService.resolveForCase("teacher@school.com", "Test School", "Tardy", 2))
                 .thenThrow(new RuntimeException("template lookup failed"));
         when(punishmentUtils.handleDefaultOpen(request, punishment, student)).thenReturn(response);
 
@@ -331,7 +326,7 @@ class PunishmentCreationServiceTest {
                 .thenReturn(punishment1);
         when(punishmentUtils.buildPunishment(eq(request2), eq(infraction2), eq(student2), eq(4), any(LocalDate.class)))
                 .thenReturn(punishment2);
-        when(assignmentService.resolveTemplateForInfraction(anyString(), anyString(), anyString(), anyInt()))
+        when(assignmentService.resolveForCase(anyString(), anyString(), anyString(), anyInt()))
                 .thenThrow(new RuntimeException("ignore template"));
         when(punishmentUtils.handleDefaultOpen(request1, punishment1, student1)).thenReturn(response1);
         when(punishmentUtils.handleAdminReferral(eq(request2), eq(punishment2), eq(student2), any(LocalDate.class)))

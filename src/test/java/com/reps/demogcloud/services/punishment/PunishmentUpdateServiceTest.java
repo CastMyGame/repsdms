@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentUpdateServiceTest {
+    @Mock private com.reps.demogcloud.services.WorkflowAccessService access;
 
     @Mock
     private PunishRepository punishRepository;
@@ -35,46 +36,12 @@ class PunishmentUpdateServiceTest {
     @InjectMocks
     private PunishmentUpdateService punishmentUpdateService;
 
-    @Test
-    void updateMapIndex_shouldUpdateAndSavePunishment_whenPunishmentExists() {
-        Punishment punishment = new Punishment();
-        punishment.setPunishmentId("P-1");
-        punishment.setMapIndex(1);
-
-        Punishment savedPunishment = new Punishment();
-        savedPunishment.setPunishmentId("P-1");
-        savedPunishment.setMapIndex(5);
-
-        when(punishRepository.findByPunishmentId("P-1")).thenReturn(punishment);
-        when(punishRepository.save(punishment)).thenReturn(savedPunishment);
-
-        Punishment result = punishmentUpdateService.updateMapIndex("P-1", 5);
-
-        assertNotNull(result);
-        assertEquals("P-1", result.getPunishmentId());
-        assertEquals(5, result.getMapIndex());
-        assertEquals(5, punishment.getMapIndex());
-
-        verify(punishRepository, times(1)).findByPunishmentId("P-1");
-        verify(punishRepository, times(1)).save(punishment);
-        verifyNoMoreInteractions(punishRepository, infractionRepository, studentRepository);
+    @Test void indexOnlyUpdatesAreRejectedWithoutSavingAStaleCase() {
+        assertThrows(IllegalArgumentException.class, () -> punishmentUpdateService.updateMapIndex("case",5));
+        verify(access).requireCase("case");verify(access).requireStaff();verifyNoInteractions(punishRepository);
     }
 
-    @Test
-    void updateMapIndex_shouldThrowResourceNotFoundException_whenPunishmentDoesNotExist() {
-        when(punishRepository.findByPunishmentId("MISSING")).thenReturn(null);
 
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> punishmentUpdateService.updateMapIndex("MISSING", 3)
-        );
-
-        assertEquals("No Punishment with Id MISSING number exist", exception.getMessage());
-
-        verify(punishRepository, times(1)).findByPunishmentId("MISSING");
-        verify(punishRepository, never()).save(any(Punishment.class));
-        verifyNoMoreInteractions(punishRepository, infractionRepository, studentRepository);
-    }
 
     @Test
     void updateTimeCreated_shouldArchiveAndSaveMatchingInfractionsOnly() {

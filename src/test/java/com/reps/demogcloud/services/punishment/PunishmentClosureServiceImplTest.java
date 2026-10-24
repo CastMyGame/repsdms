@@ -41,68 +41,15 @@ class PunishmentClosureServiceImplTest {
     // closePunishment
     // -------------------------
 
-    @Test
-    void closePunishment_shouldReturnPending_whenAnswersExist() throws MessagingException {
-        Punishment punishment = basePunishment();
-        punishment.setInfractionDescription(new ArrayList<>(List.of("base")));
-
-        Student student = baseStudent();
-
-        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                "student@test.com", "Tardy", "OPEN"))
-                .thenReturn(List.of(punishment));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com"))
-                .thenReturn(student);
-
-        List<StudentAnswer> answers = List.of(mock(StudentAnswer.class));
-
-        PunishmentResponse result =
-                service.closePunishment("Tardy", "student@test.com", answers);
-
-        assertEquals("PENDING", punishment.getStatus());
-        assertEquals(2, punishment.getInfractionDescription().size());
-
-        verify(punishRepository).save(punishment);
-        verifyNoInteractions(emailService);
+    @Test void legacySubmissionRequiresAnExplicitCaseAndNeverClosesEmptyWork() {
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> service.closePunishment("Horseplay","child@example.test",List.of()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> service.closePunishment("Horseplay","child@example.test",List.of(new StudentAnswer())));
+        verifyNoInteractions(punishRepository, emailService);
     }
 
-    @Test
-    void closePunishment_shouldCloseAndSendEmail_whenNoAnswers() throws MessagingException {
-        Punishment punishment = basePunishment();
-        Student student = baseStudent();
 
-        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                "student@test.com", "Tardy", "OPEN"))
-                .thenReturn(List.of(punishment));
 
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com"))
-                .thenReturn(student);
 
-        when(templateBuilder.buildCompletionMessage(any(), any(), any(), any(), any()))
-                .thenReturn("msg");
-        when(templateBuilder.buildCompletionSubject(any(), any(), any(), any(), anyBoolean()))
-                .thenReturn("sub");
-
-        PunishmentResponse result =
-                service.closePunishment("Tardy", "student@test.com", List.of());
-
-        assertEquals("CLOSED", punishment.getStatus());
-        assertEquals(1, punishment.getClosedTimes());
-        assertNotNull(punishment.getTimeClosed());
-
-        verify(emailService).sendPtsEmail(any(), any(), any(), eq("msg"), eq("sub"), any());
-    }
-
-    @Test
-    void closePunishment_shouldThrow_whenNoOpenPunishments() {
-        when(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                any(), any(), any()))
-                .thenReturn(List.of());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> service.closePunishment("Tardy", "student@test.com", List.of()));
-    }
 
     // -------------------------
     // closeByPunishmentId
@@ -142,28 +89,12 @@ class PunishmentClosureServiceImplTest {
     // rejectLevelThree
     // -------------------------
 
-    @Test
-    void rejectLevelThree_shouldResetAndSendEmail() throws MessagingException {
-        Punishment punishment = basePunishment();
-        punishment.setInfractionDescription(new ArrayList<>(List.of("", "reset", "feedback1")));
-
-        Student student = baseStudent();
-
-        when(punishRepository.findByPunishmentId("P1")).thenReturn(punishment);
-        when(studentRepository.findByStudentEmailIgnoreCase(any())).thenReturn(student);
-
-        when(templateBuilder.buildLevelThreeRejectSubject(any(), any(), any()))
-                .thenReturn("sub");
-        when(templateBuilder.buildLevelThreeRejectMessage(any(), any()))
-                .thenReturn("msg");
-
-        Punishment result = service.rejectLevelThree("P1");
-
-        assertEquals("OPEN", result.getStatus());
-        assertEquals(0, result.getMapIndex());
-        assertEquals(2, result.getInfractionDescription().size());
-
-        verify(emailService).sendPtsEmail(any(), any(), any(), eq("msg"), eq("sub"), any());
+    @Test void legacyRejectionRequiresExplicitRecoveryAndPreservesDescription() {
+        Punishment p=new Punishment();p.setInfractionDescription(new ArrayList<>(List.of("original behavior","old answer")));
+        when(punishRepository.findByPunishmentId("case")).thenReturn(p);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> service.rejectLevelThree("case"));
+        assertEquals(List.of("original behavior","old answer"),p.getInfractionDescription());
+        verify(punishRepository,never()).save(any());verifyNoInteractions(emailService);
     }
 
     // -------------------------

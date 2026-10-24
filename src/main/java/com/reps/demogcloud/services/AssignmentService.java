@@ -30,6 +30,11 @@ public class AssignmentService {
     private final AssignmentTemplateBindingRepository bindingRepository;
     private final StudentRepository studentRepository;
     private final PunishRepository punishRepository;
+    private final AssignmentResolver resolver;
+
+    public AssignmentTemplate resolveForCase(String teacher, String school, String infraction, int level) {
+        return resolver.resolve(teacher,school,infraction,level);
+    }
 
     // -------- LEGACY METHODS (still operate on old Assignment model) --------
 
@@ -142,126 +147,18 @@ public class AssignmentService {
         assignmentTemplateRepository.delete(existing);
     }
 
-    public AssignmentTemplate resolveTemplateForInfraction(
-            String teacherEmail,
-            String schoolId,
-            String infractionName,
-            int level
-    ) throws Exception {
-
-        // 1) Teacher-specific binding
-        if (teacherEmail != null) {
-            var bindingOpt = bindingRepository
-                    .findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                            teacherEmail, infractionName, level
-                    );
-
-            if (bindingOpt.isPresent()) {
-                String templateId = bindingOpt.get().getAssignmentTemplateId();
-                return assignmentTemplateRepository.findById(templateId)
-                        .orElseThrow(() -> new Exception(
-                                "Binding exists but template " + templateId + " not found"));
-            }
-        }
-
-        // 2) School-wide fallback
-        if (schoolId != null) {
-            var bindingOpt = bindingRepository
-                    .findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
-                            schoolId, infractionName, level
-                    );
-
-            if (bindingOpt.isPresent()) {
-                String templateId = bindingOpt.get().getAssignmentTemplateId();
-                return assignmentTemplateRepository.findById(templateId)
-                        .orElseThrow(() -> new Exception(
-                                "School binding exists but template " + templateId + " not found"));
-            }
-        }
-
-        // 3) System default fallback
-        List<AssignmentTemplate> systemTemplates =
-                assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                        infractionName,
-                        level,
-                        AssignmentTemplate.Scope.SYSTEM_DEFAULT
-                );
-
-        if (!systemTemplates.isEmpty()) {
-            return systemTemplates.get(0);
-        }
-
-        throw new Exception(
-                "No AssignmentTemplate found for infraction=" + infractionName + ", level=" + level);
+    public AssignmentTemplate resolveTemplateForInfraction(String teacherEmail, String schoolId, String infractionName, int level) {
+        return resolveForCase(teacherEmail, schoolId, infractionName, level);
     }
 
     public AssignmentTemplate resolveTemplateForPunishment(Punishment punishment) {
-        String infractionName = punishment.getInfractionName();
-        int level = Integer.parseInt(punishment.getInfractionLevel());
-        String teacherEmail = punishment.getTeacherEmail();
-
-        // (Optional) school-level default
-        String schoolId = null;
-        try {
-            Student s = studentRepository.findByStudentEmailIgnoreCase(
-                    punishment.getStudentEmail()
-            );
-            if (s != null) {
-                schoolId = s.getSchool();
-            }
-        } catch (Exception ignored) {
-            // intentionally ignored to preserve prior behavior
-        }
-
-        // 1) Teacher-specific binding
-        AssignmentTemplateBinding teacherBinding =
-                bindingRepository
-                        .findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                                teacherEmail,
-                                infractionName,
-                                level
-                        )
-                        .orElse(null);
-
-        if (teacherBinding != null) {
-            return assignmentTemplateRepository
-                    .findById(teacherBinding.getAssignmentTemplateId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Binding exists but template not found: " + teacherBinding.getAssignmentTemplateId()
-                    ));
-        }
-
-        // 2) School-level default
-        if (schoolId != null) {
-            List<AssignmentTemplate> schoolDefaults =
-                    assignmentTemplateRepository
-                            .findByInfractionNameAndLevelAndScopeAndSchoolIdAndActiveTrue(
-                                    infractionName,
-                                    level,
-                                    AssignmentTemplate.Scope.SCHOOL_DEFAULT,
-                                    schoolId
-                            );
-            if (!schoolDefaults.isEmpty()) {
-                return schoolDefaults.get(0);
-            }
-        }
-
-        // 3) System default
-        List<AssignmentTemplate> systemDefaults =
-                assignmentTemplateRepository
-                        .findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                                infractionName,
-                                level,
-                                AssignmentTemplate.Scope.SYSTEM_DEFAULT
-                        );
-
-        if (!systemDefaults.isEmpty()) {
-            return systemDefaults.get(0);
-        }
-
-        throw new IllegalStateException(
-                "No assignment template found for infraction=" + infractionName + ", level=" + level
-        );
+        if (punishment.getAssignmentTemplateId()==null)
+            throw new IllegalArgumentException("Assignment unavailable; staff must explicitly bind a template to this case");
+        AssignmentTemplate pinned=resolver.pinned(punishment.getAssignmentTemplateId(),punishment.getSchool());
+        if(punishment.getAssignmentWork()!=null && punishment.getAssignmentWork().getTemplate()==null)
+            throw new IllegalArgumentException("Assignment unavailable; staff must review this case");
+        return punishment.getAssignmentWork()!=null && punishment.getAssignmentWork().getTemplate()!=null
+                ? punishment.getAssignmentWork().getTemplate() : pinned;
     }
 
     // ================= BINDINGS: TEACHER DEFAULTS & SHARING =================

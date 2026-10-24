@@ -38,11 +38,9 @@ public class PunishmentCreationService {
         LocalDate now = LocalDate.now();
 
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
-        if (emailSenderService.isPhase1RoutingEnabled()) {
-            String actor = userContextService.getCurrentStaffEmail();
-            userContextService.requireStaffInStudentSchool(actor, student);
-            formRequest.setTeacherEmail(actor);
-        }
+        String actor = userContextService.getCurrentStaffEmail();
+        userContextService.requireStaffInStudentSchool(actor, student);
+        formRequest.setTeacherEmail(actor);
         String managedId = null;
         if (requiredNotifications.isEnabled()) {
             managedId = requiredNotifications.creationId("punishment", student.getStudentEmail(),java.util.Arrays.asList(
@@ -62,19 +60,16 @@ public class PunishmentCreationService {
         Punishment punishment = punishmentUtils.buildPunishment(formRequest, infraction, student, maxLevel, now);
         if (managedId != null) punishment.setPunishmentId(managedId);
 
-        try {
-            int level;
-            try {
-                level = Integer.parseInt(punishment.getInfractionLevel());
-            } catch (NumberFormatException e) {
-                level = maxLevel;
-            }
+        if (!InfractionType.isSpecialCase(infraction.getInfractionName()) && !formRequest.isAdminReferral()
+                && punishment.getClosedTimes()<4) try {
+            int level = Integer.parseInt(punishment.getInfractionLevel());
+            if(level<1) throw new IllegalArgumentException("Invalid assignment level");
 
             String teacherEmail = punishment.getTeacherEmail();
             String schoolIdOrName = student.getSchool();
             String infractionName = infraction.getInfractionName();
 
-            AssignmentTemplate template = assignmentService.resolveTemplateForInfraction(
+            AssignmentTemplate template = assignmentService.resolveForCase(
                     teacherEmail,
                     schoolIdOrName,
                     infractionName,
@@ -82,14 +77,11 @@ public class PunishmentCreationService {
             );
 
             punishment.setAssignmentTemplateId(template.getId());
+            punishment.setAssignmentWork(com.reps.demogcloud.models.assignments.AssignmentWork.assigned(template));
         } catch (Exception e) {
-            log.info(
-                    "No assignment template resolved for infraction={} level={} teacher={}",
-                    infraction.getInfractionName(),
-                    punishment.getInfractionLevel(),
-                    punishment.getTeacherEmail(),
-                    e
-            );
+            punishment.setAssignmentWork(com.reps.demogcloud.models.assignments.AssignmentWork.unavailable(
+                    "No usable assignment could be attached. Staff must review templates and explicitly attach an assignment."));
+            log.info("Assignment could not be attached; case creation continues with assignment unavailable");
         }
 
         punishmentUtils.savePhoneLogIfNeeded(formRequest, student, now);

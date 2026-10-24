@@ -42,6 +42,8 @@ class OfficeReferralControllerTest {
 
     @MockitoBean
     private OfficeReferralService officeReferralService;
+    @MockitoBean private com.reps.demogcloud.services.WorkflowAccessService access;
+    @MockitoBean private com.reps.demogcloud.services.UserContextService users;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -54,6 +56,7 @@ class OfficeReferralControllerTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(access.canReadOffice(any())).thenReturn(true);
         referral = new OfficeReferral();
         referral.setOfficeReferralId("123");
         referral.setAdminEmail("admin@example.com");
