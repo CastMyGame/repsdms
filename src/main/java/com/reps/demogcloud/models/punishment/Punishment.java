@@ -66,6 +66,9 @@ public class Punishment implements Comparable<Punishment>, org.springframework.d
 
     // 🔹 NEW: which assignment template this punishment uses
     private String assignmentTemplateId;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @lombok.ToString.Exclude
+    private com.reps.demogcloud.models.assignments.AssignmentWork assignmentWork;
 
 
 

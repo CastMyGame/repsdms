@@ -26,17 +26,21 @@ import java.util.List;
 public class OfficeReferralController {
 
     private final OfficeReferralService officeReferralService;
+    private final com.reps.demogcloud.services.WorkflowAccessService access;
+    private final com.reps.demogcloud.services.UserContextService users;
 
     @GetMapping("/punishments")
     public ResponseEntity<List<OfficeReferral>> getAll() {
+        access.requireStaff();
         var message = officeReferralService.findAll();
         return ResponseEntity
                 .accepted()
-                .body(message);
+                .body(message.stream().filter(access::canReadOffice).toList());
     }
     @GetMapping("/id/{id}")
     public ResponseEntity<OfficeReferral> getByReferralId(@PathVariable String id) throws ResourceNotFoundException {
         var message = officeReferralService.findByReferralId(id);
+        if(!access.canReadOffice(message)) throw new org.springframework.security.access.AccessDeniedException("Access denied");
 
         return ResponseEntity
                 .accepted()
@@ -45,14 +49,17 @@ public class OfficeReferralController {
 
     @GetMapping("/admin/{email}")
     public ResponseEntity<List<OfficeReferral>> getByAdminEmail(@PathVariable String email) throws ResourceNotFoundException {
+        access.requireStaff();
         var message = officeReferralService.findByAdminEmail(email);
 
         return ResponseEntity
                 .accepted()
-                .body(message);
+                .body(message.stream().filter(access::canReadOffice).toList());
     }
     @PostMapping("/startPunish/adminReferral")
     public ResponseEntity<List<OfficeReferral>> createNewAdminReferralBulk(@RequestBody List<OfficeReferralRequest> officeReferralListRequest) {
+        access.requireStaff();
+        for(var request:officeReferralListRequest) { request.setTeacherEmail(users.getCurrentStaffEmail()); }
         var message = officeReferralService.createNewAdminReferralBulk(officeReferralListRequest);
 
         return ResponseEntity
@@ -97,6 +104,7 @@ public class OfficeReferralController {
 
     @PutMapping("/descriptions")
     public ResponseEntity<List<OfficeReferral>> updateAllDescriptions() {
+        access.denyLegacyWrite();
         List<OfficeReferral> response = officeReferralService.updateDescriptions();
 
         return ResponseEntity

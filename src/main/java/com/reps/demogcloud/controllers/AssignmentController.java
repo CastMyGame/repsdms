@@ -106,7 +106,7 @@ public class AssignmentController {
             return ResponseEntity.notFound().build();
         }
 
-        AssignmentTemplate template = assignmentService.getTemplateById(punishment.getAssignmentTemplateId());
+        AssignmentTemplate template = assignmentService.buildAssignmentForPunishment(id);
         access.requireCaseTemplate(id, template);
         return ResponseEntity.ok(template);
     }

@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AssignmentServiceTest {
+    @Mock private AssignmentResolver resolver;
 
     @Mock
     private AssignmentRepository assignmentRepository;
@@ -286,251 +287,11 @@ class AssignmentServiceTest {
         verify(assignmentTemplateRepository, never()).delete(any());
     }
 
-    @Test
-    void resolveTemplateForInfraction_shouldUseTeacherBindingFirst() throws Exception {
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("template-1");
-
-        AssignmentTemplate template = new AssignmentTemplate();
-
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-
-        when(assignmentTemplateRepository.findById("template-1")).thenReturn(Optional.of(template));
-
-        AssignmentTemplate result = service.resolveTemplateForInfraction(
-                "teacher@test.com", "school1", "Tardy", 1
-        );
-
-        assertSame(template, result);
-        verify(bindingRepository).findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        );
-        verify(assignmentTemplateRepository).findById("template-1");
-    }
-
-    @Test
-    void resolveTemplateForInfraction_shouldThrowWhenTeacherBindingTemplateMissing() {
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("missing-template");
-
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-
-        when(assignmentTemplateRepository.findById("missing-template")).thenReturn(Optional.empty());
-
-        Exception ex = assertThrows(Exception.class, () ->
-                service.resolveTemplateForInfraction("teacher@test.com", "school1", "Tardy", 1));
-
-        assertEquals("Binding exists but template missing-template not found", ex.getMessage());
-    }
-
-    @Test
-    void resolveTemplateForInfraction_shouldUseSchoolBindingFallback() throws Exception {
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("template-2");
-
-        AssignmentTemplate template = new AssignmentTemplate();
-
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(bindingRepository.findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
-                "school1", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-
-        when(assignmentTemplateRepository.findById("template-2")).thenReturn(Optional.of(template));
-
-        AssignmentTemplate result = service.resolveTemplateForInfraction(
-                "teacher@test.com", "school1", "Tardy", 1
-        );
-
-        assertSame(template, result);
-    }
-
-    @Test
-    void resolveTemplateForInfraction_shouldThrowWhenSchoolBindingTemplateMissing() {
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("missing-template");
-
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(bindingRepository.findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
-                "school1", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-
-        when(assignmentTemplateRepository.findById("missing-template")).thenReturn(Optional.empty());
-
-        Exception ex = assertThrows(Exception.class, () ->
-                service.resolveTemplateForInfraction("teacher@test.com", "school1", "Tardy", 1));
-
-        assertEquals("School binding exists but template missing-template not found", ex.getMessage());
-    }
-
-    @Test
-    void resolveTemplateForInfraction_shouldUseSystemFallback() throws Exception {
-        AssignmentTemplate systemTemplate = new AssignmentTemplate();
-
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(bindingRepository.findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
-                "school1", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SYSTEM_DEFAULT
-        )).thenReturn(List.of(systemTemplate));
-
-        AssignmentTemplate result = service.resolveTemplateForInfraction(
-                "teacher@test.com", "school1", "Tardy", 1
-        );
-
-        assertSame(systemTemplate, result);
-    }
-
-    @Test
-    void resolveTemplateForInfraction_shouldThrowWhenNothingFound() {
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(bindingRepository.findFirstByTeacherEmailIsNullAndSchoolIdAndInfractionNameAndLevelAndActiveTrue(
-                "school1", "Tardy", 1
-        )).thenReturn(Optional.empty());
-
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SYSTEM_DEFAULT
-        )).thenReturn(List.of());
-
-        Exception ex = assertThrows(Exception.class, () ->
-                service.resolveTemplateForInfraction("teacher@test.com", "school1", "Tardy", 1));
-
-        assertEquals("No AssignmentTemplate found for infraction=Tardy, level=1", ex.getMessage());
-    }
-
-    @Test
-    void resolveTemplateForPunishment_shouldUseTeacherBindingFirst() {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("template-1");
-
-        AssignmentTemplate template = new AssignmentTemplate();
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-        when(assignmentTemplateRepository.findById("template-1")).thenReturn(Optional.of(template));
-
-        AssignmentTemplate result = service.resolveTemplateForPunishment(punishment);
-
-        assertSame(template, result);
-    }
-
-    @Test
-    void resolveTemplateForPunishment_shouldThrowWhenTeacherBindingTemplateMissing() {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        AssignmentTemplateBinding binding = new AssignmentTemplateBinding();
-        binding.setAssignmentTemplateId("missing-template");
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.of(binding));
-        when(assignmentTemplateRepository.findById("missing-template")).thenReturn(Optional.empty());
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> service.resolveTemplateForPunishment(punishment));
-
-        assertEquals("Binding exists but template not found: missing-template", ex.getMessage());
-    }
-
-    @Test
-    void resolveTemplateForPunishment_shouldUseSchoolDefaultFallback() {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        Student student = new Student();
-        student.setSchool("school1");
-
-        AssignmentTemplate schoolTemplate = new AssignmentTemplate();
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndSchoolIdAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SCHOOL_DEFAULT, "school1"
-        )).thenReturn(List.of(schoolTemplate));
-
-        AssignmentTemplate result = service.resolveTemplateForPunishment(punishment);
-
-        assertSame(schoolTemplate, result);
-    }
-
-    @Test
-    void resolveTemplateForPunishment_shouldUseSystemFallback() {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        AssignmentTemplate systemTemplate = new AssignmentTemplate();
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SYSTEM_DEFAULT
-        )).thenReturn(List.of(systemTemplate));
-
-        AssignmentTemplate result = service.resolveTemplateForPunishment(punishment);
-
-        assertSame(systemTemplate, result);
-    }
-
-    @Test
-    void resolveTemplateForPunishment_shouldThrowWhenNothingFound() {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SYSTEM_DEFAULT
-        )).thenReturn(List.of());
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> service.resolveTemplateForPunishment(punishment));
-
-        assertEquals("No assignment template found for infraction=Tardy, level=1", ex.getMessage());
+    @Test void creationResolutionUsesOneCanonicalPolicy() {
+        var template=new AssignmentTemplate();
+        when(resolver.resolve("teacher","School","Horseplay",1)).thenReturn(template);
+        assertSame(template,service.resolveTemplateForInfraction("teacher","School","Horseplay",1));
+        verify(resolver).resolve("teacher","School","Horseplay",1);
     }
 
     @Test
@@ -804,28 +565,13 @@ class AssignmentServiceTest {
         assertTrue(result.get(0).getFirstQuestionPreview().endsWith("..."));
     }
 
-    @Test
-    void buildAssignmentForPunishment_shouldResolveTemplate() throws Exception {
-        Punishment punishment = new Punishment();
-        punishment.setTeacherEmail("teacher@test.com");
-        punishment.setInfractionName("Tardy");
-        punishment.setInfractionLevel("1");
-        punishment.setStudentEmail("student@test.com");
-
-        AssignmentTemplate template = new AssignmentTemplate();
-
-        when(punishRepository.findById("1")).thenReturn(Optional.of(punishment));
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(null);
-        when(bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrueOrderByCreatedAtDesc(
-                "teacher@test.com", "Tardy", 1
-        )).thenReturn(Optional.empty());
-        when(assignmentTemplateRepository.findByInfractionNameAndLevelAndScopeAndActiveTrue(
-                "Tardy", 1, AssignmentTemplate.Scope.SYSTEM_DEFAULT
-        )).thenReturn(List.of(template));
-
-        AssignmentTemplate result = service.buildAssignmentForPunishment("1");
-
-        assertSame(template, result);
+    @Test void buildAssignmentForPunishmentHonorsPinnedTemplate() throws Exception {
+        var punishment=new Punishment();punishment.setAssignmentTemplateId("original");punishment.setSchool("School");
+        var template=new AssignmentTemplate();
+        when(punishRepository.findById("case")).thenReturn(Optional.of(punishment));
+        when(resolver.pinned("original","School")).thenReturn(template);
+        assertSame(template,service.buildAssignmentForPunishment("case"));
+        verifyNoInteractions(bindingRepository);
     }
 
     @Test

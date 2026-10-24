@@ -91,11 +91,9 @@ public class OfficeReferralService {
             throw new IllegalStateException("Student not found: " + officeReferralRequest.getStudentEmail());
         }
 
-        if (emailSenderService.isPhase1RoutingEnabled()) {
-            String actor = userContextService.getCurrentStaffEmail();
-            userContextService.requireStaffInStudentSchool(actor, findMe);
-            officeReferralRequest.setTeacherEmail(actor);
-        }
+        String actor = userContextService.getCurrentStaffEmail();
+        userContextService.requireStaffInStudentSchool(actor, findMe);
+        officeReferralRequest.setTeacherEmail(actor);
 
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
 
@@ -129,73 +127,11 @@ public class OfficeReferralService {
     }
 
     public OfficeReferral updateMapIndex(String id, int index) {
-        OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(id);
-        if (referral != null) {
-            referral.setMapIndex(index);
-            officeReferralRepository.save(referral);
-            return referral;
-        } else {
-            throw new ResourceNotFoundException("No Punishment with Id " + id + " number exist");
-        }
+        throw new IllegalArgumentException("Office referrals are handled by the principal and have no student assignment");
     }
 
     public OfficeReferral rejectAnswers(String referralId) throws MessagingException {
-        if(requiredNotifications.isEnabled()) return managedChange(referralId,"REJECTED",null);
-        OfficeReferral referral = officeReferralRepository.findByOfficeReferralId(referralId);
-        if (referral == null) {
-            throw new ResourceNotFoundException("Office Referral not found for ID: " + referralId);
-        }
-
-        Student studentReject = studentRepository.findByStudentEmailIgnoreCase(referral.getStudentEmail());
-        if (studentReject == null) {
-            throw new IllegalStateException("Student not found: " + referral.getStudentEmail());
-        }
-
-        List<String> infractionContext = referral.getReferralDescription();
-        if (infractionContext == null || infractionContext.isEmpty()) {
-            throw new IllegalStateException("Referral description is missing for referral: " + referralId);
-        }
-
-        String resetContext = infractionContext.get(0);
-        List<String> contextToStore = infractionContext.size() > 1
-                ? new ArrayList<>(infractionContext.subList(1, infractionContext.size()))
-                : new ArrayList<>();
-
-        List<String> studentAnswer = new ArrayList<>();
-        studentAnswer.add(resetContext);
-        Date currentDate = new Date();
-
-        if (referral.getAnswerHistory() != null) {
-            Map<Date, List<String>> answers = referral.getAnswerHistory();
-            answers.put(currentDate, new ArrayList<>(contextToStore));
-        } else {
-            referral.setAnswerHistory(currentDate, new ArrayList<>(contextToStore));
-        }
-
-        referral.setReferralDescription(studentAnswer);
-        referral.setStatus("OPEN");
-
-        String message = "Hello, \n" +
-                "Unfortunately your answers provided to the open ended questions were unacceptable and you must resubmit with acceptable answers to close this out. A description of why your answers were not accepted is:  \n" +
-                " \n" +
-                contextToStore + " \n" +
-                "If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.";
-
-        String subject = "Level Three Answers not accepted for " + studentReject.getFirstName() + " " + studentReject.getLastName();
-
-        emailService.sendPtsEmail(
-                studentReject.getParentEmail(),
-                referral.getTeacherEmail(),
-                studentReject.getStudentEmail(),
-                message,
-                subject,
-                studentReject.getPreferredLanguage()
-        );
-
-        referral.setMapIndex(0);
-        officeReferralRepository.save(referral);
-
-        return referral;
+        throw new IllegalArgumentException("Office referrals have no student assignment to reject; review the referral with the principal");
     }
 
     public List<OfficeReferral> findAll() {
@@ -240,10 +176,17 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException {
+        OfficeReferral checked=officeReferralRepository.findByOfficeReferralId(request.getId());
+        if(checked==null) throw new ResourceNotFoundException("Case not found");
+        userContextService.requireAdministratorInSchool(checked.getSchool());
+        requiredNotifications.requireActionAccess(checked,"CLOSED");
+        if("CLOSED".equals(checked.getStatus())) {
+            var response=new OfficeReferralResponse(); response.setOfficeReferral(checked); return response;
+        }
         if(requiredNotifications.isEnabled()) {
             OfficeReferralResponse response=new OfficeReferralResponse(); response.setOfficeReferral(managedChange(request.getId(),"CLOSED",request.getComment())); return response;
         }
-        OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(request.getId());
+        OfficeReferral findMe = checked;
 
         if (findMe == null) {
             throw new ResourceNotFoundException("Office Referral not found for ID: " + request.getId());
@@ -286,22 +229,7 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse submitByReferralId(String referralId) throws ResourceNotFoundException {
-        if(requiredNotifications.isEnabled()) {
-            OfficeReferralResponse response=new OfficeReferralResponse(); response.setOfficeReferral(managedChange(referralId,"SUBMITTED",null)); return response;
-        }
-        OfficeReferral findMe = officeReferralRepository.findByOfficeReferralId(referralId);
-
-        if (findMe == null) {
-            throw new ResourceNotFoundException("Office Referral not found for ID: " + referralId);
-        }
-
-        findMe.setStatus("PENDING");
-        findMe.setTimeClosed(LocalDate.now());
-        officeReferralRepository.save(findMe);
-        OfficeReferralResponse referralResponse = new OfficeReferralResponse();
-        referralResponse.setOfficeReferral(findMe);
-
-        return referralResponse;
+        throw new IllegalArgumentException("Office referrals have no student assignment; contact the principal");
     }
 
     public List<TeacherDTO> getTeacherResponse(List<OfficeReferral> referralList) {

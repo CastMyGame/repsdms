@@ -92,6 +92,13 @@ public class WorkflowAccessService {
         if (!canReadCase(punishment)) denied();
         return punishment;
     }
+    public boolean canReadOffice(com.reps.demogcloud.models.officeReferral.OfficeReferral referral) {
+        if(referral==null) return false;
+        var scope=new Punishment();scope.setStudentEmail(referral.getStudentEmail());scope.setSchool(referral.getSchool());
+        scope.setTeacherEmail(referral.getTeacherEmail());scope.setOriginalAuthorEmail(referral.getOriginalAuthorEmail());
+        scope.setResponsibleStaffEmail(referral.getResponsibleStaffEmail());
+        return canReadCase(scope);
+    }
 
     private boolean system(AssignmentTemplate template) {
         return template.isCreatedBySystem() && !text(template.getCreatedByUserId())
