@@ -151,28 +151,17 @@ public class RequiredNotificationService {
         if(entity instanceof Punishment punishment && punishment.getAssignmentWork()!=null
                 && punishment.getAssignmentWork().getFeedback()!=null)
             content.put("feedback",punishment.getAssignmentWork().getFeedback());
+        if(entity instanceof Punishment p && p.getAssignmentWork()!=null) content.put("assignmentState",p.getAssignmentWork().getState());
+        if(entity instanceof OfficeReferral && "CLOSED".equals(list.get(list.size()-1).getEvent()) && value instanceof List<?> entries && entries.size()>1)
+            content.put("closureComment",Objects.toString(entries.get(entries.size()-1),""));
         list.get(list.size()-1).setContent(content);
     }
-    private String escape(String value) { return org.springframework.web.util.HtmlUtils.htmlEscape(Objects.toString(value,"")); }
     private String render(Object entity,RequiredNotification notification,Student student) {
-        if(notification.getBody()!=null) return notification.getBody();
-        Map<String,String> content=notification.getContent()==null?Map.of():notification.getContent();
-        String first=escape(student.getFirstName()), last=escape(student.getLastName()), lang=Objects.toString(student.getPreferredLanguage(),"en");
-        String name=escape(content.getOrDefault("infractionName","School referral")), level=escape(content.getOrDefault("infractionLevel",""));
+        if(notification.getBody()!=null) return notification.getBody(); // Persisted guidance resource HTML is constructed/escaped server-side.
         String contact=notification.getActor()==null?text(entity,"originalAuthorEmail"):notification.getActor();
-        return switch(notification.getEvent()) {
-            case "CLOSED","COMPLETED" -> templates.buildCompletionMessage(first,last,name,contact,lang);
-            case "REJECTED" -> templates.buildLevelThreeRejectMessage(escape(content.getOrDefault("feedback","Please contact your school for feedback.")),lang);
-            case "ARCHIVED" -> templates.buildPunishmentDeletedMessage(first,last,name,level,escape(content.getOrDefault("archivedExplanation","")),lang);
-            case "RESTORED" -> templates.buildPunishmentRestoredMessage(first,last,lang);
-            case "CREATED" -> {
-                if(entity instanceof OfficeReferral) yield templates.buildOfficeReferralMessage(first,last,name,escape(content.getOrDefault("description","")),lang);
-                if("CFR".equals(content.get("status"))) yield templates.createCFRMessage(first,last,name,text(entity,"originalAuthorEmail"),student.getStudentEmail(),lang);
-                yield templates.createEmailText(first,last,level,name,escape(content.getOrDefault("description","")),student.getStudentEmail(),lang);
-            }
-            case "SUBMITTED" -> "<p>"+first+" "+last+" submitted work for school review. Please contact the school with any questions.</p>";
-            default -> "<p>"+first+" "+last+" has an incomplete school assignment. Please contact the school about the "+escape(notification.getEvent().replace("REMINDER_",""))+" reminder.</p>";
-        };
+        return templates.buildCaseMessage(kind(entity),notification.getEvent(),
+                notification.getContent()==null?Map.of():notification.getContent(),
+                Objects.toString(student.getFirstName(),""),Objects.toString(student.getLastName(),""),contact,student.getPreferredLanguage());
     }
     private void authorize(String actor,String author,String owner,Student student) {
         users.requireStaffInStudentSchool(actor,student);
@@ -298,20 +287,24 @@ public class RequiredNotificationService {
             cc.removeIf(email->email.equalsIgnoreCase(to)); bcc.removeIf(email->email.equalsIgnoreCase(to));
             var recipients=new TreeSet<String>(); recipients.add(to); recipients.addAll(cc); recipients.addAll(bcc);
             intent.setRecipients(new ArrayList<>(recipients));
+            String subject="REPS case "+text(claimed,"conversationId").substring(0,8)+" — "+templates.buildManagedSubject(kind,intent.getContent()==null?Map.of():intent.getContent(),student.getPreferredLanguage());
             String parent=null,thread=null;
             for(var previous:intents(claimed)) {
                 if("ACCEPTED".equals(previous.getState()) && Objects.equals(previous.getRecipients(),new ArrayList<>(recipients))) {
                     parent=previous.getRfcMessageId();
-                    thread=Objects.equals(actor,previous.getActor()) && "GMAIL".equals(previous.getProvider())?previous.getGmailThreadId():null;
+                    thread=Objects.equals(actor,previous.getActor()) && Objects.equals(subject,previous.getSubject()) && "GMAIL".equals(previous.getProvider())?previous.getGmailThreadId():null;
                 }
             }
-            String body=render(claimed,intent,student);
-            if(body==null || body.isBlank()) throw new IllegalStateException("Notification content could not be prepared");
-            Update metadata=new Update().set("requiredNotifications.$.recipients",new ArrayList<>(recipients))
+            String body;
+            try { body=render(claimed,intent,student); }
+            catch(IllegalArgumentException | IllegalStateException invalid) { throw new ContentFailure(); }
+            try { EmailContent.requireRendered(subject,body); }
+            catch(IllegalArgumentException invalid) { throw new ContentFailure(); }
+            Update metadata=new Update().set("requiredNotifications.$.recipients",new ArrayList<>(recipients)).set("requiredNotifications.$.subject",subject)
                     .set("requiredNotifications.$.inReplyTo",parent).set("requiredNotifications.$.references",parent);
             update(kind,caseId,notificationId,"DISPATCHING",attempt,metadata);
             attempted=true;
-            Map<String,String> receipt=router.sendRequiredNotification(to,cc,"REPS case "+text(claimed,"conversationId").substring(0,8)+" update",body,
+            Map<String,String> receipt=router.sendRequiredNotification(to,cc,subject,body,
                     bcc,sendingIdentity,intent.isSystem(),intent.getRfcMessageId(),parent,thread);
             update(kind,caseId,notificationId,"DISPATCHING",attempt,new Update().set("requiredNotifications.$.state","ACCEPTED")
                     .set("requiredNotifications.$.provider",receipt.get("provider")).set("requiredNotifications.$.providerMessageId",receipt.get("providerMessageId"))
@@ -325,7 +318,7 @@ public class RequiredNotificationService {
             if(outcomes.containsValue("ACCEPTED")) state="UNCERTAIN";
             else if(intent.getRecipients()!=null && !outcomes.isEmpty() && outcomes.keySet().containsAll(intent.getRecipients())) state="FAILED";
             boolean safe=!"UNCERTAIN".equals(state);
-            String reason = attempted ? "PROVIDER_"+state : "AUTHORIZATION_OR_RECIPIENT_VALIDATION";
+            String reason = failure instanceof ContentFailure ? "CONTENT_OR_LINK_CONFIGURATION_INVALID" : failure instanceof RecipientFailure ? "REQUIRED_RECIPIENT_INVALID" : attempted ? "PROVIDER_"+state : "AUTHORIZATION_OR_RECIPIENT_VALIDATION";
             Update failureUpdate = new Update().set("requiredNotifications.$.state",state)
                     .set("requiredNotifications.$.retrySafe",safe).set("requiredNotifications.$.recipientOutcomes",outcomes);
             if (failure instanceof com.reps.demogcloud.security.services.GoogleMailService.SendFailure gmail) {
@@ -336,10 +329,15 @@ public class RequiredNotificationService {
             catch(Exception ignored) { /* Claim remains recoverable as UNCERTAIN. Never resend here. */ }
         }
     }
-    private String address(String email) throws Exception {
-        if(email==null || email.isBlank()) throw new IllegalArgumentException("Required recipient is missing");
-        InternetAddress parsed=new InternetAddress(email,true); parsed.validate();
-        if(!email.equals(parsed.getAddress())) throw new IllegalArgumentException("Only one verified recipient is allowed"); return email.toLowerCase(Locale.ROOT);
+    private static class ContentFailure extends IllegalArgumentException {}
+    private static class RecipientFailure extends IllegalArgumentException {}
+    private String address(String email) {
+        try {
+            if(email==null || email.isBlank() || email.contains("\r") || email.contains("\n")) throw new RecipientFailure();
+            InternetAddress parsed=new InternetAddress(email,true); parsed.validate();
+            if(!email.equals(parsed.getAddress())) throw new RecipientFailure();
+            return email.toLowerCase(Locale.ROOT);
+        } catch(Exception invalid) { throw new RecipientFailure(); }
     }
     private void addStaff(List<String> recipients,String staff,Student student) {
         if(staff==null || staff.isBlank()) return;

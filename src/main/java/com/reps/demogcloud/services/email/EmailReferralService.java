@@ -25,6 +25,7 @@ import java.util.Optional;
 public class EmailReferralService {
 
     private final EmailTemplateBuilderService emailTemplateBuilderService;
+    private final EmailNotificationService notificationService;
     private final PunishRepository punishRepository;
     private final StudentRepository studentRepository;
     private final InfractionRepository infractionRepository;
@@ -119,24 +120,16 @@ public class EmailReferralService {
             description0 = punishment.getInfractionDescription().get(0);
         }
 
-        String msg = emailTemplateBuilderService.createEmailText(
-                student.getFirstName(),
-                student.getLastName(),
-                infraction.getInfractionLevel(),
-                infraction.getInfractionName(),
-                emailTemplateBuilderService.replaceString(description0),
-                student.getStudentEmail(),
-                student.getPreferredLanguage()
-        );
-
-        String subject = emailTemplateBuilderService.buildSubject(
-                student.getSchool(),
-                student.getFirstName(),
-                student.getLastName(),
-                student.getPreferredLanguage(),
-                false
-        );
-
+        String msg, subject;
+        if(com.reps.demogcloud.models.enums.InfractionType.isSpecialCase(infraction.getInfractionName())) {
+            var content=java.util.Map.of("infractionName",infraction.getInfractionName(),"description",description(punishment),"status",java.util.Objects.toString(punishment.getStatus(),""));
+            msg=emailTemplateBuilderService.buildCaseMessage("punishment","CREATED",content,student.getFirstName(),student.getLastName(),punishment.getTeacherEmail(),student.getPreferredLanguage());
+            subject=emailTemplateBuilderService.buildCommunicationSubject("punishment",content,student.getSchool(),student.getFirstName(),student.getLastName(),student.getPreferredLanguage());
+        } else {
+            msg=emailTemplateBuilderService.createEmailText(student.getFirstName(),student.getLastName(),infraction.getInfractionLevel(),
+                    infraction.getInfractionName(),description0,student.getStudentEmail(),student.getPreferredLanguage());
+            subject=emailTemplateBuilderService.buildSubject(student.getSchool(),student.getFirstName(),student.getLastName(),student.getPreferredLanguage(),false);
+        }
         response.setMessage(msg);
         response.setSubject(subject);
 
@@ -150,7 +143,7 @@ public class EmailReferralService {
         );
     }
 
-    public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
+    public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) throws MessagingException {
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
         Infraction infraction = infractionRepository.findByInfractionId(punishment.getInfractionId());
         Optional<School> schoolOpt = schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());
@@ -174,13 +167,20 @@ public class EmailReferralService {
                 student.getFirstName(),
                 student.getLastName(),
                 infraction.getInfractionName(),
+                description(punishment),
                 response.getTeacherToEmail(),
                 student.getStudentEmail(),
                 student.getPreferredLanguage()
         );
 
         response.setMessage(message);
+        notificationService.sendPtsEmail(response.getParentToEmail(),response.getTeacherToEmail(),response.getStudentToEmail(),
+                message,response.getSubject(),student.getPreferredLanguage());
         return response;
+    }
+
+    private String description(Punishment p) {
+        return p.getInfractionDescription()==null || p.getInfractionDescription().isEmpty()?null:p.getInfractionDescription().get(0);
     }
 
     private PunishmentResponse setUpPunishmentResponse(Punishment punishment, Student student) {

@@ -3,64 +3,30 @@ package com.reps.demogcloud.models.email;
 public class EmailTemplates {
 
     public static final String EMAIL_EN = """
-        Hello,
-        Your child, {{studentFullName}}, has received offense number {{infractionLevel}} for {{infractionName}}. {{description}}.
-        As a result they have received an assignment. The goal of the assignment is to provide {{studentFullName}} with information about the infraction and ways to make beneficial decisions in the future. If {{studentFullName}} does not complete the assignment by the end of the school day tomorrow they will receive a failure to comply with disciplinary action referral which is an office managed referral. We will send out an email confirming the completion of the assignment when we receive the assignment. We appreciate your assistance and will continue to work to help your child reach their full potential.
-        Your child’s login information is as follows at the website {{loginUrl}}:
-        If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking reply all to this message and typing a response. Please include any extenuating circumstances that may have led to this behavior, or will prevent the completion of the assignment.
+        <p>Hello, {{studentFullName}} received referral level {{infractionLevel}} for {{infractionName}}.</p><p>{{description}}</p><p>Review the assigned work and school instructions at {{loginUrl}}. Sign-in identifier: {{studentEmail}}. Use your established password, Google sign-in, or ask school staff for secure setup assistance. No password is included in this message.</p><p>Reply to contact the responsible staff member.</p>
         """;
 
     public static final String EMAIL_ES = """
-        Hola,
-        Su hijo, {{studentFullName}}, ha recibido la falta número {{infractionLevel}} por {{infractionName}}. {{description}}.<br><br>
-        Como resultado, se le ha asignado una tarea. El objetivo de esta tarea es proporcionar a {{studentFullName}} información sobre la infracción y maneras de tomar decisiones beneficiosas en el futuro.
-        Si {{studentFullName}} no completa la tarea antes del final del día escolar de mañana, recibirá una notificación por incumplimiento de las medidas disciplinarias, una notificación gestionada por la oficina.
-        Enviaremos un correo electrónico confirmando la finalización de la tarea cuando la recibamos.
-        Agradecemos su ayuda y seguiremos trabajando para ayudar a su hijo/a a alcanzar su máximo potencial.
-        La información de inicio de sesión de su hijo es la siguiente en el sitio web {{loginUrl}}:
-        Si tiene alguna pregunta o inquietud, puede contactar directamente al profesor que escribió la recomendación haciendo clic en "Responder a todos" y escribiendo una respuesta.
-        Incluya cualquier circunstancia atenuante que pueda haber provocado este comportamiento o que impida completar la tarea.
+        <p>Hola, {{studentFullName}} recibió una referencia de nivel {{infractionLevel}} por {{infractionName}}.</p><p>{{description}}</p><p>Consulte la tarea y las instrucciones de la escuela en {{loginUrl}}. Identificador de acceso: {{studentEmail}}. Use su contraseña establecida, inicie sesión con Google o solicite ayuda a la escuela para configurar el acceso de forma segura. Este mensaje no contiene ninguna contraseña.</p><p>Responda para contactar al personal responsable.</p>
         """;
 
     public static final String CFR_EN = """
-        Hello,<br>
-        Your child, {{studentFullName}}, has received another offense for {{infractionName}}. {{description}}.<br><br>
-
-        They currently have an assignment at {{loginUrl}} they need to complete for this type of offense, so they will not be receiving another assignment.
-        A record of this offense will be kept, and this email is to inform you of this happening.<br><br>
-
-        You may email the teacher directly at {{teacherEmail}} if there are any extenuating circumstances that may have led to this behavior, will prevent completion of the assignment, or if you have any questions or concerns.<br><br>
-
-        Your child’s login information is as follows at the website {{loginUrl}}:<br>
-
-        If you have any questions or concerns you can contact the teacher who wrote the referral directly by clicking “Reply all” to this message and typing a response.
-        Please include any extenuating circumstances that may have led to this behavior, or will prevent completion of the assignment.
+        <p>Hello, {{studentFullName}} received another referral for {{infractionName}}.</p><p>{{description}}</p><p>No new assignment was issued for this repeated referral. Review existing work and school instructions at {{loginUrl}}. Contact {{teacherEmail}} with questions.</p>
         """;
 
     public static final String CFR_ES = """
-        Hola,<br>
-        Su hijo/a, {{studentFullName}}, ha recibido otra falta por {{infractionName}}. {{description}}.<br><br>
-
-        Actualmente tiene una tarea en {{loginUrl}} que debe completar para este tipo de falta, por lo que no recibirá otra.
-        Se mantendrá un registro de esta falta, y este correo es para informarle de lo ocurrido.<br><br>
-
-        Puede enviar un correo al profesor directamente a {{teacherEmail}} si existen circunstancias atenuantes que hayan provocado este comportamiento, que impidan completar la tarea, o si tiene alguna pregunta o inquietud.<br><br>
-
-        La información de inicio de sesión de su hijo/a es la siguiente en el sitio web {{loginUrl}}:<br>
-
-        Si tiene alguna pregunta o inquietud, puede contactar directamente al profesor que escribió la recomendación haciendo clic en “Responder a todos” y escribiendo una respuesta.
-        Incluya cualquier circunstancia atenuante que pueda haber provocado este comportamiento o que impida completar la tarea.
+        <p>Hola, {{studentFullName}} recibió otra referencia por {{infractionName}}.</p><p>{{description}}</p><p>No se asignó una nueva tarea por esta referencia repetida. Consulte el trabajo existente y las instrucciones de la escuela en {{loginUrl}}. Contacte a {{teacherEmail}} si tiene preguntas.</p>
         """;
 
     public static final String TEXT_EN = """
         Your child, {{studentFullName}}, has received offense number {{infractionLevel}} for {{infractionName}}. {{description}}.
-        They have an assignment due by the end of the school day tomorrow. If not completed, they will receive a Failure to Comply with Disciplinary Action referral (office-managed).
+        Review current assigned work and school instructions in REPS, or contact the school for help.
         Check your email for details. This is an automated text—please reply to the email or contact the school with questions.
         """;
 
     public static final String TEXT_ES = """
         Su hijo/a, {{studentFullName}}, ha recibido la falta número {{infractionLevel}} por {{infractionName}}. {{description}}.
-        Tiene una tarea que vence antes del final del día escolar de mañana. Si no se completa, recibirá una notificación por incumplimiento de las medidas disciplinarias (gestionada por la oficina).
+        Consulte el trabajo asignado y las instrucciones actuales en REPS o comuníquese con la escuela para obtener ayuda.
         Revise su correo electrónico para más detalles. Este es un mensaje automático; responda al correo o contacte a la escuela si tiene preguntas.
         """;
 
@@ -71,17 +37,11 @@ public class EmailTemplates {
     public static final String SUBJECT_OFFICE_REFERRAL_ES = "{{schoolName}} Referencia de oficina para {{studentFullName}}";
 
     public static final String OFFICE_REFERRAL_MSG_EN = """
-        Thank you for using the teacher managed referral. Because {{studentFullName}} has received their fourth or greater offense for {{infractionName}}, they must now receive an office referral.
-        Please complete an office referral for Failure to Comply with Disciplinary Action.
-        Summary:
-        {{summary}}
+        <p>The referral history for {{studentFullName}} regarding {{infractionName}} requires office review. The principal will determine the appropriate response individually.</p><p>{{summary}}</p>
         """;
 
     public static final String OFFICE_REFERRAL_MSG_ES = """
-        Gracias por usar la referencia administrada por el maestro. Debido a que {{studentFullName}} ha recibido su cuarta o mayor infracción por {{infractionName}}, ahora debe recibir una referencia de oficina.
-        Por favor complete una referencia de oficina por Incumplimiento de medidas disciplinarias.
-        Resumen:
-        {{summary}}
+        <p>El historial de referencias de {{studentFullName}} sobre {{infractionName}} requiere revisión de la dirección. El director determinará la respuesta apropiada de forma individual.</p><p>{{summary}}</p>
         """;
 
     public static final String SUBJECT_COMPLETION_EN = "Referral Completion for {{studentFullName}}";
@@ -106,9 +66,9 @@ public class EmailTemplates {
         """;
 
     public static final String SUBJECT_L3_REJECT_EN =
-            "Level Three Answers Not Accepted for {{studentFullName}}";
+            "Assignment revision requested for {{studentFullName}}";
     public static final String SUBJECT_L3_REJECT_ES =
-            "Respuestas de nivel tres no aceptadas para {{studentFullName}}";
+            "Revisión de tarea solicitada para {{studentFullName}}";
 
     public static final String L3_REJECT_MSG_EN = """
     Hello,
@@ -163,14 +123,47 @@ public class EmailTemplates {
             "{{schoolName}} Notificación restaurada para {{studentFullName}}";
 
     public static final String PUNISHMENT_RESTORED_MSG_EN = """
-    Hello,
-    A referral for your child, {{studentFullName}}, was unintentionally removed and has now been restored.
-    Please have them complete their assignment at {{loginUrl}}.
-    """;
+        <p>The referral for {{studentFullName}} was restored. Review its current status and school instructions at {{loginUrl}}.</p>
+        """;
 
     public static final String PUNISHMENT_RESTORED_MSG_ES = """
-    Hola,
-    Una notificación para su hijo/a, {{studentFullName}}, fue eliminada sin intención y ahora ha sido restaurada.
-    Por favor, pídale que complete su tarea en {{loginUrl}}.
-    """;
+        <p>La referencia de {{studentFullName}} fue restaurada. Consulte su estado actual y las instrucciones de la escuela en {{loginUrl}}.</p>
+        """;
+
+    public static final String POSITIVE_EN = """
+        <p>Positive recognition for {{studentFullName}}!</p><p>{{description}}</p><p>Thank you for contributing positively to our school community. Keep up the great work!</p>
+        """;
+    public static final String POSITIVE_ES = """
+        <p>¡Reconocimiento positivo para {{studentFullName}}!</p><p>{{description}}</p><p>Gracias por contribuir positivamente a nuestra comunidad escolar. ¡Sigue así!</p>
+        """;
+    public static final String REFERRAL_CREATED_EN = """
+        <p>Hello, {{studentFullName}} received referral level {{infractionLevel}} for {{infractionName}}.</p><p>{{description}}</p><p>Review the case at {{loginUrl}}. Use established access or ask school staff for secure setup assistance. No password is included.</p>
+        """;
+    public static final String REFERRAL_CREATED_ES = """
+        <p>Hola, {{studentFullName}} recibió una referencia de nivel {{infractionLevel}} por {{infractionName}}.</p><p>{{description}}</p><p>Consulte el caso en {{loginUrl}}. Use su acceso establecido o solicite ayuda a la escuela para configurar el acceso de forma segura. No se incluye ninguna contraseña.</p>
+        """;
+    public static final String OFFICE_CREATED_EN = """
+        <p>An office referral for {{studentFullName}} regarding {{infractionName}} was recorded.</p><p>{{description}}</p><p>The principal will review this individually. No student assignment is created by this office referral. Contact the school with questions.</p>
+        """;
+    public static final String OFFICE_CREATED_ES = """
+        <p>Se registró una referencia a la dirección para {{studentFullName}} sobre {{infractionName}}.</p><p>{{description}}</p><p>El director la revisará de forma individual. Esta referencia no crea una tarea para el estudiante. Comuníquese con la escuela si tiene preguntas.</p>
+        """;
+    public static final String SCHOOL_UPDATE_EN = """
+        <p>A school update for {{studentFullName}} was recorded: {{infractionName}}.</p><p>{{description}}</p><p>Contact the responsible school staff member for next steps.</p>
+        """;
+    public static final String SCHOOL_UPDATE_ES = """
+        <p>Se registró una actualización escolar para {{studentFullName}}: {{infractionName}}.</p><p>{{description}}</p><p>Comuníquese con el personal responsable de la escuela para conocer los próximos pasos.</p>
+        """;
+    public static final String SUBMITTED_EN = """
+        <p>{{studentFullName}} submitted assignment work. It is saved and awaiting school review; submission does not mean it has been accepted or the case closed.</p>
+        """;
+    public static final String SUBMITTED_ES = """
+        <p>{{studentFullName}} entregó su tarea. Está guardada y pendiente de revisión escolar; la entrega no significa que se haya aceptado ni que el caso esté cerrado.</p>
+        """;
+    public static final String REMINDER_EN = """
+        <p>This is a school reminder for {{studentFullName}} about incomplete assignment work. Review the current case and school instructions at {{loginUrl}} or contact the school. This reminder does not change the case.</p>
+        """;
+    public static final String REMINDER_ES = """
+        <p>Este es un recordatorio escolar para {{studentFullName}} sobre una tarea incompleta. Consulte el caso actual y las instrucciones de la escuela en {{loginUrl}} o comuníquese con la escuela. Este recordatorio no modifica el caso.</p>
+        """;
 }

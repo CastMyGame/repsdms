@@ -111,7 +111,7 @@ public class EmailService {
         emailNotificationService.notifyParentViaTextAndEmail(punishment, student, infraction, punishmentResponse);
     }
 
-    public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) {
+    public PunishmentResponse sendCFREmailBasedOnType(Punishment punishment) throws MessagingException {
         return emailReferralService.sendCFREmailBasedOnType(punishment);
     }
 }

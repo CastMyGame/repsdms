@@ -128,12 +128,13 @@ class EmailSenderServiceTest {
 
         verify(emailRoutingService).sendBulkEmail(
                 "r1@test.com",
-                List.of("r2@test.com"),
+                null,
                 "sub",
                 "msg",
                 null,
                 "teacher@test.com"
         );
+        verify(emailRoutingService).sendBulkEmail("r2@test.com",null,"sub","msg",null,"teacher@test.com");
     }
 
     @Test

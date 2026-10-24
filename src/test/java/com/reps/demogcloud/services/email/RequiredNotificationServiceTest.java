@@ -62,6 +62,7 @@ class RequiredNotificationServiceTest {
         context.setSimpleTypeHolder(conversions.getSimpleTypeHolder()); context.afterPropertiesSet();
         converter=new MappingMongoConverter(NoOpDbRefResolver.INSTANCE,context); converter.setCustomConversions(conversions); converter.afterPropertiesSet();
         service=new RequiredNotificationService(mongo,env,students,users,router,templates);
+        when(templates.buildManagedSubject(anyString(),anyMap(),any())).thenReturn("School update");
         action();
         when(mongo.insert(any(Punishment.class))).thenAnswer(i->{ synchronized(lock) {
             var value=(Punishment)i.getArgument(0); value.setRevision(0L); database.set(write(value)); new CasePersistenceCallbacks().onAfterSave(value,database.get(),"Punishments"); return value;
@@ -133,6 +134,37 @@ class RequiredNotificationServiceTest {
     }
     private RequiredNotification last() { var p=read(); return p.getRequiredNotifications().get(p.getRequiredNotifications().size()-1); }
     private void dispatchLast() { service.dispatchOne("punishment",ID,last().getNotificationId()); }
+    private void realContent() {
+        var translations=mock(com.reps.demogcloud.services.translation.TranslationService.class);
+        when(translations.translate(anyString(),eq("en"),eq("es"))).thenAnswer(i->i.getArgument(0));
+        var builder=new EmailTemplateBuilderService(translations);
+        org.springframework.test.util.ReflectionTestUtils.setField(builder,"accountBaseUrl","https://repsdev.vercel.app");
+        service=new RequiredNotificationService(mongo,env,students,users,router,builder);
+        student.setFirstName("Ana");student.setLastName("López");
+    }
+    @ParameterizedTest @CsvSource({"en,SO,Positive Behavior Shout Out!","es,SO,Positive Behavior Shout Out!","en,OPEN,Horseplay","es,CFR,Dress Code","es,AC,Academic Concern","es,BC,Behavioral Concern"})
+    void actualRendererDispatchesLocalizedSafeContentWithoutChangingRecipients(String lang,String status,String name) throws Exception {
+        realContent();student.setPreferredLanguage(lang);var p=fresh();p.setStatus(status);p.setInfractionName(name);p.setInfractionLevel("1");
+        p.setInfractionDescription(List.of("Actual <behavior> & detail"));service.saveCreated(p);dispatchLast();
+        assertEquals("ACCEPTED",last().getState());assertEquals("SMTP",last().getProvider());
+        var body=org.mockito.ArgumentCaptor.forClass(String.class);var subject=org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(router).sendRequiredNotification(eq(student.getParentEmail()),argThat(cc->cc.contains(TEACHER)&&cc.contains(ADMIN)&&cc.contains(student.getStudentEmail())),subject.capture(),body.capture(),anyList(),eq(TEACHER),eq(false),anyString(),isNull(),isNull());
+        assertTrue(body.getValue().contains("Actual &lt;behavior&gt; &amp; detail"));assertFalse(body.getValue().contains("{{"));
+        assertFalse(subject.getValue().contains("Ana"));assertFalse(subject.getValue().contains("Horseplay"));
+        if("SO".equals(status)) { assertFalse(body.getValue().toLowerCase(Locale.ROOT).contains("assignment"));assertTrue(subject.getValue().contains(lang.equals("es")?"Reconocimiento":"recognition")); }
+    }
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"","invalid","one@example.test,two@example.test","Name <guardian@example.test>","guardian@example.test\r\nBcc: other@example.test"})
+    void invalidRequiredGuardianFailsDurablyWithoutReroutingOrSending(String guardian) throws Exception {
+        student.setParentEmail(guardian);create();dispatchLast();
+        assertEquals("FAILED",last().getState());assertEquals("REQUIRED_RECIPIENT_INVALID",last().getReason());assertTrue(last().isRetrySafe());
+        verify(router,never()).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
+        assertNotNull(read());
+    }
+    @Test void missingRequiredContentStaysFailedAndDoesNotLoseTheCase() throws Exception {
+        realContent();var p=fresh();p.setInfractionDescription(List.of());p.setInfractionLevel("1");service.saveCreated(p);dispatchLast();
+        assertEquals("FAILED",last().getState());assertEquals("CONTENT_OR_LINK_CONFIGURATION_INVALID",last().getReason());assertNotNull(read());
+        verify(router,never()).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
+    }
     @Test void teacherCreationEmbedsTheObligationInTheSameCaseInsertAndDoesNotSend() throws Exception {
         var schools=mock(SchoolRepository.class); var school=new School(); school.setMaxPunishLevel(4); when(schools.findBySchoolNameIgnoreCase("School")).thenReturn(Optional.of(school));
         var email=mock(EmailService.class);
@@ -244,6 +276,20 @@ class RequiredNotificationServiceTest {
         assertEquals(conversation,read().getConversationId());
         verify(router).sendRequiredNotification(any(),any(),argThat(subject->!subject.contains("student")&&!subject.contains("Synthetic")),any(),any(),eq(ADMIN),eq(false),any(),eq(parent),isNull());
     }
+    @Test void oldNotificationWithoutRecordedSubjectDoesNotForceAnIncompatibleGmailThread() throws Exception {
+        create();when(router.sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any()))
+                .thenReturn(Map.of("provider","GMAIL","providerMessageId","synthetic","gmailThreadId","old-thread"));
+        dispatchLast();notifications().get(0).remove("subject");
+        var p=read();action();service.prepare(p,"CLOSED");mongo.save(p);dispatchLast();
+        assertEquals("ACCEPTED",last().getState());assertNotNull(last().getSubject());
+        verify(router,times(2)).sendRequiredNotification(any(),any(),any(),any(),any(),eq(TEACHER),eq(false),any(),any(),isNull());
+    }
+    @Test void matchingSenderRecipientsAndRecordedSubjectCanReuseGmailThread() throws Exception {
+        create();when(router.sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any()))
+                .thenReturn(Map.of("provider","GMAIL","providerMessageId","synthetic","gmailThreadId","same-thread"));
+        dispatchLast();var p=read();action();service.prepare(p,"CLOSED");mongo.save(p);dispatchLast();
+        verify(router).sendRequiredNotification(any(),any(),any(),any(),any(),eq(TEACHER),eq(false),any(),any(),eq("same-thread"));
+    }
     @Test void studentSubmissionIsAlwaysSystemAndCanOnlyAffectOwnStudentRecord() {
         var p=fresh(); when(users.isCurrentUserStudent()).thenReturn(true); when(users.getCurrentUserEmail()).thenReturn(student.getStudentEmail());
         assertTrue(service.prepare(p,"SUBMITTED")); assertTrue(p.getRequiredNotifications().get(0).isSystem()); assertNull(p.getRequiredNotifications().get(0).getActor());
@@ -267,7 +313,7 @@ class RequiredNotificationServiceTest {
     }
     @Test void messageUsesItsRetainedActionContentRatherThanLaterCaseChanges() {
         create(); var changed=read(); changed.setInfractionName("Later case detail"); changed.setInfractionDescription(new ArrayList<>(List.of("Later description"))); mongo.save(changed);
-        dispatchLast(); verify(templates).createEmailText(anyString(),anyString(),anyString(),eq("Synthetic"),eq("synthetic description"),eq(student.getStudentEmail()),anyString());
+        dispatchLast(); verify(templates).buildCaseMessage(eq("punishment"),eq("CREATED"),argThat(content -> "Synthetic".equals(content.get("infractionName")) && "synthetic description".equals(content.get("description"))),anyString(),anyString(),anyString(),any());
     }
     @Test void retryEndpointRejectsCookieOnlyAuthenticationBeforeQueueMutation() {
         create(); var controller=new com.reps.demogcloud.controllers.EmailController(mock(EmailService.class),service);

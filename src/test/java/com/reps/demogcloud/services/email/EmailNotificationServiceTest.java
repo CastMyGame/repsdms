@@ -110,15 +110,16 @@ class EmailNotificationServiceTest {
         punishment.setStudentEmail("student@test.com");
         punishment.setTeacherEmail("teacher@test.com");
         when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
+        when(templateBuilderService.buildCaseMessage(any(),any(),any(),any(),any(),any(),any())).thenReturn("Reminder body");
+        when(templateBuilderService.buildCommunicationSubject(any(),any(),any(),any(),any(),any())).thenReturn("Localized reminder");
         service.sendAlertEmail("ISS", punishment, "en");
-        verify(emailSenderService).sendSystemBulkEmail(eq("parent@test.com"), any(), eq("ISS REMINDER"), any(), any(), eq("teacher@test.com"));
+        verify(emailSenderService).sendSystemBulkEmail(eq("parent@test.com"), any(), eq("Localized reminder"), any(), any(), eq("teacher@test.com"));
         verify(userContextService, never()).getCurrentStaffEmail();
         verify(userContextService, never()).isCurrentUserStudent();
     }
 
     @Test
     void announcementCannotBorrowAnotherTeachersIdentity() {
-        when(emailSenderService.isPhase1RoutingEnabled()).thenReturn(true);
         when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
         ClassAnnouncementRequest request = new ClassAnnouncementRequest();
         request.setTeacherEmail("teacher@test.com");
@@ -160,7 +161,8 @@ class EmailNotificationServiceTest {
 
     @Test
     void sendClassAnnouncement_shouldGroupByLanguageAndSend() throws Exception {
-        Employee teacher = new Employee();
+        Employee teacher = new Employee();teacher.setSchool("School");
+        when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com");
         Employee.ClassRoster roster = new Employee.ClassRoster();
         roster.setClassName("Math");
         roster.setClassRoster(List.of("s1@test.com", "s2@test.com"));
@@ -169,10 +171,10 @@ class EmailNotificationServiceTest {
         when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(teacher);
 
         Student s1 = new Student();
-        s1.setPreferredLanguage("en");
+        s1.setPreferredLanguage("en");s1.setSchool("School");
 
         Student s2 = new Student();
-        s2.setPreferredLanguage("es");
+        s2.setPreferredLanguage("es");s2.setSchool("School");
 
         when(studentRepository.findByStudentEmailIgnoreCase("s1@test.com")).thenReturn(s1);
         when(studentRepository.findByStudentEmailIgnoreCase("s2@test.com")).thenReturn(s2);
@@ -190,14 +192,14 @@ class EmailNotificationServiceTest {
         service.sendClassAnnouncement(req);
 
         verify(emailSenderService, times(1))
-                .sendClassAnnouncement("teacher@test.com", List.of("s1@test.com"), "Subject", "Message");
+                .sendClassAnnouncement("teacher@test.com", List.of("s1@test.com"), "Subject", "<p style=\"white-space:pre-wrap\">Message</p>");
 
         verify(emailSenderService, times(1))
-                .sendClassAnnouncement("teacher@test.com", List.of("s2@test.com"), "translated", "translated");
+                .sendClassAnnouncement("teacher@test.com", List.of("s2@test.com"), "translated", "<p style=\"white-space:pre-wrap\">translated</p>");
     }
 
     @Test
-    void sendClassAnnouncement_shouldReturn_whenNoClass() throws Exception {
+    void sendClassAnnouncement_shouldReject_whenNoClass() throws Exception {
         Employee teacher = new Employee();
         teacher.setClasses(List.of());
 
@@ -207,8 +209,8 @@ class EmailNotificationServiceTest {
         req.setTeacherEmail("t");
         req.setClassName("none");
 
-        service.sendClassAnnouncement(req);
-
+        when(userContextService.getCurrentStaffEmail()).thenReturn("t");
+        assertThrows(IllegalArgumentException.class,()->service.sendClassAnnouncement(req));
         verify(emailSenderService, never()).sendClassAnnouncement(any(), any(), any(), any());
     }
 
@@ -257,7 +259,6 @@ class EmailNotificationServiceTest {
 
         when(templateBuilderService.createEmailText(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("builtMessage");
-        when(templateBuilderService.replaceString("desc")).thenReturn("desc");
 
         EmailNotificationService spy = Mockito.spy(service);
         doNothing().when(spy).sendPtsEmail(any(), any(), any(), any(), any(), any());

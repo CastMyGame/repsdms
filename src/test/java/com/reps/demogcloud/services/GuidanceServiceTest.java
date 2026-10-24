@@ -35,11 +35,13 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -327,16 +329,28 @@ class GuidanceServiceTest {
         assertEquals(1, response.getGuidance().size());
         assertEquals(1, referral.getNotesArray().size());
         assertEquals("Resources", referral.getNotesArray().get(0).getEvent());
-        assertEquals("Resources Sent: Resource A, Resource B", referral.getNotesArray().get(0).getContent());
+        assertEquals("Resources requested: Resource A, Resource B", referral.getNotesArray().get(0).getContent());
 
         verify(emailService).sendEmailGeneric(
                 eq(List.of("guidance@test.com", "teacher@test.com")),
                 eq("student@test.com"),
-                eq("Test High School Guidance's Resources"),
+                eq("Test Guidance resources"),
                 any(String.class),
                 eq("en")
         );
         verify(guidanceRepository).save(referral);
+    }
+
+    @Test void spanishResourcesAreEscapedAndDoNotClaimDelivery() throws Exception {
+        var referral=new GuidanceReferral();referral.setStudentEmail("student@test.com");referral.setTeacherEmail("teacher@test.com");referral.setNotesArray(new ArrayList<>());
+        var student=new Student();student.setFirstName("Ana <test>");student.setLastName("López");student.setPreferredLanguage("es-MX");student.setSchool("Testing");student.setStudentEmail("student@test.com");student.setGuidanceEmail("guidance@test.com");
+        var option=new ResourceOption();option.setLabel("Ayuda <script>");option.setUrl("https://school.example.test/resources");
+        var request=new ResourceUpdateRequest();request.setResourceOptionList(List.of(option));
+        when(guidanceRepository.findById("g1")).thenReturn(Optional.of(referral));when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
+        guidanceService.sendResourcesAndMakeNotes("g1",request);
+        verify(requiredNotifications).requireActionAccess(referral,"RESOURCES");
+        verify(emailService).sendEmailGeneric(any(),eq("student@test.com"),eq("Testing Recursos de orientación"),argThat(body->body.contains("Hola") && body.contains("&lt;script&gt;") && !body.contains("<script>") && !body.contains("has sent")),eq("es-MX"));
+        assertTrue(referral.getNotesArray().get(0).getContent().startsWith("Resources requested:"));
     }
 
     @Test
