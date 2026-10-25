@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface StudentRepository extends MongoRepository<Student,String> {
+public interface StudentRepository extends StudentBalanceSafeRepository<Student>, MongoRepository<Student,String> {
     List<Student> findByArchived(boolean bool);
     List<Student> findByLastName(String lastName);
     List<Student> findByParentEmail(String email);

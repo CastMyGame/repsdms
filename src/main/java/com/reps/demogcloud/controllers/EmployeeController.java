@@ -80,6 +80,7 @@ public class EmployeeController {
     @PutMapping("/currency/spend")
     public ResponseEntity<List<Student>> spendCurrency(@RequestBody List<CurrencySpendRequest> requests) {
         administration.requireStaff();
+        if(requests==null || requests.isEmpty() || requests.stream().anyMatch(java.util.Objects::isNull)) throw new IllegalArgumentException("Invalid redemption batch");
         requests.forEach(r -> administration.requireStudentAccess(r.getStudentEmail()));
         List<Student> response = employeeService.spendCurrency(requests);
         return ResponseEntity.accepted().body(response);

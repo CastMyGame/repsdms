@@ -147,21 +147,13 @@ public class PunishmentUtils {
                                                      Punishment punishment,
                                                      Student student,
                                                      LocalDate now) throws MessagingException {
-        if (formRequest.getCurrency() > 0) {
-            employeeService.transferCurrency(new CurrencyTransferRequest(
-                    formRequest.getTeacherEmail(),
-                    formRequest.getStudentEmail(),
-                    formRequest.getCurrency()));
-        }
-
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())
+            throw new IllegalStateException("Positive recognition requires a currency transaction");
         punishment.setStatus("SO");
         punishment.setTimeClosed(now);
-        Punishment saved = saveCreatedPunishment(punishment);
-
+        Punishment saved = (Punishment) requiredNotifications.saveCurrencyCreated(punishment);
         linkGuidanceIfNeeded(formRequest, student, saved);
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
-
-        return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
+        return requiredNotifications.response(saved);
     }
 
     public PunishmentResponse handleBasicClose(String status,

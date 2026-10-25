@@ -62,6 +62,7 @@ class UserAdministrationSecurityTest {
     @MockitoBean JwtUtils jwt;
     @MockitoBean org.springframework.data.mongodb.core.MongoTemplate mongo;
     @MockitoBean StudentService studentService;
+    @MockitoBean com.reps.demogcloud.services.currency.CurrencyService currency;
     @MockitoBean UserRepository users;
     @MockitoBean EmployeeRepository employees;
     @MockitoBean StudentRepository students;

@@ -318,56 +318,9 @@ class PunishmentUtilsTest {
         verify(guidanceService, never()).LinkAssignmentToGuidance(any(), any(), any());
     }
 
-    @Test
-    void handlePositiveShoutout_shouldTransferCurrencySaveLinkAndSendEmail() throws MessagingException {
-        PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setTeacherEmail("teacher@test.com");
-        request.setStudentEmail("student@test.com");
-        request.setCurrency(5);
-        request.setGuidanceDescription("guidance note");
 
-        Punishment punishment = new Punishment();
-        Student student = new Student();
-        LocalDate now = LocalDate.of(2026, 4, 1);
 
-        Punishment saved = new Punishment();
-        PunishmentResponse response = new PunishmentResponse();
 
-        when(punishRepository.save(punishment)).thenReturn(saved);
-        when(emailService.sendEmailBasedOnType(request, saved, emailService)).thenReturn(response);
-
-        PunishmentResponse result = punishmentUtils.handlePositiveShoutout(request, punishment, student, now);
-
-        assertSame(response, result);
-        assertEquals("SO", punishment.getStatus());
-        assertEquals(now, punishment.getTimeClosed());
-
-        verify(employeeService).transferCurrency(any());
-        verify(punishRepository).save(punishment);
-        verify(guidanceService).LinkAssignmentToGuidance(student, request, saved);
-        verify(emailService).sendEmailBasedOnType(request, saved, emailService);
-    }
-
-    @Test
-    void handlePositiveShoutout_shouldNotTransferCurrency_whenCurrencyIsZero() throws MessagingException {
-        PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setCurrency(0);
-
-        Punishment punishment = new Punishment();
-        Student student = new Student();
-        LocalDate now = LocalDate.now();
-
-        Punishment saved = new Punishment();
-        PunishmentResponse response = new PunishmentResponse();
-
-        when(punishRepository.save(punishment)).thenReturn(saved);
-        when(emailService.sendEmailBasedOnType(request, saved, emailService)).thenReturn(response);
-
-        PunishmentResponse result = punishmentUtils.handlePositiveShoutout(request, punishment, student, now);
-
-        assertSame(response, result);
-        verify(employeeService, never()).transferCurrency(any());
-    }
 
     @Test
     void handleBasicClose_shouldSetStatusCloseSaveAndEmail() throws MessagingException {
@@ -614,32 +567,9 @@ class PunishmentUtilsTest {
         assertEquals("Original", punishment.getInfractionDescription().get(0));
     }
 
-    @Test
-    void handlePositiveShoutout_shouldBuildCurrencyTransferRequestWithExpectedValues() throws Exception {
-        PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setTeacherEmail("teacher@test.com");
-        request.setStudentEmail("student@test.com");
-        request.setCurrency(10);
 
-        Punishment punishment = new Punishment();
-        Student student = new Student();
-        LocalDate now = LocalDate.now();
-
-        Punishment saved = new Punishment();
-        PunishmentResponse response = new PunishmentResponse();
-
-        when(punishRepository.save(punishment)).thenReturn(saved);
-        when(emailService.sendEmailBasedOnType(request, saved, emailService)).thenReturn(response);
-
-        punishmentUtils.handlePositiveShoutout(request, punishment, student, now);
-
-        ArgumentCaptor<com.reps.demogcloud.models.employee.CurrencyTransferRequest> captor =
-                ArgumentCaptor.forClass(com.reps.demogcloud.models.employee.CurrencyTransferRequest.class);
-
-        verify(employeeService).transferCurrency(captor.capture());
-
-        assertEquals("teacher@test.com", captor.getValue().getTeacherEmail());
-        assertEquals("student@test.com", captor.getValue().getStudentEmail());
-        assertEquals(10, captor.getValue().getCurrencyTransferred());
+    @Test void positiveRecognitionCannotBypassTransactionBoundary() {
+        assertThrows(IllegalStateException.class,()->punishmentUtils.handlePositiveShoutout(new PunishmentFormRequest(),new Punishment(),new Student(),LocalDate.now()));
+        verifyNoInteractions(employeeService,punishRepository,emailService);
     }
 }

@@ -41,6 +41,11 @@ public class Punishment implements Comparable<Punishment>, org.springframework.d
 
     @Id
     private String punishmentId;
+    @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String currencyOperationId;
+    @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private Integer currencyAwarded;
+
     private String studentEmail;
     private String school;
     private String infractionId;

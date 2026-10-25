@@ -29,6 +29,7 @@ public class StudentAdminService {
     private final SchoolRepository schoolRepository;
     private final StudentRepository studentRepository;
     private final StudentUtils studentUtils;
+    private final com.reps.demogcloud.services.WorkflowAccessService access;
 
     public Student addTimeToStudent(String studentEmail, int additionalHours, int additionalMinutes) {
         // Fetch the student by ID
@@ -62,6 +63,18 @@ public class StudentAdminService {
     }
 
     public List<Student> updateStudents(List<Student> students) {
+        access.requireStaff();
+        if(students==null || students.isEmpty() || students.size()>200) throw new IllegalArgumentException("Invalid student update batch");
+        // Validate the entire batch before profile changes; this is never a wallet-adjustment API.
+        for(Student input:students) {
+            if(input==null || input.getStudentIdNumber()==null) throw new IllegalArgumentException("Student ID required");
+            Student existing=studentRepository.findById(input.getStudentIdNumber()).orElseThrow(()->new IllegalArgumentException("Student not found"));
+            access.requireStudentAccess(existing.getStudentEmail());
+            if((input.getCurrency()!=null && !Objects.equals(input.getCurrency(),existing.getCurrency()))
+                    || (input.getSchool()!=null && !Objects.equals(input.getSchool(),existing.getSchool()))
+                    || (input.getStudentEmail()!=null && !input.getStudentEmail().equalsIgnoreCase(existing.getStudentEmail())))
+                throw new IllegalArgumentException("Currency, school and account identity cannot be changed through bulk profile updates");
+        }
         List<Student> updatedStudents = new ArrayList<>();
 
         for (Student updatedData : students) {
@@ -130,10 +143,6 @@ public class StudentAdminService {
                 }
                 if (studentUtils.isDifferent(existingStudent.getSchool(), updatedData.getSchool())) {
                     existingStudent.setSchool(updatedData.getSchool());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getCurrency(), updatedData.getCurrency())) {
-                    existingStudent.setCurrency(updatedData.getCurrency());
                     isUpdated = true;
                 }
                 if (studentUtils.isDifferent(existingStudent.getStateStudentId(), updatedData.getStateStudentId())) {
