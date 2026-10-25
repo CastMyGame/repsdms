@@ -204,6 +204,7 @@ public class GuidanceService {
         if(requiredNotifications.isEnabled() && requiredNotifications.hasAction(guidance,"RESOURCES")) {
             GuidanceResponse prior = new GuidanceResponse(); prior.setGuidance(List.of(guidance)); return prior;
         }
+        requiredNotifications.requireActionAccess(guidance,"RESOURCES");
         LocalDate timePosted = LocalDate.now();
         List<ThreadEvent> events = guidance.getNotesArray() == null ? new ArrayList<>() : guidance.getNotesArray();
 
@@ -219,7 +220,7 @@ public class GuidanceService {
                 .map(ResourceOption::getLabel)
                 .toList();
 
-        newEvent.setContent("Resources Sent: " + String.join(", ", labels));
+        newEvent.setContent("Resources requested: " + String.join(", ", labels));
         events.add(newEvent);
 
         guidance.setNotesArray(events);
@@ -229,18 +230,19 @@ public class GuidanceService {
             throw new IllegalStateException("Student not found: " + guidance.getStudentEmail());
         }
 
+        boolean spanish=student.getPreferredLanguage()!=null && student.getPreferredLanguage().trim().toLowerCase(Locale.ROOT).matches("es([-_].*)?");
         StringBuilder resourceMessage = new StringBuilder();
         resourceMessage.append("<html>")
                 .append("<body>")
-                .append("<p>Hello,<br>")
+                .append(spanish ? "<p>Hola,<br>" : "<p>Hello,<br>")
                 .append(org.springframework.web.util.HtmlUtils.htmlEscape(java.util.Objects.toString(student.getFirstName(),"")))
                 .append(" ")
                 .append(org.springframework.web.util.HtmlUtils.htmlEscape(java.util.Objects.toString(student.getLastName(),"")))
-                .append(", Guidance has sent you the following resources for your consideration:</p>")
+                .append(spanish ? ", Orientación comparte los siguientes recursos para su consideración:</p>" : ", Guidance shares the following resources for your consideration:</p>")
                 .append("<ul>");
 
         for (ResourceOption item : options) {
-            if(requiredNotifications.isEnabled()) {
+            {
                 java.net.URI uri=java.net.URI.create(item.getUrl());
                 if(!java.util.Set.of("https","http").contains(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null)
                     throw new IllegalArgumentException("Resources must use HTTP or HTTPS links");
@@ -256,7 +258,7 @@ public class GuidanceService {
                 .append("</body>")
                 .append("</html>");
 
-        String subject = student.getSchool() + " High School Guidance's Resources";
+        String subject = student.getSchool() + (spanish ? " Recursos de orientación" : " Guidance resources");
         ArrayList<String> ccList = new ArrayList<>();
         ccList.add(student.getGuidanceEmail());
         ccList.add(guidance.getTeacherEmail());

@@ -27,6 +27,7 @@ public class RequiredNotification {
     private String inReplyTo;
     private String references;
     private String body;
+    private String subject;
     private Map<String,String> content;
     private List<String> recipients;
     private Map<String,String> recipientOutcomes;

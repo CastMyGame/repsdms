@@ -47,6 +47,8 @@ class EmailReferralServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock private EmailNotificationService notificationService;
+
     @InjectMocks
     private EmailReferralService emailReferralService;
 
@@ -163,7 +165,6 @@ class EmailReferralServiceTest {
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
         when(infractionRepository.findByInfractionId("INF-1")).thenReturn(infraction);
         when(schoolRepository.findBySchoolNameIgnoreCase("Burke High")).thenReturn(Optional.of(school));
-        when(emailTemplateBuilderService.replaceString("Talking during lesson")).thenReturn("Talking during lesson");
         when(emailTemplateBuilderService.createEmailText(
                 "John", "Doe", "2", "Tardy", "Talking during lesson", "student@test.com", "en"))
                 .thenReturn("Infraction Message");
@@ -222,7 +223,7 @@ class EmailReferralServiceTest {
     }
 
     @Test
-    void sendInfractionNotification_shouldUseBlankDescription_whenDescriptionsAreNull() throws MessagingException {
+    void sendInfractionNotification_missingDescriptionCannotSendMisleadingContent() throws MessagingException {
         Student student = new Student();
         student.setStudentEmail("student@test.com");
         student.setParentEmail("parent@test.com");
@@ -245,27 +246,14 @@ class EmailReferralServiceTest {
         response.setStudentToEmail("student@test.com");
         response.setTeacherToEmail("teacher@test.com");
 
-        when(emailTemplateBuilderService.replaceString("")).thenReturn("");
-        when(emailTemplateBuilderService.createEmailText(
-                "John", "Doe", "1", "Tardy", "", "student@test.com", "en"))
-                .thenReturn("Message");
-        when(emailTemplateBuilderService.buildSubject("Burke High", "John", "Doe", "en", false))
-                .thenReturn("Subject");
-
-        assertDoesNotThrow(() ->
-                emailReferralService.sendInfractionNotification(punishment, emailService, student, infraction, response)
-        );
-
-        assertEquals("Message", response.getMessage());
-        assertEquals("Subject", response.getSubject());
-
-        verify(emailService, times(1)).sendPtsEmail(
-                "parent@test.com", "teacher@test.com", "student@test.com", "Message", "Subject", "en"
-        );
+        when(emailTemplateBuilderService.createEmailText("John","Doe","1","Tardy","","student@test.com","en"))
+                .thenThrow(new IllegalArgumentException("Required email content is missing"));
+        assertThrows(IllegalArgumentException.class,()->emailReferralService.sendInfractionNotification(punishment,emailService,student,infraction,response));
+        verifyNoInteractions(emailService);
     }
 
     @Test
-    void sendCFREmailBasedOnType_shouldBuildResponseAndSetTimeClosed() {
+    void sendCFREmailBasedOnType_shouldBuildResponseAndSetTimeClosed() throws Exception {
         Student student = new Student();
         student.setStudentEmail("student@test.com");
         student.setParentEmail("parent@test.com");
@@ -283,6 +271,7 @@ class EmailReferralServiceTest {
         punishment.setStudentEmail("student@test.com");
         punishment.setTeacherEmail("teacher@test.com");
         punishment.setInfractionId("INF-1");
+        punishment.setInfractionDescription(List.of("Actual behavior"));
 
         School school = new School();
         school.setSchoolName("Burke High");
@@ -293,11 +282,12 @@ class EmailReferralServiceTest {
         when(emailTemplateBuilderService.buildSubject("Burke High", "John", "Doe", "en", false))
                 .thenReturn("CFR Subject");
         when(emailTemplateBuilderService.createCFRMessage(
-                "John", "Doe", "Tardy", "teacher@test.com", "student@test.com", "en"))
+                "John", "Doe", "Tardy", "Actual behavior", "teacher@test.com", "student@test.com", "en"))
                 .thenReturn("CFR Message");
 
         PunishmentResponse result = emailReferralService.sendCFREmailBasedOnType(punishment);
 
+        verify(notificationService).sendPtsEmail("parent@test.com","teacher@test.com","student@test.com","CFR Message","CFR Subject","en");
         assertNotNull(result);
         assertEquals("CFR Subject", result.getSubject());
         assertEquals("CFR Message", result.getMessage());
@@ -308,7 +298,7 @@ class EmailReferralServiceTest {
     }
 
     @Test
-    void sendCFREmailBasedOnType_shouldThrow_whenSchoolNotFound() {
+    void sendCFREmailBasedOnType_shouldThrow_whenSchoolNotFound() throws Exception {
         Student student = new Student();
         student.setStudentEmail("student@test.com");
         student.setSchool("Missing School");

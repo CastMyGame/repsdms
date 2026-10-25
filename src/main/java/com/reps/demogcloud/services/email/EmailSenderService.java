@@ -65,6 +65,7 @@ public class EmailSenderService {
 
     public void sendContactEmail(String to, String subjectEn, String bodyEn, String languageCode) {
 
+        EmailContent.requireRendered(subjectEn,bodyEn);
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setCc("REPS.DMS@GMAIL.COM");
@@ -90,14 +91,7 @@ public class EmailSenderService {
             return;
         }
 
-        emailRoutingService.sendBulkEmail(
-                recipients.get(0),
-                recipients.size() > 1 ? recipients.subList(1, recipients.size()) : null,
-                subjectLocalized,
-                messageBodyLocalized,
-                null,
-                from
-        );
+        for(String recipient : recipients) emailRoutingService.sendBulkEmail(recipient,null,subjectLocalized,messageBodyLocalized,null,from);
     }
 
     public void sendSafe(

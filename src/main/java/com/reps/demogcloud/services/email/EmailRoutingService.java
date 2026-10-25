@@ -58,6 +58,7 @@ public class EmailRoutingService {
 
     private java.util.Map<String,String> sendPhase1WithReceipt(String to,List<String> cc,String subject,String body,
             List<String> bcc,String sender,boolean staffInitiated,String messageId,String parent,String gmailThread,boolean recorded) throws MessagingException {
+        EmailContent.requireRendered(subject,body);
         String verifiedSender = null;
         if (staffInitiated) {
             verifiedSender = recorded ? userContextService.getVerifiedStaffEmail(sender) : userContextService.getCurrentStaffEmail();
@@ -176,6 +177,7 @@ public class EmailRoutingService {
 
     public void sendEmail(String toEmail, String subject, String msg, String fromEmail, boolean isUserInitiated)
             throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
 
         if (isPhase1RoutingEnabled()) {
             sendPhase1(toEmail, null, subject, msg, null, fromEmail, isUserInitiated);
@@ -207,6 +209,7 @@ public class EmailRoutingService {
     }
 
     public void sendEmail(String toEmail, String subject, String msg, String fromEmail) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         sendEmail(toEmail, subject, msg, fromEmail, false);
     }
 
@@ -230,6 +233,7 @@ public class EmailRoutingService {
             String fromEmail,
             boolean isUserInitiated
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
 
         if (isPhase1RoutingEnabled()) {
             sendPhase1(to, cc, subject, msg, bcc, fromEmail, isUserInitiated);
@@ -268,6 +272,7 @@ public class EmailRoutingService {
             List<String> bcc,
             String fromEmail
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         sendBulkEmail(to, cc, subject, msg, bcc, fromEmail, true);
     }
 
@@ -317,6 +322,7 @@ public class EmailRoutingService {
             String fromEmail,
             boolean isUserInitiated
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         if (isPhase1RoutingEnabled()) {
             sendPhase1(parentEmail, List.of(teacherEmail, studentEmail), subject, msg,
                     spotters, fromEmail, isUserInitiated);
@@ -334,6 +340,7 @@ public class EmailRoutingService {
             String subject,
             String fromEmail
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         sendDetailedEmail(parentEmail, teacherEmail, studentEmail, spotters, msg, subject, fromEmail, false);
     }
 
@@ -372,6 +379,7 @@ public class EmailRoutingService {
             String fromEmail,
             boolean isUserInitiated
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         if (isPhase1RoutingEnabled()) {
             sendPhase1(recipientEmail, null, subject, msg, ccEmails, fromEmail, isUserInitiated);
             return;
@@ -386,6 +394,7 @@ public class EmailRoutingService {
             String msg,
             String fromEmail
     ) throws MessagingException {
+        EmailContent.requireRendered(subject, msg);
         sendGenericEmail(ccEmails, recipientEmail, subject, msg, fromEmail, false);
     }
 

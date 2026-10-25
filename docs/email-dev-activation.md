@@ -50,4 +50,4 @@ After key access, OAuth registrations, pending-queue review and owner-controlled
 
 ## Remaining link limitation
 
-Existing password-reset links and student email templates point to `https://repsdiscipline.vercel.app`, not localhost. These older cross-environment links are unchanged and require a separate decision before relying on development password-reset/student-link testing. No general template or authentication redesign is included.
+Account setup and communication links now use `REPS_ACCOUNTS_PUBLIC_BASE_URL`. Set it to `http://localhost:3000` for normal local testing; the dev profile defaults to `https://repsdev.vercel.app`. See `docs/email-communication.md` for validation and deployment requirements. OAuth callbacks are configured separately and are unchanged.

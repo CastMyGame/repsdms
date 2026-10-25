@@ -12,6 +12,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailTemplateBuilderServiceTest {
+    @org.junit.jupiter.api.BeforeEach void links() { org.springframework.test.util.ReflectionTestUtils.setField(service,"accountBaseUrl","https://repsdev.vercel.app"); }
 
     @Mock
     private TranslationService translationService;
@@ -126,6 +127,7 @@ class EmailTemplateBuilderServiceTest {
                 "Jane",
                 "Doe",
                 "Fight",
+                "Actual behavior",
                 "teacher@test.com",
                 "student@test.com",
                 "en"
@@ -134,7 +136,8 @@ class EmailTemplateBuilderServiceTest {
         assertNotNull(result);
         assertTrue(result.contains("Jane Doe"));
         assertTrue(result.contains("teacher@test.com"));
-        assertTrue(result.contains("student@test.com"));
+        assertTrue(result.contains("Actual behavior"));
+        assertFalse(result.contains("{{description}}"));
 
         verifyNoInteractions(translationService);
     }
