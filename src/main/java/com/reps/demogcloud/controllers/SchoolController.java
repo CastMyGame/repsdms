@@ -39,21 +39,7 @@ public class SchoolController {
 
     @PostMapping("/newSchool")
     public ResponseEntity<SchoolResponse> createSchool(@RequestBody School schoolRequest) {
-        log.info("POST /school/v1/newSchool payload: schoolName='{}', currency='{}'",
-                schoolRequest.getSchoolName(), schoolRequest.getCurrency());
-
-        SchoolResponse schoolResponse = schoolService.createNewSchool(schoolRequest);
-
-        if (schoolResponse.getSchool() == null) {
-            log.warn("Create school failed: error='{}'", schoolResponse.getError());
-            return new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST);
-        }
-
-        log.info("Create school succeeded: id='{}', name='{}'",
-                schoolResponse.getSchool().getSchoolIdNumber(),
-                schoolResponse.getSchool().getSchoolName());
-
-        return new ResponseEntity<>(schoolResponse, HttpStatus.CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED).body(schoolService.createNewSchool(schoolRequest));
     }
 
     @PutMapping("/{schoolName}")
@@ -66,5 +52,10 @@ public class SchoolController {
         return schoolResponse.getSchool() == null
                 ? new ResponseEntity<>(schoolResponse, HttpStatus.BAD_REQUEST)
                 : new ResponseEntity<>(schoolResponse, HttpStatus.OK);
+    }
+    @RequestMapping(value={"", "/**"}, method={RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE})
+    public void unsupportedMaintenance() {
+        throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN,
+                "School provisioning and maintenance require REPS approval.");
     }
 }
