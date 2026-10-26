@@ -42,6 +42,8 @@ class PunishmentCreationServiceTest {
     @Mock
     private AssignmentService assignmentService;
 
+    @Mock com.reps.demogcloud.services.currency.CurrencyService currency;
+
     @InjectMocks
     private PunishmentCreationService punishmentCreationService;
 
@@ -60,52 +62,7 @@ class PunishmentCreationServiceTest {
         verify(userContextService).requireStaffInStudentSchool("teacher@test.com", student);
     }
 
-    @Test
-    void createNewPunishForm_shouldHandlePositiveShoutout() throws Exception {
-        PunishmentFormRequest request = new PunishmentFormRequest();
-        request.setStudentEmail("student@school.com");
 
-        Student student = new Student();
-        student.setSchool("Test School");
-        student.setPreferredLanguage("en");
-
-        School school = new School();
-        school.setMaxPunishLevel(4);
-
-        Infraction infraction = new Infraction();
-        infraction.setInfractionName(InfractionType.POSITIVE.getLabel());
-
-        Punishment punishment = new Punishment();
-        punishment.setInfractionLevel("1");
-        punishment.setTeacherEmail("teacher@school.com");
-        punishment.setClosedTimes(0);
-
-        AssignmentTemplate template = mock(AssignmentTemplate.class);
-
-        PunishmentResponse response = mock(PunishmentResponse.class);
-
-        when(punishmentUtils.fetchStudent("student@school.com")).thenReturn(student);
-        when(punishmentUtils.fetchSchool("Test School")).thenReturn(Optional.of(school));
-        when(punishmentUtils.resolveInfraction(request, school, 4)).thenReturn(infraction);
-        when(punishmentUtils.buildPunishment(eq(request), eq(infraction), eq(student), eq(4), any(LocalDate.class)))
-                .thenReturn(punishment);
-        when(punishmentUtils.handlePositiveShoutout(eq(request), eq(punishment), eq(student), any(LocalDate.class)))
-                .thenReturn(response);
-
-        PunishmentResponse result = punishmentCreationService.createNewPunishForm(request);
-
-        assertSame(response, result);
-        assertNull(punishment.getAssignmentWork());
-
-        verify(punishmentUtils).validateFormRequest(request);
-        verify(punishmentUtils).fetchStudent("student@school.com");
-        verify(punishmentUtils).fetchSchool("Test School");
-        verify(punishmentUtils).resolveInfraction(request, school, 4);
-        verify(punishmentUtils).buildPunishment(eq(request), eq(infraction), eq(student), eq(4), any(LocalDate.class));
-        verify(punishmentUtils).savePhoneLogIfNeeded(eq(request), eq(student), any(LocalDate.class));
-        verify(punishmentUtils).handlePositiveShoutout(eq(request), eq(punishment), eq(student), any(LocalDate.class));
-        verifyNoMoreInteractions(punishmentUtils, assignmentService);
-    }
 
     @Test
     void createNewPunishForm_shouldHandleBehavioralBasicClose() throws MessagingException {

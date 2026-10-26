@@ -15,6 +15,7 @@ public class PunishmentFormRequest {
     private String infractionPeriod;
     private String infractionDescription;
     private String teacherEmail;
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=com.reps.demogcloud.models.PositiveWholeCurrencyDeserializer.class)
     private int currency;
     private String guidanceDescription;
     private String phoneLogDescription;

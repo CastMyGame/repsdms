@@ -33,7 +33,16 @@ public class PunishmentCreationService {
     private final EmailSenderService emailSenderService;
     private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
+    private final com.reps.demogcloud.services.currency.CurrencyService currency;
+
+    public record Prepared(PunishmentFormRequest request,Student student,Punishment punishment,Infraction infraction,LocalDate now) {}
+
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
+        if (formRequest!=null && InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName()))
+            return award(java.util.List.of(formRequest)).get(0);
+        return persist(prepare(formRequest));
+    }
+    private Prepared prepare(PunishmentFormRequest formRequest) {
         punishmentUtils.validateFormRequest(formRequest);
         LocalDate now = LocalDate.now();
 
@@ -42,12 +51,13 @@ public class PunishmentCreationService {
         userContextService.requireStaffInStudentSchool(actor, student);
         formRequest.setTeacherEmail(actor);
         String managedId = null;
-        if (requiredNotifications.isEnabled()) {
+        if (requiredNotifications.isEnabled() || InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName())) {
             managedId = requiredNotifications.creationId("punishment", student.getStudentEmail(),java.util.Arrays.asList(
                     formRequest.getInfractionName(),formRequest.getInfractionPeriod(),formRequest.getInfractionDescription(),formRequest.getCurrency(),
                     formRequest.getGuidanceDescription(),formRequest.getPhoneLogDescription(),formRequest.isAdminReferral(),formRequest.isGuidanceReferral()));
             Punishment existing = requiredNotifications.existingCreation(managedId, Punishment.class);
-            if (existing != null) return requiredNotifications.response(existing);
+            if (existing != null && !InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName()))
+                return new Prepared(formRequest,student,existing,null,now);
         }
         Optional<School> schoolOpt = punishmentUtils.fetchSchool(student.getSchool());
 
@@ -84,6 +94,12 @@ public class PunishmentCreationService {
             log.info("Assignment could not be attached; case creation continues with assignment unavailable");
         }
 
+        return new Prepared(formRequest,student,punishment,infraction,now);
+    }
+    private PunishmentResponse persist(Prepared prepared) throws MessagingException {
+        var formRequest=prepared.request();var student=prepared.student();var punishment=prepared.punishment();
+        var infraction=prepared.infraction();var now=prepared.now();
+        if(infraction==null) return requiredNotifications.response(punishment);
         punishmentUtils.savePhoneLogIfNeeded(formRequest, student, now);
 
         String infractionName = infraction.getInfractionName();
@@ -117,10 +133,24 @@ public class PunishmentCreationService {
     }
 
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException {
+        if(listRequest!=null && listRequest.stream().anyMatch(r->r!=null && InfractionType.POSITIVE.getLabel().equals(r.getInfractionName())))
+            return award(listRequest);
         List<PunishmentResponse> punishmentResponses = new ArrayList<>();
         for (PunishmentFormRequest punishmentFormRequest : listRequest) {
             punishmentResponses.add(createNewPunishForm(punishmentFormRequest));
         }
         return punishmentResponses;
     }
+    private List<PunishmentResponse> award(List<PunishmentFormRequest> requests) {
+        if(requests.stream().anyMatch(r->r==null || !InfractionType.POSITIVE.getLabel().equals(r.getInfractionName())
+                || r.isAdminReferral() || r.isGuidanceReferral()))
+            throw new IllegalArgumentException("Positive recognition cannot be mixed with referrals or other case types");
+        String actor=userContextService.getCurrentStaffEmail();
+        requests.forEach(request->request.setTeacherEmail(actor));
+        // Hash trusted actor identity; frontend sender overrides cannot affect the receipt.
+        return currency.award(requests,()->requests.stream().map(this::prepare).toList(),item->{
+            try {persist(item);} catch(MessagingException impossible) {throw new IllegalStateException("Recognition persistence failed",impossible);}
+        });
+    }
+
 }

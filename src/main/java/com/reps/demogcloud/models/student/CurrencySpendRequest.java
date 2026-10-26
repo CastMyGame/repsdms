@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class CurrencySpendRequest {
     private String studentEmail;
+    @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=com.reps.demogcloud.models.PositiveWholeCurrencyDeserializer.class)
     private Integer currencyTransferred;
 }

@@ -202,6 +202,7 @@ public class StudentController {
 
     @PutMapping("/updateStudents")
     public ResponseEntity<List<Student>> updateStudents(@RequestBody List<Student> students) {
+        administration.requireStaff();
         List<Student> response = studentService.updateStudents(students);
 
         return ResponseEntity

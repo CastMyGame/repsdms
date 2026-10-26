@@ -32,6 +32,8 @@ class StudentAdminServiceTest {
     @Mock private SecurityContext securityContext;
     @Mock private Authentication authentication;
 
+    @Mock com.reps.demogcloud.services.WorkflowAccessService access;
+
     @InjectMocks
     private StudentAdminService service;
 

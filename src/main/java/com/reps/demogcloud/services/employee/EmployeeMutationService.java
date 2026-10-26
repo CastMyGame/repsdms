@@ -22,6 +22,7 @@ public class EmployeeMutationService {
 
     private final EmployeeRepository employeeRepository;
     private final StudentRepository studentRepository;
+    private final com.reps.demogcloud.services.currency.CurrencyService currency;
 
     public void deleteEmployee(String id) throws Exception {
         Optional<Employee> employeeOptional = employeeRepository.findById(id);
@@ -34,38 +35,15 @@ public class EmployeeMutationService {
     }
 
     public List<Student> spendCurrency(List<CurrencySpendRequest> requests) {
-        List<Student> spenders = new ArrayList<>();
-        for (CurrencySpendRequest request : requests) {
-            Student spender = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
-            spender.setCurrency(spender.getCurrency() - request.getCurrencyTransferred());
-            spenders.add(studentRepository.save(spender));
-        }
-        return spenders;
+        return currency.spend(requests);
     }
 
     public List<Employee> editSchool(String school) {
-        List<Employee> employees = employeeRepository.findBySchool(school);
-        List<Employee> updated = new ArrayList<>();
-        for (Employee employee : employees) {
-            employee.setCurrency(5);
-            employeeRepository.setCurrency(employee.getEmployeeId(), 5);
-            updated.add(employee);
-        }
-
-        return updated;
+        return currency.resetSchool(school);
     }
 
     public void transferCurrency(CurrencyTransferRequest request) {
-        Employee teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
-        Student student = studentRepository.findByStudentEmailIgnoreCase(request.getStudentEmail());
-        if (teacher.getCurrency() < request.getCurrencyTransferred()) {
-            throw new ResourceNotFoundException("You do not have enough currency to give");
-        }
-        if (request.getCurrencyTransferred() < 0 || employeeRepository.debitCurrency(teacher.getEmployeeId(),
-                request.getCurrencyTransferred(), -request.getCurrencyTransferred()) != 1)
-            throw new IllegalArgumentException("Currency changed; reload before retrying");
-        student.setCurrency(student.getCurrency() + request.getCurrencyTransferred());
-        studentRepository.save(student);
+        throw new IllegalStateException("Direct currency transfer is unsupported; create an atomic recognition batch");
     }
 
     public List<Employee> updateAllEmployees() {

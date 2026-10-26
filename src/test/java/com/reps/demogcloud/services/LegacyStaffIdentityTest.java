@@ -142,7 +142,7 @@ class LegacyStaffIdentityTest {
         var assignments = mock(AssignmentService.class); var template = new AssignmentTemplate(); template.setId("synthetic-template");
         when(assignments.resolveTemplateForInfraction(anyString(), anyString(), anyString(), anyInt())).thenReturn(template);
         var sender = mock(EmailSenderService.class); when(sender.isPhase1RoutingEnabled()).thenReturn(true);
-        var creation = new PunishmentCreationService(utils, assignments, identity, sender, notifications);
+        var creation = new PunishmentCreationService(utils, assignments, identity, sender, notifications, mock(com.reps.demogcloud.services.currency.CurrencyService.class));
         var persisted = new AtomicReference<Document>();
         when(mongo.insert(any(Punishment.class))).thenAnswer(invocation -> {
             Punishment punishment = invocation.getArgument(0); var doc = new Document(); converter.write(punishment, doc);

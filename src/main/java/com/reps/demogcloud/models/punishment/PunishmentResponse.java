@@ -16,6 +16,10 @@ public class PunishmentResponse {
     private String teacherToEmail;
     private String subject;
     private String message;
+    private String currencyOperationId;
+    private String currencyState;
+    private Integer teacherCurrency;
+
 
 
 }

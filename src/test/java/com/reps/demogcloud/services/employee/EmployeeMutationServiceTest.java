@@ -29,6 +29,8 @@ class EmployeeMutationServiceTest {
     @Mock
     private StudentRepository studentRepository;
 
+    @Mock com.reps.demogcloud.services.currency.CurrencyService currency;
+
     @InjectMocks
     private EmployeeMutationService employeeMutationService;
 
@@ -90,182 +92,17 @@ class EmployeeMutationServiceTest {
         verifyNoInteractions(studentRepository);
     }
 
-    @Test
-    void spendCurrency_shouldSpendCurrencyForEachStudent() {
-        CurrencySpendRequest request1 = new CurrencySpendRequest();
-        request1.setStudentEmail("student1@school.com");
-        request1.setCurrencyTransferred(5);
 
-        CurrencySpendRequest request2 = new CurrencySpendRequest();
-        request2.setStudentEmail("student2@school.com");
-        request2.setCurrencyTransferred(3);
 
-        Student student1 = new Student();
-        student1.setStudentEmail("student1@school.com");
-        student1.setCurrency(20);
 
-        Student student2 = new Student();
-        student2.setStudentEmail("student2@school.com");
-        student2.setCurrency(10);
 
-        Student savedStudent1 = new Student();
-        savedStudent1.setStudentEmail("student1@school.com");
-        savedStudent1.setCurrency(15);
 
-        Student savedStudent2 = new Student();
-        savedStudent2.setStudentEmail("student2@school.com");
-        savedStudent2.setCurrency(7);
 
-        when(studentRepository.findByStudentEmailIgnoreCase("student1@school.com")).thenReturn(student1);
-        when(studentRepository.findByStudentEmailIgnoreCase("student2@school.com")).thenReturn(student2);
-        when(studentRepository.save(student1)).thenReturn(savedStudent1);
-        when(studentRepository.save(student2)).thenReturn(savedStudent2);
 
-        List<Student> result = employeeMutationService.spendCurrency(List.of(request1, request2));
 
-        assertNotNull(result);
-        assertEquals(2, result.size());
 
-        assertEquals("student1@school.com", result.get(0).getStudentEmail());
-        assertEquals(15, result.get(0).getCurrency());
 
-        assertEquals("student2@school.com", result.get(1).getStudentEmail());
-        assertEquals(7, result.get(1).getCurrency());
 
-        assertEquals(15, student1.getCurrency());
-        assertEquals(7, student2.getCurrency());
-
-        verify(studentRepository, times(1)).findByStudentEmailIgnoreCase("student1@school.com");
-        verify(studentRepository, times(1)).findByStudentEmailIgnoreCase("student2@school.com");
-        verify(studentRepository, times(1)).save(student1);
-        verify(studentRepository, times(1)).save(student2);
-        verifyNoMoreInteractions(studentRepository);
-        verifyNoInteractions(employeeRepository);
-    }
-
-    @Test
-    void spendCurrency_shouldReturnEmptyList_whenRequestsAreEmpty() {
-        List<Student> result = employeeMutationService.spendCurrency(List.of());
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verifyNoInteractions(employeeRepository, studentRepository);
-    }
-
-    @Test
-    void editSchool_shouldSetCurrencyToFiveForAllEmployeesInSchool() {
-        Employee employee1 = new Employee();
-        employee1.setEmployeeId("E1");
-        employee1.setSchool("Test School");
-        employee1.setCurrency(0);
-
-        Employee employee2 = new Employee();
-        employee2.setEmployeeId("E2");
-        employee2.setSchool("Test School");
-        employee2.setCurrency(12);
-
-        when(employeeRepository.findBySchool("Test School")).thenReturn(List.of(employee1, employee2));
-        employee1.setEmployeeId("one");
-        employee2.setEmployeeId("two");
-
-        List<Employee> result = employeeMutationService.editSchool("Test School");
-
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals(5, result.get(0).getCurrency());
-        assertEquals(5, result.get(1).getCurrency());
-
-        assertEquals(5, employee1.getCurrency());
-        assertEquals(5, employee2.getCurrency());
-
-        verify(employeeRepository, times(1)).findBySchool("Test School");
-        verify(employeeRepository).setCurrency("one",5);
-        verify(employeeRepository).setCurrency("two",5);
-        verifyNoMoreInteractions(employeeRepository);
-        verifyNoInteractions(studentRepository);
-    }
-
-    @Test
-    void editSchool_shouldReturnEmptyList_whenNoEmployeesFound() {
-        when(employeeRepository.findBySchool("Empty School")).thenReturn(List.of());
-
-        List<Employee> result = employeeMutationService.editSchool("Empty School");
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verify(employeeRepository, times(1)).findBySchool("Empty School");
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verifyNoMoreInteractions(employeeRepository);
-        verifyNoInteractions(studentRepository);
-    }
-
-    @Test
-    void transferCurrency_shouldTransferCurrency_whenTeacherHasEnough() {
-        CurrencyTransferRequest request = new CurrencyTransferRequest();
-        request.setTeacherEmail("teacher@school.com");
-        request.setStudentEmail("student@school.com");
-        request.setCurrencyTransferred(5);
-
-        Employee teacher = new Employee();
-        teacher.setEmail("teacher@school.com");
-        teacher.setCurrency(20);
-
-        Student student = new Student();
-        student.setStudentEmail("student@school.com");
-        student.setCurrency(7);
-
-        when(employeeRepository.findByEmailIgnoreCase("teacher@school.com")).thenReturn(teacher);
-        when(studentRepository.findByStudentEmailIgnoreCase("student@school.com")).thenReturn(student);
-        when(employeeRepository.debitCurrency(any(),anyInt(),anyInt())).thenReturn(1L);
-        when(studentRepository.save(student)).thenReturn(student);
-
-        assertDoesNotThrow(() -> employeeMutationService.transferCurrency(request));
-
-        assertEquals(20, teacher.getCurrency());
-        assertEquals(12, student.getCurrency());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase("teacher@school.com");
-        verify(studentRepository, times(1)).findByStudentEmailIgnoreCase("student@school.com");
-        verify(employeeRepository).debitCurrency(eq(teacher.getEmployeeId()),anyInt(),anyInt());
-        verify(studentRepository, times(1)).save(student);
-        verifyNoMoreInteractions(employeeRepository, studentRepository);
-    }
-
-    @Test
-    void transferCurrency_shouldThrowResourceNotFoundException_whenTeacherDoesNotHaveEnoughCurrency() {
-        CurrencyTransferRequest request = new CurrencyTransferRequest();
-        request.setTeacherEmail("teacher@school.com");
-        request.setStudentEmail("student@school.com");
-        request.setCurrencyTransferred(10);
-
-        Employee teacher = new Employee();
-        teacher.setEmail("teacher@school.com");
-        teacher.setCurrency(5);
-
-        Student student = new Student();
-        student.setStudentEmail("student@school.com");
-        student.setCurrency(7);
-
-        when(employeeRepository.findByEmailIgnoreCase("teacher@school.com")).thenReturn(teacher);
-        when(studentRepository.findByStudentEmailIgnoreCase("student@school.com")).thenReturn(student);
-
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> employeeMutationService.transferCurrency(request)
-        );
-
-        assertEquals("You do not have enough currency to give", exception.getMessage());
-        assertEquals(5, teacher.getCurrency());
-        assertEquals(7, student.getCurrency());
-
-        verify(employeeRepository, times(1)).findByEmailIgnoreCase("teacher@school.com");
-        verify(studentRepository, times(1)).findByStudentEmailIgnoreCase("student@school.com");
-        verify(employeeRepository, never()).save(any(Employee.class));
-        verify(studentRepository, never()).save(any(Student.class));
-        verifyNoMoreInteractions(employeeRepository, studentRepository);
-    }
 
     @Test
     void updateAllEmployees_shouldInitializeClassesOnlyForEmployeesWithNullClasses() {
@@ -349,5 +186,18 @@ class EmployeeMutationServiceTest {
         verify(employeeRepository, never()).save(any(Employee.class));
         verifyNoMoreInteractions(employeeRepository);
         verifyNoInteractions(studentRepository);
+    }
+    @Test void currencyOperationsDelegateToTransactionBoundary() {
+        var requests=List.<CurrencySpendRequest>of();
+        when(currency.spend(requests)).thenReturn(List.of());
+        when(currency.resetSchool("School")).thenReturn(List.of());
+        assertEquals(List.of(),employeeMutationService.spendCurrency(requests));
+        assertEquals(List.of(),employeeMutationService.editSchool("School"));
+        verify(currency).spend(requests);verify(currency).resetSchool("School");
+        verifyNoInteractions(studentRepository,employeeRepository);
+    }
+    @Test void directUnrecordedTransferIsRejected() {
+        assertThrows(IllegalStateException.class,()->employeeMutationService.transferCurrency(new CurrencyTransferRequest("a","b",1)));
+        verifyNoInteractions(studentRepository,employeeRepository,currency);
     }
 }

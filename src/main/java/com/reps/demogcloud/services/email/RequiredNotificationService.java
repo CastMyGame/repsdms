@@ -99,7 +99,10 @@ public class RequiredNotificationService {
         if(previous!=null) requireActionAccess(previous,"COMPLETED"); return previous;
     }
     public boolean prepare(Object entity,String event,String action,String body) {
-        if(!isEnabled()) return true;
+        return prepareInternal(entity,event,action,body,false);
+    }
+    private boolean prepareInternal(Object entity,String event,String action,String body,boolean currency) {
+        if(!currency && !isEnabled()) return true;
         String author=text(entity,"originalAuthorEmail"); if(author.isBlank()) author=text(entity,"teacherEmail");
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school and student must match");
@@ -122,6 +125,12 @@ public class RequiredNotificationService {
         var intent=new RequiredNotification(); intent.setNotificationId(id); intent.setActionId(action); intent.setEvent(event);
         intent.setActor(actor); intent.setSystem(system); intent.setBody(body); intent.setRfcMessageId("<"+id+"@notifications.repsdiscipline.com>");
         intents(entity).add(intent); return true;
+    }
+    /** Currency recognitions always retain their obligation; dispatch still requires all existing email gates. */
+    public Object saveCurrencyCreated(Object entity) {
+        prepareInternal(entity,"CREATED",actionId(),null,true);
+        captureContent(entity);
+        return mongo.insert(entity);
     }
     public Object saveCreated(Object entity) {
         prepare(entity,"CREATED");
