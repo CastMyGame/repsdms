@@ -25,6 +25,11 @@ class PunishmentDtoServiceTest {
     @Mock
     private StudentService studentService;
 
+    @Mock private com.reps.demogcloud.services.WorkflowAccessService access;
+    @org.junit.jupiter.api.BeforeEach void authorizeMappingFixture() {
+        lenient().when(access.canReadStudent(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        lenient().when(access.sameSchool(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
     @InjectMocks
     private PunishmentDtoService punishmentDtoService;
 

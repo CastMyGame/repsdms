@@ -47,6 +47,8 @@ public class WorkflowAccessService {
         if (!role(actor(), "ADMIN")) denied();
     }
 
+    public boolean isStudentActor() { return role(actor(), "STUDENT"); }
+
     public void requireStudent() {
         var user = actor();
         if (!role(user, "STUDENT")) denied();
@@ -64,13 +66,7 @@ public class WorkflowAccessService {
                 || !same(user.getSchool(), student.getSchool())) return false;
         if (role(user, "STUDENT")) return same(user.getUsername(), student.getStudentEmail());
         requireStaff();
-        if (role(user, "ADMIN") || same(user.getUsername(), student.getGuidanceEmail())
-                || (student.getSpotters() != null && student.getSpotters().stream()
-                .anyMatch(e -> same(e, user.getUsername())))) return true;
-        var employee = employees.findByEmailIgnoreCase(user.getUsername());
-        return employee.getClasses() != null && employee.getClasses().stream()
-                .filter(c -> c != null && c.getClassRoster() != null)
-                .flatMap(c -> c.getClassRoster().stream()).anyMatch(e -> same(e, email));
+        return userContext.hasIndependentStudentAccess(user.getUsername(), student);
     }
 
     public boolean canReadCase(Punishment punishment) {

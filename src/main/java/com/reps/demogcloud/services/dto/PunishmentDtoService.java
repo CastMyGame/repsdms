@@ -17,12 +17,14 @@ public class PunishmentDtoService {
 
     private final PunishmentService punishmentService;
     private final StudentService studentService;
+    private final com.reps.demogcloud.services.WorkflowAccessService access;
 
     public List<PunishmentDTO> getDTOPunishments() throws Exception {
         List<PunishmentDTO> punishmentDTOList = new ArrayList<>();
         List<Punishment> punishments = punishmentService.findAllSchool();
 
         for (Punishment punishment : punishments) {
+            if (!access.canReadStudent(punishment.getStudentEmail())) continue;
             PunishmentDTO punishmentDTO = new PunishmentDTO();
 
             punishmentDTO.setPunishment(punishment);

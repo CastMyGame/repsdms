@@ -36,6 +36,7 @@ public class Student {
     private String archivedBy;
     private String archivedExplanation;
     private LocalDate archivedOn;
+    private long profileRevision; // Missing legacy field is revision zero; profile edits use compare-and-set.
     private Integer points;
     private String school;
     private Integer currency;

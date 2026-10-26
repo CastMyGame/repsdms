@@ -45,6 +45,11 @@ class StudentQueryServiceTest {
     @Mock
     private Authentication authentication;
 
+    @Mock private com.reps.demogcloud.services.WorkflowAccessService access;
+    @org.junit.jupiter.api.BeforeEach void authorizeMappingFixture() {
+        lenient().when(access.canReadStudent(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        lenient().when(access.sameSchool(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
     @InjectMocks
     private StudentQueryService studentQueryService;
 
@@ -354,18 +359,20 @@ class StudentQueryServiceTest {
 
     @Test
     void findAllStudentArchived_shouldReturnArchivedRecords() {
-        List<Student> students = List.of(new Student());
+        List<Student> students = List.of(new Student()); students.get(0).setArchived(true);
 
-        when(studentRepository.findByArchived(true)).thenReturn(students);
+        when(schoolUtils.fetchSchoolName()).thenReturn("Testing");
+        when(studentRepository.findByArchivedAndSchool(true,"Testing")).thenReturn(students);
 
         List<Student> result = studentQueryService.findAllStudentArchived(true);
 
-        assertSame(students, result);
+        assertEquals(students, result);
     }
 
     @Test
     void findAllStudentArchived_shouldThrowWhenNoArchivedRecordsExist() {
-        when(studentRepository.findByArchived(true)).thenReturn(List.of());
+        when(schoolUtils.fetchSchoolName()).thenReturn("Testing");
+        when(studentRepository.findByArchivedAndSchool(true,"Testing")).thenReturn(List.of());
 
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
@@ -383,7 +390,7 @@ class StudentQueryServiceTest {
 
         List<Student> result = studentQueryService.findBySchool("Burke High");
 
-        assertSame(students, result);
+        assertEquals(students, result);
     }
 
     @Test
@@ -396,7 +403,7 @@ class StudentQueryServiceTest {
 
         List<Student> result = studentQueryService.findByLastNameAndSchool("Doe");
 
-        assertSame(students, result);
+        assertEquals(students, result);
     }
 
     @Test
@@ -408,7 +415,7 @@ class StudentQueryServiceTest {
 
         List<Student> result = studentQueryService.findByArchivedAndSchool(false);
 
-        assertSame(students, result);
+        assertEquals(students, result);
     }
 
     @Test

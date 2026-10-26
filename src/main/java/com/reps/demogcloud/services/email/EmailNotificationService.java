@@ -52,7 +52,7 @@ public class EmailNotificationService {
             return;
         }
 
-        List<String> spotters = student.getSpotters() != null ? student.getSpotters() : new ArrayList<>();
+        List<String> spotters = student.getSpotters() != null ? student.getSpotters().stream().filter(e -> userContextService.hasIndependentStudentAccess(e, student)).toList() : new ArrayList<>();
 
         emailSenderService.sendBulkEmail(
                 parentEmail,
@@ -220,6 +220,7 @@ public class EmailNotificationService {
         List<String> bcc = new ArrayList<>();
         if (student.getSpotters() != null) {
             for (String spotter : student.getSpotters()) {
+                if (!userContextService.hasIndependentStudentAccess(spotter, student)) continue;
                 String eligible = eligibleStaff(spotter, student);
                 if (eligible != null && !cc.contains(eligible) && !bcc.contains(eligible)) bcc.add(eligible);
             }

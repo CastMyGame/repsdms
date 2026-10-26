@@ -57,6 +57,11 @@ class PunishmentUtilsTest {
     @Mock
     private OfficeReferralService officeReferralService;
 
+    @Mock org.springframework.data.mongodb.core.MongoTemplate mongo;
+    @org.junit.jupiter.api.BeforeEach void targetedNotesPersistence() {
+        lenient().when(mongo.updateFirst(any(org.springframework.data.mongodb.core.query.Query.class),any(org.springframework.data.mongodb.core.query.Update.class),eq(Student.class)))
+            .thenReturn(com.mongodb.client.result.UpdateResult.acknowledged(1,1L,null));
+    }
     @InjectMocks
     private PunishmentUtils punishmentUtils;
 
@@ -262,7 +267,7 @@ class PunishmentUtilsTest {
         assertEquals("Called parent", log.getContent());
         assertEquals("Phone", log.getEvent());
 
-        verify(studentRepository).save(student);
+        verify(mongo).updateFirst(any(org.springframework.data.mongodb.core.query.Query.class),any(org.springframework.data.mongodb.core.query.Update.class),eq(Student.class));
     }
 
     @Test
@@ -278,7 +283,7 @@ class PunishmentUtilsTest {
 
         assertNotNull(student.getNotesArray());
         assertEquals(1, student.getNotesArray().size());
-        verify(studentRepository).save(student);
+        verify(mongo).updateFirst(any(org.springframework.data.mongodb.core.query.Query.class),any(org.springframework.data.mongodb.core.query.Update.class),eq(Student.class));
     }
 
     @Test

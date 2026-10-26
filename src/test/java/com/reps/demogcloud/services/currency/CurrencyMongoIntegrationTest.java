@@ -77,7 +77,7 @@ class CurrencyMongoIntegrationTest {
         transactions=new CurrencyTransactions(mongo,users,notifications);
         currency=new CurrencyService(transactions,mongo,employees,students,cases,access,users,notifications);
         legacy=mock(EmailService.class);
-        var utils=new PunishmentUtils(students,context.getBean(InfractionRepository.class),cases,context.getBean(SchoolRepository.class),legacy,
+        var utils=new PunishmentUtils(students,mongo,context.getBean(InfractionRepository.class),cases,context.getBean(SchoolRepository.class),legacy,
                 mock(EmployeeService.class),mock(GuidanceService.class),mock(OfficeReferralService.class),notifications);
         creation=new PunishmentCreationService(utils,mock(AssignmentService.class),users,mock(EmailSenderService.class),notifications,currency);
         action(UUID.randomUUID().toString());
@@ -149,7 +149,7 @@ class CurrencyMongoIntegrationTest {
         currency.resetSchool(SCHOOL);assertEquals(3,teacherBalance());
         assertThrows(org.springframework.security.access.AccessDeniedException.class,()->currency.resetSchool("Other"));
     }
-    @Test void restartedServiceReadsExistingActionReceipt() throws Exception {award(2);transactions=new CurrencyTransactions(mongo,users,notifications);currency=new CurrencyService(transactions,mongo,employees,students,cases,access,users,notifications);creation=new PunishmentCreationService(new PunishmentUtils(students,context.getBean(InfractionRepository.class),cases,context.getBean(SchoolRepository.class),legacy,mock(EmployeeService.class),mock(GuidanceService.class),mock(OfficeReferralService.class),notifications),mock(AssignmentService.class),users,mock(EmailSenderService.class),notifications,currency);award(2);assertEquals(16,teacherBalance());assertEquals(2,cases.count());}
+    @Test void restartedServiceReadsExistingActionReceipt() throws Exception {award(2);transactions=new CurrencyTransactions(mongo,users,notifications);currency=new CurrencyService(transactions,mongo,employees,students,cases,access,users,notifications);creation=new PunishmentCreationService(new PunishmentUtils(students,mongo,context.getBean(InfractionRepository.class),cases,context.getBean(SchoolRepository.class),legacy,mock(EmployeeService.class),mock(GuidanceService.class),mock(OfficeReferralService.class),notifications),mock(AssignmentService.class),users,mock(EmailSenderService.class),notifications,currency);award(2);assertEquals(16,teacherBalance());assertEquals(2,cases.count());}
 
     @Test void notificationIntentIsInvisibleToDispatcherUntilCommit() throws Exception {
         doAnswer(i->{Object saved=i.callRealMethod();

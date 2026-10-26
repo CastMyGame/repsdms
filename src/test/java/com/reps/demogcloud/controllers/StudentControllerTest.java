@@ -43,6 +43,7 @@ public class StudentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean private com.reps.demogcloud.services.student.StudentQueryService studentQueries;
     @MockitoBean
     private StudentService studentService;
     @MockitoBean private com.reps.demogcloud.services.UserAdministrationService administration;

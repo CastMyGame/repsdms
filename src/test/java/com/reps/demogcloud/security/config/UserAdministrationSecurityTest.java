@@ -55,6 +55,7 @@ class UserAdministrationSecurityTest {
             UserAccountService.class, AuthService.class, CustomUserDetailsService.class, GlobalExceptionHandler.class})
     static class App { @Bean AuthenticationProvider provider() { return mock(AuthenticationProvider.class); } }
     @Autowired WebApplicationContext context;
+    @MockitoBean private com.reps.demogcloud.services.student.StudentQueryService studentQueries;
     @MockitoBean com.reps.demogcloud.security.services.AccountAccessService accountAccess;
     @MockitoBean CustomOAuth2UserService oidc;
     @MockitoBean OAuth2LoginSuccessHandler success;

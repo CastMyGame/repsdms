@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.mail.MessagingException;
-import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +26,10 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final com.reps.demogcloud.services.student.StudentQueryService studentQueries;
+
+    @GetMapping("/enrollment-directory")
+    public Object enrollmentDirectory() { return studentQueries.enrollmentDirectory(); }
     private final com.reps.demogcloud.services.UserAdministrationService administration;
 
     //---------------------------------GET Controllers--------------------------------
@@ -46,7 +49,7 @@ public class StudentController {
 
 
 
-    @GetMapping("/allStudents")
+    @GetMapping({"/allStudents", "/allStudents/"})
     public ResponseEntity<List<Student>> findAllStudents () {
         administration.requireStaff();
         var findAll = studentService.getAllStudents(false);
@@ -159,7 +162,7 @@ public class StudentController {
     }
 
     @PostMapping("/points/transfer")
-    public ResponseEntity<List<Student>> transferPoints (@Valid @RequestBody TransferPointsRequest request) {
+    public ResponseEntity<List<Student>> transferPoints (@RequestBody TransferPointsRequest request) {
         List<Student> response = studentService.transferPoints(request.getGivingStudentEmail(),
                 request.getReceivingStudentEmail(),
                 request.getPointsTransferred());
