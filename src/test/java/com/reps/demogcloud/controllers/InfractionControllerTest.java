@@ -102,30 +102,13 @@ class InfractionControllerTest {
     }
 
     @Test
-    void testCreateNewInfraction_returnsAcceptedWithCreatedInfraction() throws Exception {
-        Mockito.when(infractionService.createNewInfraction(any(Infraction.class))).thenReturn(sampleInfraction);
-
+    void testCreateAndDeleteCatalogAreIntentionallyUnavailable() throws Exception {
         String json = objectMapper.writeValueAsString(sampleInfraction);
-
-        mockMvc.perform(post("/infraction/v1/createInfraction")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.infractionId").value("123"))
-                .andExpect(jsonPath("$.infractionName").value("Test Infraction"));
-    }
-
-    @Test
-    void testDeleteInfraction_returnsAcceptedWithMessage() throws Exception {
-        Mockito.when(infractionService.deleteInfraction(any(Infraction.class))).thenReturn("Deleted");
-
-        String json = objectMapper.writeValueAsString(sampleInfraction);
-
-        mockMvc.perform(delete("/infraction/v1/delete/infraction")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isAccepted())
-                .andExpect(content().string("Deleted"));
+        mockMvc.perform(post("/infraction/v1/createInfraction").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isMethodNotAllowed()).andExpect(content().string("Infraction catalog editing is unavailable for MVP 1."));
+        mockMvc.perform(delete("/infraction/v1/delete/infraction").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isMethodNotAllowed()).andExpect(content().string("Infraction catalog editing is unavailable for MVP 1."));
+        Mockito.verifyNoInteractions(infractionService);
     }
 
     @Test

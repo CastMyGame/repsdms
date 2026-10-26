@@ -48,21 +48,9 @@ public class InfractionController {
                 .accepted()
                 .body(findMe);
     }
-    //----------------------------POST Controllers------------------------
-    @PostMapping("/createInfraction")
-    public ResponseEntity<Infraction> createNewInfraction(@RequestBody Infraction infraction) {
-        var message = infractionService.createNewInfraction(infraction);
-
-        return ResponseEntity
-                .accepted()
-                .body(message);
-    }
-    //------------------------------DELETE Controllers-----------------------
-    @DeleteMapping("/delete/infraction")
-    public ResponseEntity<String> deleteInfraction (@RequestBody Infraction infraction) throws ResourceNotFoundException {
-        var delete = infractionService.deleteInfraction(infraction);
-        return ResponseEntity
-                .accepted()
-                .body(delete);
+    /** Fail closed for unsupported bulk, update and legacy mutation paths too. */
+    @RequestMapping(value={"", "/**"}, method={RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE})
+    public void catalogEditingUnavailable() {
+        throw com.reps.demogcloud.services.infraction.InfractionMutationService.editingUnavailable();
     }
 }

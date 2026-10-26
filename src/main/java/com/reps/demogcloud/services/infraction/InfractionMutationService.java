@@ -1,27 +1,17 @@
 package com.reps.demogcloud.services.infraction;
 
-import com.reps.demogcloud.data.InfractionRepository;
-import com.reps.demogcloud.exceptions.ResourceNotFoundException;
 import com.reps.demogcloud.models.infraction.Infraction;
-import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+/** Shared catalog writes are unavailable through application APIs for MVP 1, including internal aliases. */
 @Service
-@RequiredArgsConstructor
 public class InfractionMutationService {
-
-    private final InfractionRepository repository;
-
-    public Infraction createNewInfraction(Infraction infraction) {
-        return repository.save(infraction);
+    public static ResponseStatusException editingUnavailable() {
+        return new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED,
+                "Infraction catalog editing is unavailable for MVP 1.");
     }
-
-    public String deleteInfraction(Infraction infraction) throws ResourceNotFoundException {
-        try {
-            repository.delete(infraction);
-        } catch (Exception e) {
-            throw new ResourceNotFoundException("That infraction does not exist");
-        }
-        return infraction.getInfractionName() + " has been deleted";
-    }
+    public Infraction createNewInfraction(Infraction infraction) { throw editingUnavailable(); }
+    public String deleteInfraction(Infraction infraction) { throw editingUnavailable(); }
 }
