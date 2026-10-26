@@ -82,39 +82,11 @@ class SchoolControllerTest {
     }
 
     @Test
-    void createSchool_returnsCreated() throws Exception {
-        School school = new School();
-        school.setSchoolName("Test School");
-        school.setSchoolIdNumber("123");
-        school.setCurrency("USD");
-
-        SchoolResponse response = new SchoolResponse();
-        response.setSchool(school);
-
-        when(schoolService.createNewSchool(any(School.class))).thenReturn(response);
-
-        mockMvc.perform(post("/school/v1/newSchool")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(school)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.school.schoolName").value("Test School"))
-                .andExpect(jsonPath("$.school.schoolIdNumber").value("123"));
-    }
-
-    @Test
-    void createSchool_returnsBadRequest_whenSchoolIsNull() throws Exception {
-        SchoolResponse response = new SchoolResponse();
-        response.setSchool(null);
-        response.setError("School already exists");
-
-        when(schoolService.createNewSchool(any(School.class))).thenReturn(response);
-
-        mockMvc.perform(post("/school/v1/newSchool")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new School())))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.school").doesNotExist())
-                .andExpect(jsonPath("$.error").value("School already exists"));
+    void createSchool_returnsIntentionalApprovalRequiredResponse() throws Exception {
+        when(schoolService.createNewSchool(any(School.class))).thenThrow(new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.FORBIDDEN, "School activation requires approval from the REPS team."));
+        mockMvc.perform(post("/school/v1/newSchool").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden()).andExpect(content().string("School activation requires approval from the REPS team."));
     }
 
     @Test
@@ -129,13 +101,13 @@ class SchoolControllerTest {
 
         Map<String, String> updateMap = new HashMap<>();
         updateMap.put("currency", "points");
-        updateMap.put("city", "Charleston");
+        updateMap.put("maxPunishLevel", "4");
 
         when(schoolService.editSchool(eq(schoolName), any(Map.class))).thenReturn(response);
 
         mockMvc.perform(put("/school/v1/{schoolName}", schoolName)
                         .param("currency", "points")
-                        .param("city", "Charleston"))
+                        .param("maxPunishLevel", "4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.school.schoolName").value("Test School"));
     }
