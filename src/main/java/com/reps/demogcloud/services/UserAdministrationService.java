@@ -172,7 +172,7 @@ public class UserAdministrationService {
         input.setAdminEmail(studentStaffReference(input.getAdminEmail(), actor.getSchool(), "ADMIN"));
         return input;
     }
-    private String studentStaffReference(String email, String school, String role) {
+    public String studentStaffReference(String email, String school, String role) {
         if (email == null || email.isBlank()) return null;
         String normalized = email.trim().toLowerCase(Locale.ROOT);
         var account = users.findByUsername(normalized);

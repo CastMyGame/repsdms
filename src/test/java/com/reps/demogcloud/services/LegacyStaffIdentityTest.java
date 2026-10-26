@@ -137,7 +137,7 @@ class LegacyStaffIdentityTest {
         infraction.setInfractionName("Talking"); infraction.setInfractionLevel("1");
         when(infractions.findByInfractionNameAndInfractionLevel("Talking", "1")).thenReturn(infraction);
         var legacyEmail = mock(EmailService.class);
-        var utils = new PunishmentUtils(students, infractions, mock(PunishRepository.class), schools,
+        var utils = new PunishmentUtils(students,mock(org.springframework.data.mongodb.core.MongoTemplate.class), infractions, mock(PunishRepository.class), schools,
                 legacyEmail, mock(EmployeeService.class), mock(GuidanceService.class), mock(OfficeReferralService.class), notifications);
         var assignments = mock(AssignmentService.class); var template = new AssignmentTemplate(); template.setId("synthetic-template");
         when(assignments.resolveTemplateForInfraction(anyString(), anyString(), anyString(), anyInt())).thenReturn(template);

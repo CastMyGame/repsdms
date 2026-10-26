@@ -1,248 +1,44 @@
 package com.reps.demogcloud.services.student;
-
 import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.UpdateSpottersRequest;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import com.reps.demogcloud.models.student.*;
+import com.reps.demogcloud.services.UserContextService;
+import org.junit.jupiter.api.*;
+import org.springframework.data.mongodb.core.*;
+import org.springframework.data.mongodb.core.query.*;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
 class StudentSpotterServiceTest {
-
-    @Mock
-    private StudentRepository studentRepository;
-
-    @InjectMocks
-    private StudentSpotterService studentSpotterService;
-
-    @Test
-    void addAsSpotter_shouldAddSpottersToStudentsWithExistingSpotters() {
-        Student student1 = new Student();
-        student1.setStudentEmail("student1@test.com");
-        student1.setSpotters(new ArrayList<>(List.of("existing@test.com")));
-
-        Student student2 = new Student();
-        student2.setStudentEmail("student2@test.com");
-        student2.setSpotters(new ArrayList<>(List.of("old@test.com")));
-
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of("student1@test.com", "student2@test.com"));
-        request.setSpotters(List.of("new1@test.com", "new2@test.com"));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student1@test.com")).thenReturn(student1);
-        when(studentRepository.findByStudentEmailIgnoreCase("student2@test.com")).thenReturn(student2);
-        when(studentRepository.save(student1)).thenReturn(student1);
-        when(studentRepository.save(student2)).thenReturn(student2);
-
-        List<Student> result = studentSpotterService.addAsSpotter(request);
-
-        assertNotNull(result);
-        assertEquals(2, result.size());
-
-        assertEquals(
-                List.of("existing@test.com", "new1@test.com", "new2@test.com"),
-                student1.getSpotters()
-        );
-        assertEquals(
-                List.of("old@test.com", "new1@test.com", "new2@test.com"),
-                student2.getSpotters()
-        );
-
-        verify(studentRepository).findByStudentEmailIgnoreCase("student1@test.com");
-        verify(studentRepository).findByStudentEmailIgnoreCase("student2@test.com");
-        verify(studentRepository).save(student1);
-        verify(studentRepository).save(student2);
-        verifyNoMoreInteractions(studentRepository);
+    StudentRepository records; UserContextService users; MongoTemplate mongo; StudentSpotterService service; Student child;
+    @BeforeEach void setup() {
+        records=mock(StudentRepository.class);users=mock(UserContextService.class);mongo=mock(MongoTemplate.class);
+        service=new StudentSpotterService(records,users,mongo);child=new Student();child.setStudentIdNumber("child");child.setStudentEmail("child@example.test");child.setSchool("Testing");
+        when(users.getCurrentStaffEmail()).thenReturn("teacher@example.test");when(users.hasIndependentStudentAccess(anyString(),eq(child))).thenReturn(true);
+        when(records.findByStudentEmailIgnoreCase(child.getStudentEmail())).thenReturn(child);
+        when(mongo.findAndModify(any(Query.class),any(Update.class),any(FindAndModifyOptions.class),eq(Student.class))).thenReturn(child);
     }
-
-    @Test
-    void addAsSpotter_shouldAddSpottersWhenStudentHasNoExistingSpotters() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-        student.setSpotters(null);
-
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of("student@test.com"));
-        request.setSpotters(List.of("spotter1@test.com", "spotter2@test.com"));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
-        when(studentRepository.save(student)).thenReturn(student);
-
-        List<Student> result = studentSpotterService.addAsSpotter(request);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(List.of("spotter1@test.com", "spotter2@test.com"), student.getSpotters());
-
-        verify(studentRepository).findByStudentEmailIgnoreCase("student@test.com");
-        verify(studentRepository).save(student);
-        verifyNoMoreInteractions(studentRepository);
+    UpdateSpottersRequest request(String staff) {var request=new UpdateSpottersRequest();request.setSpotters(List.of(staff));request.setStudentEmail(List.of(child.getStudentEmail()));return request;}
+    @Test void retriesUseSetAdditionAndNeverWholeDocumentSave() {
+        for(int i=0;i<2;i++)service.addAsSpotter(request("teacher@example.test"));
+        var update=org.mockito.ArgumentCaptor.forClass(Update.class);verify(mongo,times(2)).findAndModify(any(Query.class),update.capture(),any(FindAndModifyOptions.class),eq(Student.class));
+        update.getAllValues().forEach(u -> {assertTrue(u.getUpdateObject().containsKey("$addToSet"));assertFalse(u.getUpdateObject().containsKey("$set"));});verify(records,never()).save(any());
     }
-
-    @Test
-    void addAsSpotter_shouldReturnEmptyListWhenNoStudentEmailsProvided() {
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of());
-        request.setSpotters(List.of("spotter@test.com"));
-
-        List<Student> result = studentSpotterService.addAsSpotter(request);
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verifyNoInteractions(studentRepository);
+    @Test void adminMayManageAnotherEligibleStaffMemberAndRemoveStaleGrant() {
+        when(users.isCurrentStaffAdministrator()).thenReturn(true);service.addAsSpotter(request("other@example.test"));
+        when(users.hasIndependentStudentAccess(anyString(),eq(child))).thenReturn(false);service.deleteSpotters(request("other@example.test"));
+        verify(mongo,times(2)).findAndModify(any(Query.class),any(Update.class),any(FindAndModifyOptions.class),eq(Student.class));
     }
-
-    @Test
-    void deleteSpotters_shouldRemoveRequestedSpottersFromStudents() {
-        Student student1 = new Student();
-        student1.setStudentEmail("student1@test.com");
-        student1.setSpotters(new ArrayList<>(List.of("keep@test.com", "remove1@test.com", "remove2@test.com")));
-
-        Student student2 = new Student();
-        student2.setStudentEmail("student2@test.com");
-        student2.setSpotters(new ArrayList<>(List.of("remove1@test.com", "keep2@test.com")));
-
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of("student1@test.com", "student2@test.com"));
-        request.setSpotters(List.of("remove1@test.com", "remove2@test.com"));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student1@test.com")).thenReturn(student1);
-        when(studentRepository.findByStudentEmailIgnoreCase("student2@test.com")).thenReturn(student2);
-        when(studentRepository.save(student1)).thenReturn(student1);
-        when(studentRepository.save(student2)).thenReturn(student2);
-
-        List<Student> result = studentSpotterService.deleteSpotters(request);
-
-        assertNotNull(result);
-        assertEquals(2, result.size());
-
-        assertEquals(List.of("keep@test.com"), student1.getSpotters());
-        assertEquals(List.of("keep2@test.com"), student2.getSpotters());
-
-        verify(studentRepository).findByStudentEmailIgnoreCase("student1@test.com");
-        verify(studentRepository).findByStudentEmailIgnoreCase("student2@test.com");
-        verify(studentRepository).save(student1);
-        verify(studentRepository).save(student2);
-        verifyNoMoreInteractions(studentRepository);
+    @Test void forgedStaffAndRevokedUnderlyingRelationshipCannotWrite() {
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->service.addAsSpotter(request("other@example.test")));
+        when(users.hasIndependentStudentAccess(anyString(),eq(child))).thenReturn(false);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->service.addAsSpotter(request("teacher@example.test")));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->service.deleteSpotters(request("teacher@example.test")));
+        verifyNoInteractions(mongo);
     }
-
-    @Test
-    void deleteSpotters_shouldHandleNullExistingSpotters() {
-        Student student = new Student();
-        student.setStudentEmail("student@test.com");
-        student.setSpotters(null);
-
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of("student@test.com"));
-        request.setSpotters(List.of("remove@test.com"));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("student@test.com")).thenReturn(student);
-        when(studentRepository.save(student)).thenReturn(student);
-
-        List<Student> result = studentSpotterService.deleteSpotters(request);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertNotNull(student.getSpotters());
-        assertTrue(student.getSpotters().isEmpty());
-
-        verify(studentRepository).findByStudentEmailIgnoreCase("student@test.com");
-        verify(studentRepository).save(student);
-        verifyNoMoreInteractions(studentRepository);
-    }
-
-    @Test
-    void deleteSpotters_shouldReturnEmptyListWhenNoStudentEmailsProvided() {
-        UpdateSpottersRequest request = new UpdateSpottersRequest();
-        request.setStudentEmail(List.of());
-        request.setSpotters(List.of("remove@test.com"));
-
-        List<Student> result = studentSpotterService.deleteSpotters(request);
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verifyNoInteractions(studentRepository);
-    }
-
-    @Test
-    void removeSpotterByEmail_shouldRemoveSpotterAndSaveStudent() {
-        Student inputStudent = new Student();
-        inputStudent.setStudentIdNumber("S-1");
-
-        Student existingStudent = new Student();
-        existingStudent.setStudentIdNumber("S-1");
-        existingStudent.setSpotters(new ArrayList<>(List.of("keep@test.com", "remove@test.com")));
-
-        when(studentRepository.findByStudentIdNumber("S-1")).thenReturn(existingStudent);
-        when(studentRepository.save(existingStudent)).thenReturn(existingStudent);
-
-        Student result = studentSpotterService.removeSpotterByEmail("remove@test.com", inputStudent);
-
-        assertNotNull(result);
-        assertEquals(List.of("keep@test.com"), existingStudent.getSpotters());
-
-        verify(studentRepository).findByStudentIdNumber("S-1");
-        verify(studentRepository).save(existingStudent);
-        verifyNoMoreInteractions(studentRepository);
-    }
-
-    @Test
-    void removeSpotterByEmail_shouldLeaveSpottersUnchangedWhenEmailNotPresent() {
-        Student inputStudent = new Student();
-        inputStudent.setStudentIdNumber("S-1");
-
-        Student existingStudent = new Student();
-        existingStudent.setStudentIdNumber("S-1");
-        existingStudent.setSpotters(new ArrayList<>(List.of("keep@test.com")));
-
-        when(studentRepository.findByStudentIdNumber("S-1")).thenReturn(existingStudent);
-        when(studentRepository.save(existingStudent)).thenReturn(existingStudent);
-
-        Student result = studentSpotterService.removeSpotterByEmail("missing@test.com", inputStudent);
-
-        assertNotNull(result);
-        assertEquals(List.of("keep@test.com"), existingStudent.getSpotters());
-
-        verify(studentRepository).findByStudentIdNumber("S-1");
-        verify(studentRepository).save(existingStudent);
-        verifyNoMoreInteractions(studentRepository);
-    }
-
-    @Test
-    void findBySpotter_shouldDelegateToRepository() {
-        List<Student> students = List.of(new Student(), new Student());
-
-        when(studentRepository.findBySpottersContainsIgnoreCase("spotter@test.com")).thenReturn(students);
-
-        List<Student> result = studentSpotterService.findBySpotter("spotter@test.com");
-
-        assertSame(students, result);
-
-        verify(studentRepository).findBySpottersContainsIgnoreCase("spotter@test.com");
-        verifyNoMoreInteractions(studentRepository);
-    }
-
-    @Test
-    void findBySpotter_shouldReturnEmptyListWhenRepositoryReturnsEmpty() {
-        when(studentRepository.findBySpottersContainsIgnoreCase("spotter@test.com")).thenReturn(List.of());
-
-        List<Student> result = studentSpotterService.findBySpotter("spotter@test.com");
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-
-        verify(studentRepository).findBySpottersContainsIgnoreCase("spotter@test.com");
-        verifyNoMoreInteractions(studentRepository);
+    @Test void concurrentArchiveIsReportedAsConflictAndRetryUsesNoStaleArray() {
+        when(mongo.findAndModify(any(Query.class),any(Update.class),any(FindAndModifyOptions.class),eq(Student.class))).thenReturn(null);
+        assertEquals(409,assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.addAsSpotter(request("teacher@example.test"))).getStatusCode().value());
+        verify(records,never()).save(any());
     }
 }

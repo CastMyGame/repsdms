@@ -168,7 +168,7 @@ class RequiredNotificationServiceTest {
     @Test void teacherCreationEmbedsTheObligationInTheSameCaseInsertAndDoesNotSend() throws Exception {
         var schools=mock(SchoolRepository.class); var school=new School(); school.setMaxPunishLevel(4); when(schools.findBySchoolNameIgnoreCase("School")).thenReturn(Optional.of(school));
         var email=mock(EmailService.class);
-        var utility=new PunishmentUtils(students,mock(InfractionRepository.class),mock(PunishRepository.class),schools,email,
+        var utility=new PunishmentUtils(students,mock(org.springframework.data.mongodb.core.MongoTemplate.class),mock(InfractionRepository.class),mock(PunishRepository.class),schools,email,
                 mock(EmployeeService.class),mock(GuidanceService.class),mock(OfficeReferralService.class),service);
         var result=utility.handleBasicClose("BC",new PunishmentFormRequest(),fresh(),student,java.time.LocalDate.now());
         assertEquals("BC",result.getPunishment().getStatus()); assertEquals("PENDING",last().getState()); assertEquals(TEACHER,last().getActor());
@@ -362,4 +362,13 @@ class RequiredNotificationServiceTest {
         create(); env.setProperty("reps.email.notifications.dispatch-enabled","false"); dispatchLast(); service.dispatchPending();
         assertEquals("PENDING",last().getState()); verify(router,never()).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
     }
+    @Test void dispatchRechecksSpotterRelationshipAndExcludesRevokedSubscriber() throws Exception {
+        create();when(users.hasIndependentStudentAccess("spotter@example.test",student)).thenReturn(false);
+        dispatchLast();assertFalse(last().getRecipients().contains("spotter@example.test"));assertEquals("ACCEPTED",last().getState());
+    }
+    @Test void dispatchIncludesOnlyIndependentlyAuthorizedSpotter() throws Exception {
+        create();when(users.hasIndependentStudentAccess("spotter@example.test",student)).thenReturn(true);
+        dispatchLast();assertTrue(last().getRecipients().contains("spotter@example.test"));assertEquals("ACCEPTED",last().getState());
+    }
+
 }

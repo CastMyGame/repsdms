@@ -19,6 +19,10 @@ public class StudentMutationService {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final StudentQueryService studentQueryService;
+    private final com.reps.demogcloud.services.WorkflowAccessService access;
+    private final com.reps.demogcloud.services.UserAdministrationService administration;
+    private final com.reps.demogcloud.services.UserContextService context;
+    private final org.springframework.data.mongodb.core.MongoTemplate mongo;
 
     public StudentResponse createNewStudent(Student input) {
         if (input == null || input.getStudentEmail() == null || input.getStudentEmail().isBlank()
@@ -57,14 +61,28 @@ public class StudentMutationService {
         return new StudentResponse("", existing);
     }
 
-    public String deleteStudent(StudentRequest request) throws Exception {
-        try { studentRepository.delete(request.getStudent()); }
-        catch (Exception e) { throw new Exception("That student does not exist"); }
-        return request.getStudent().getFirstName() + " " + request.getStudent().getLastName() + " has been deleted";
+    public String deleteStudent(StudentRequest request) {
+        throw new ResponseStatusException(HttpStatus.GONE, "Destructive deletion is retired; an administrator may archive the student");
     }
     public Student archiveRecord(String studentId) {
-        var record = studentQueryService.findByStudentId(studentId);
-        record.setArchived(true); record.setArchivedOn(LocalDate.now()); record.setArchivedBy(studentId);
-        return studentRepository.save(record);
+        access.requireAdmin();
+        Student student=studentRepository.findByStudentIdNumber(studentId);
+        if(student==null || !access.sameSchool(student.getSchool()))
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        UserModel account=userRepository.findByUsernameIgnoreCase(student.getStudentEmail());
+        if(account!=null) {
+            if(!access.sameSchool(account.getSchool()) || account.getRoles()==null
+                    || account.getRoles().size()!=1 || account.getRoles().stream().noneMatch(r -> r!=null && "STUDENT".equalsIgnoreCase(r.getRole())))
+                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            // Existing deactivation revokes account tickets/sessions first. Fail closed on a later archive failure.
+            administration.setEnabled(account.getId(),false);
+        }
+        var query=org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria.where("_id")
+                .is(studentId).and("school").is(student.getSchool()));
+        var update=new org.springframework.data.mongodb.core.query.Update().set("archived",true);
+        if(!student.isArchived())update.set("archivedOn",LocalDate.now()).set("archivedBy",context.getCurrentStaffEmail());
+        Student result=mongo.findAndModify(query,update,org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Student.class);
+        if(result==null)throw new ResponseStatusException(HttpStatus.CONFLICT,"Account access disabled; student archive needs retry");
+        return result;
     }
 }

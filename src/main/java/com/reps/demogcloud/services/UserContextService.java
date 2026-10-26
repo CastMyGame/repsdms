@@ -75,7 +75,7 @@ public class UserContextService {
         }
         UserModel user = userRepository.findByUsername(email);
         Employee employee = employeeRepository.findByEmailIgnoreCase(email);
-        boolean staff = user != null && user.isEnabled() && user.getRoles() != null
+        boolean staff = user != null && user.isEnabled() && !user.isPasswordSetupRequired() && !hasRole(user, "STUDENT") && user.getRoles() != null
                 && user.getRoles().stream().anyMatch(role -> role != null
                 && ("TEACHER".equalsIgnoreCase(role.getRole())
                 || "GUIDANCE".equalsIgnoreCase(role.getRole())
@@ -98,6 +98,38 @@ public class UserContextService {
         return employee.getEmail();
     }
 
+    /** Spotters are subscriptions, never proof of student access. Recheck persisted relationships. */
+    public boolean hasIndependentStudentAccess(String email, Student student) {
+        try {
+            requireStaffInStudentSchool(email, student);
+            if (student.isArchived()) return false;
+            UserModel user = userRepository.findByUsername(email);
+            if (hasRole(user, "ADMIN")) return true;
+            if (hasRole(user, "GUIDANCE") && email.equalsIgnoreCase(student.getGuidanceEmail())) return true;
+            Employee employee = employeeRepository.findByEmailIgnoreCase(email);
+            return hasRole(user, "TEACHER") && employee.getClasses() != null
+                    && employee.getClasses().stream().filter(c -> c != null && c.getClassRoster() != null)
+                    .flatMap(c -> c.getClassRoster().stream()).anyMatch(student.getStudentEmail()::equalsIgnoreCase);
+        } catch (AccessDeniedException denied) { return false; }
+    }
+
+    private boolean hasAuthorizedStudentSubscription(String email, Student student) {
+        if (!hasIndependentStudentAccess(email, student)) return false;
+        UserModel user = userRepository.findByUsername(email);
+        return (hasRole(user, "GUIDANCE") && email.equalsIgnoreCase(student.getGuidanceEmail()))
+                || (student.getSpotters() != null && student.getSpotters().stream().anyMatch(email::equalsIgnoreCase));
+    }
+
+    public boolean isCurrentStaffAdministrator() {
+        getCurrentStaffEmail();
+        return hasRole(getCurrentUserModel(), "ADMIN");
+    }
+
+    private boolean hasRole(UserModel user, String role) {
+        return user != null && user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> r != null && role.equalsIgnoreCase(r.getRole()));
+    }
+
     public void requireStaffInStudentSchool(String staffEmail, Student student) {
         getVerifiedStaffEmail(staffEmail);
         Employee employee = employeeRepository.findByEmailIgnoreCase(staffEmail);
@@ -114,9 +146,7 @@ public class UserContextService {
         boolean admin = user.getRoles().stream().anyMatch(role -> role != null
                 && "ADMIN".equalsIgnoreCase(role.getRole()));
         boolean participant = actor.equalsIgnoreCase(originalTeacher)
-                || actor.equalsIgnoreCase(student.getGuidanceEmail())
-                || (student.getSpotters() != null && student.getSpotters().stream()
-                .anyMatch(actor::equalsIgnoreCase));
+                || hasAuthorizedStudentSubscription(actor, student);
         if (!admin && !participant) {
             throw new AccessDeniedException("Staff must be an authorized participant in this case");
         }
@@ -127,8 +157,7 @@ public class UserContextService {
         UserModel user = userRepository.findByUsername(actor);
         boolean admin = user.getRoles().stream().anyMatch(role -> role != null && "ADMIN".equalsIgnoreCase(role.getRole()));
         boolean participant = actor.equalsIgnoreCase(originalTeacher) || actor.equalsIgnoreCase(owner)
-                || actor.equalsIgnoreCase(student.getGuidanceEmail())
-                || (student.getSpotters() != null && student.getSpotters().stream().anyMatch(actor::equalsIgnoreCase));
+                || hasAuthorizedStudentSubscription(actor, student);
         if (!admin && !participant) throw new AccessDeniedException("Staff must be an authorized case participant");
     }
 

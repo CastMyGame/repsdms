@@ -79,7 +79,7 @@ class CurrencySecurityTest {
     @BeforeEach void setup() {
         mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         account=new UserModel();account.setUsername(STAFF);account.setSchool("Testing");account.setRoles(Set.of(new RoleModel(null,"TEACHER")));
-        employee=new Employee();employee.setEmployeeId("staff");employee.setEmail(STAFF);employee.setSchool("Testing");employee.setCurrency(20);employee.setClasses(List.of());
+        employee=new Employee();employee.setEmployeeId("staff");employee.setEmail(STAFF);employee.setSchool("Testing");employee.setCurrency(20);var roster=new Employee.ClassRoster();roster.setClassRoster(List.of(CHILD));employee.setClasses(List.of(roster));
         child=new Student();child.setStudentIdNumber("child");child.setStudentEmail(CHILD);child.setSchool("Testing");child.setCurrency(10);child.setSpotters(List.of(STAFF));
         when(users.findByUsername(STAFF)).thenAnswer(i->account);when(employees.findByEmailIgnoreCase(STAFF)).thenAnswer(i->employee);
         when(students.findByStudentEmailIgnoreCase(CHILD)).thenAnswer(i->child);when(students.findById("child")).thenAnswer(i->Optional.of(child));
@@ -102,7 +102,7 @@ class CurrencySecurityTest {
     }
     @Test void crossSchoolUnrelatedAndArchivedStudentsAreDenied() throws Exception {
         child.setSchool("Other");mvc.perform(request("/employees/v1/currency/spend",redemption(1))).andExpect(status().isForbidden());
-        child.setSchool("Testing");child.setSpotters(List.of());mvc.perform(request("/employees/v1/currency/spend",redemption(1))).andExpect(status().isForbidden());
+        child.setSchool("Testing");child.setSpotters(List.of());employee.setClasses(List.of());mvc.perform(request("/employees/v1/currency/spend",redemption(1))).andExpect(status().isForbidden());
         child.setSpotters(List.of(STAFF));child.setArchived(true);mvc.perform(request("/employees/v1/currency/spend",redemption(1))).andExpect(status().isForbidden());
         verify(mongo,never()).updateFirst(any(org.springframework.data.mongodb.core.query.Query.class),any(org.springframework.data.mongodb.core.query.Update.class),any(Class.class));
     }
@@ -122,9 +122,10 @@ class CurrencySecurityTest {
         verify(students,never()).save(any());
     }
     @Test void authorizedProfileChangeDoesNotWriteCurrency() throws Exception {
-        when(utils.isDifferent(any(),any())).thenAnswer(i->i.getArgument(1)!=null&&!Objects.equals(i.getArgument(0),i.getArgument(1)));
-        when(students.save(any())).thenAnswer(i->i.getArgument(0));
+        when(mongo.findAndModify(any(org.springframework.data.mongodb.core.query.Query.class),any(org.springframework.data.mongodb.core.query.Update.class),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Student.class))).thenReturn(child);
         mvc.perform(request("/student/v1/updateStudents","[{\"studentIdNumber\":\"child\",\"firstName\":\"Updated\",\"currency\":10}]")).andExpect(status().isAccepted());
-        verify(students).save(argThat(s->s.getCurrency()==10&&"Updated".equals(s.getFirstName())));
+        var update=org.mockito.ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Update.class);
+        verify(mongo).findAndModify(any(org.springframework.data.mongodb.core.query.Query.class),update.capture(),any(org.springframework.data.mongodb.core.FindAndModifyOptions.class),eq(Student.class));
+        assertFalse(update.getValue().getUpdateObject().toJson().contains("currency"));verify(students,never()).save(any());
     }
 }

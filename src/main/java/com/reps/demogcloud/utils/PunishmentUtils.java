@@ -36,6 +36,7 @@ import java.util.UUID;
 public class PunishmentUtils {
 
     private final StudentRepository studentRepository;
+    private final org.springframework.data.mongodb.core.MongoTemplate mongo;
     private final InfractionRepository infractionRepository;
     private final PunishRepository punishRepository;
     private final SchoolRepository schoolRepository;
@@ -132,7 +133,10 @@ public class PunishmentUtils {
             }
 
             student.getNotesArray().add(log);
-            studentRepository.save(student);
+            var query=org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria
+                    .where("_id").is(student.getStudentIdNumber()).and("school").is(student.getSchool()).and("archived").ne(true));
+            if(mongo.updateFirst(query,new org.springframework.data.mongodb.core.query.Update().push("notesArray",log),Student.class).getMatchedCount()!=1)
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Student changed; phone note was not saved");
         }
     }
 

@@ -63,8 +63,7 @@ class EmailNotificationServiceTest {
         when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
         when(userContextService.getVerifiedStaffEmail("teacher@test.com")).thenReturn("teacher@test.com");
         doNothing().when(userContextService).requireStaffInStudentSchool("teacher@test.com", student);
-        doThrow(new org.springframework.security.access.AccessDeniedException("Former staff"))
-                .when(userContextService).requireStaffInStudentSchool("former@test.com", student);
+        when(userContextService.hasIndependentStudentAccess("former@test.com",student)).thenReturn(false);
         service.sendPtsEmail("parent@test.com", "teacher@test.com", "student@test.com", "Closed", "Subject", "en");
         verify(userContextService).requireCaseCommunicationAccess("teacher@test.com", student);
         verify(emailSenderService).sendStaffBulkEmail("parent@test.com", List.of("teacher@test.com", "student@test.com"),
@@ -131,6 +130,7 @@ class EmailNotificationServiceTest {
     void sendPtsEmail_shouldSendBulkEmail() throws Exception {
         Student student = new Student();
         student.setSpotters(List.of("spot1@test.com"));
+        when(userContextService.hasIndependentStudentAccess("spot1@test.com",student)).thenReturn(true);
 
         when(studentRepository.findByStudentEmailIgnoreCase("student@test.com"))
                 .thenReturn(student);

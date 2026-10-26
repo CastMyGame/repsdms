@@ -1,227 +1,116 @@
 package com.reps.demogcloud.services.student;
 
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
+import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.punishment.ThreadEvent;
 import com.reps.demogcloud.models.school.School;
 import com.reps.demogcloud.models.student.Student;
-import com.reps.demogcloud.models.student.StudentResponse;
-import com.reps.demogcloud.utils.StudentUtils;
+import com.reps.demogcloud.services.*;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.mongodb.core.*;
+import org.springframework.data.mongodb.core.query.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
-@Service
-@RequiredArgsConstructor
+@Service @RequiredArgsConstructor
 public class StudentAdminService {
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
     private final SchoolRepository schoolRepository;
     private final StudentRepository studentRepository;
-    private final StudentUtils studentUtils;
-    private final com.reps.demogcloud.services.WorkflowAccessService access;
+    private final com.reps.demogcloud.utils.StudentUtils studentUtils;
+    private final WorkflowAccessService access;
+    private final UserContextService users;
+    private final MongoTemplate mongo;
+    private final UserAdministrationService administration;
 
-    public Student addTimeToStudent(String studentEmail, int additionalHours, int additionalMinutes) {
-        // Fetch the student by ID
-        Student bankStudent = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
-        if (bankStudent != null) {
-            Student.TimeBank currentTimeBank = bankStudent.getTimeBank();
-
-            if (currentTimeBank == null) {
-                currentTimeBank = new Student.TimeBank(0, 0);
-            }
-
-            // Add the additional time to the current timeBank
-            int newMinutes = currentTimeBank.getMinutes() + additionalMinutes;
-            int newHours = currentTimeBank.getHours() + additionalHours;
-
-            // If newMinutes >= 60, convert excess minutes to hours
-            if (newMinutes >= 60) {
-                newHours += newMinutes / 60;
-                newMinutes = newMinutes % 60;
-            }
-
-            // Set the updated time bank back to the student
-            bankStudent.setTimeBank(new Student.TimeBank(newHours, newMinutes));
-
-            // Save the updated student object
-            return studentRepository.save(bankStudent);
-
-        } else {
-            throw new RuntimeException("Student not found");
-        }
+    private Student staffStudent(String email) {
+        access.requireStaff(); access.requireStudentAccess(email);
+        return studentRepository.findByStudentEmailIgnoreCase(email);
     }
-
-    public List<Student> updateStudents(List<Student> students) {
+    private Query active(Student student) {
+        return Query.query(Criteria.where("_id").is(student.getStudentIdNumber())
+                .and("school").is(student.getSchool()).and("archived").ne(true));
+    }
+    private Student modify(Query query, Update update) {
+        Student result = mongo.findAndModify(query, update, FindAndModifyOptions.options().returnNew(true), Student.class);
+        if (result == null) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Student changed; refresh before retrying. Earlier changes in a batch may already be saved.");
+        return result;
+    }
+    public Student addTimeToStudent(String email, int hours, int minutes) {
+        Student student = staffStudent(email);
+        if (hours < 0 || hours > 1000 || minutes < 0 || minutes > 59 || hours + minutes == 0)
+            throw new IllegalArgumentException("Positive detention time required (minutes 0-59)");
+        Student.TimeBank old = student.getTimeBank();
+        int total = Math.addExact(old == null ? 0 : Math.addExact(Math.multiplyExact(old.getHours(),60),old.getMinutes()), hours*60+minutes);
+        return modify(active(student).addCriteria(Criteria.where("timeBank").is(old)),
+                new Update().set("timeBank",new Student.TimeBank(total/60,total%60)));
+    }
+    public List<Student> updateStudents(List<Student> inputs) {
         access.requireStaff();
-        if(students==null || students.isEmpty() || students.size()>200) throw new IllegalArgumentException("Invalid student update batch");
-        // Validate the entire batch before profile changes; this is never a wallet-adjustment API.
-        for(Student input:students) {
-            if(input==null || input.getStudentIdNumber()==null) throw new IllegalArgumentException("Student ID required");
-            Student existing=studentRepository.findById(input.getStudentIdNumber()).orElseThrow(()->new IllegalArgumentException("Student not found"));
-            access.requireStudentAccess(existing.getStudentEmail());
-            if((input.getCurrency()!=null && !Objects.equals(input.getCurrency(),existing.getCurrency()))
-                    || (input.getSchool()!=null && !Objects.equals(input.getSchool(),existing.getSchool()))
-                    || (input.getStudentEmail()!=null && !input.getStudentEmail().equalsIgnoreCase(existing.getStudentEmail())))
-                throw new IllegalArgumentException("Currency, school and account identity cannot be changed through bulk profile updates");
-        }
-        List<Student> updatedStudents = new ArrayList<>();
-
-        for (Student updatedData : students) {
-            Optional<Student> existingStudentOpt = studentRepository.findById(updatedData.getStudentIdNumber());
-
-            if (existingStudentOpt.isPresent()) {
-                Student existingStudent = existingStudentOpt.get();
-                boolean isUpdated = false;
-
-                // Check each field and update only if the new value is different
-                if (studentUtils.isDifferent(existingStudent.getFirstName(), updatedData.getFirstName())) {
-                    existingStudent.setFirstName(updatedData.getFirstName());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getLastName(), updatedData.getLastName())) {
-                    existingStudent.setLastName(updatedData.getLastName());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getParentEmail(), updatedData.getParentEmail())) {
-                    existingStudent.setParentEmail(updatedData.getParentEmail());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getStudentEmail(), updatedData.getStudentEmail())) {
-                    existingStudent.setStudentEmail(updatedData.getStudentEmail());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getGuidanceEmail(), updatedData.getGuidanceEmail())) {
-                    existingStudent.setGuidanceEmail(updatedData.getGuidanceEmail());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getAdminEmail(), updatedData.getAdminEmail())) {
-                    existingStudent.setAdminEmail(updatedData.getAdminEmail());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getAddress(), updatedData.getAddress())) {
-                    existingStudent.setAddress(updatedData.getAddress());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getGrade(), updatedData.getGrade())) {
-                    existingStudent.setGrade(updatedData.getGrade());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getParentPhoneNumber(), updatedData.getParentPhoneNumber())) {
-                    existingStudent.setParentPhoneNumber(updatedData.getParentPhoneNumber());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getStudentPhoneNumber(), updatedData.getStudentPhoneNumber())) {
-                    existingStudent.setStudentPhoneNumber(updatedData.getStudentPhoneNumber());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getArchivedBy(), updatedData.getArchivedBy())) {
-                    existingStudent.setArchivedBy(updatedData.getArchivedBy());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getArchivedExplanation(), updatedData.getArchivedExplanation())) {
-                    existingStudent.setArchivedExplanation(updatedData.getArchivedExplanation());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getArchivedOn(), updatedData.getArchivedOn())) {
-                    existingStudent.setArchivedOn(updatedData.getArchivedOn());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getPoints(), updatedData.getPoints())) {
-                    existingStudent.setPoints(updatedData.getPoints());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getSchool(), updatedData.getSchool())) {
-                    existingStudent.setSchool(updatedData.getSchool());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getStateStudentId(), updatedData.getStateStudentId())) {
-                    existingStudent.setStateStudentId(updatedData.getStateStudentId());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getNotesArray(), updatedData.getNotesArray())) {
-                    existingStudent.setNotesArray(updatedData.getNotesArray());
-                    isUpdated = true;
-                }
-                if (studentUtils.isDifferent(existingStudent.getSpotters(), updatedData.getSpotters())) {
-                    existingStudent.setSpotters(updatedData.getSpotters());
-                    isUpdated = true;
-                }
-                if (updatedData.getTimeBank() != null && !Objects.equals(existingStudent.getTimeBank(), updatedData.getTimeBank())) {
-                    existingStudent.setTimeBank(updatedData.getTimeBank());
-                    isUpdated = true;
-                }
-
-                if (isUpdated) {
-                    studentRepository.save(existingStudent);
-                    updatedStudents.add(existingStudent);
-                }
+        if (inputs == null || inputs.isEmpty() || inputs.size() > 200) throw new IllegalArgumentException("Invalid student batch");
+        List<Student> records = new ArrayList<>(); Set<String> ids = new HashSet<>();
+        for (Student input : inputs) {
+            if (input == null || input.getStudentIdNumber() == null || !ids.add(input.getStudentIdNumber()))
+                throw new IllegalArgumentException("Unique student IDs required");
+            Student old = studentRepository.findById(input.getStudentIdNumber()).orElseThrow(() -> new IllegalArgumentException("Student not found"));
+            if (!access.sameSchool(old.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            staffStudent(old.getStudentEmail());
+            if ((input.getCurrency()!=null && !Objects.equals(input.getCurrency(),old.getCurrency()))
+                    || (input.getPoints()!=null && !Objects.equals(input.getPoints(),old.getPoints()))
+                    || (input.getSchool()!=null && !Objects.equals(input.getSchool(),old.getSchool()))
+                    || (input.getStudentEmail()!=null && !input.getStudentEmail().equalsIgnoreCase(old.getStudentEmail()))
+                    || input.isArchived() || changed(input.getSpotters(),old.getSpotters())
+                    || changed(input.getNotesArray(),old.getNotesArray()) || changed(input.getTimeBank(),old.getTimeBank())
+                    || changed(input.getArchivedBy(),old.getArchivedBy()) || changed(input.getArchivedOn(),old.getArchivedOn())
+                    || changed(input.getArchivedExplanation(),old.getArchivedExplanation()))
+                throw new IllegalArgumentException("Protected student fields require their authorized workflow");
+            if (changed(input.getGuidanceEmail(),old.getGuidanceEmail()) || changed(input.getAdminEmail(),old.getAdminEmail())) {
+                access.requireAdmin();
+                if(input.getGuidanceEmail()!=null) administration.studentStaffReference(input.getGuidanceEmail(),old.getSchool(),"GUIDANCE");
+                if(input.getAdminEmail()!=null) administration.studentStaffReference(input.getAdminEmail(),old.getSchool(),"ADMIN");
             }
+            if (input.getProfileRevision()!=old.getProfileRevision()) conflict();
+            records.add(old);
         }
-
-        return updatedStudents;
-    }
-
-    public Student updateStudentNotes(String id, ThreadEvent event) {
-        Optional<Student> studentOptional = studentRepository.findById(id);
-
-        if (studentOptional.isEmpty()) {
-            StudentResponse response = new StudentResponse();
-            response.setError("No Student with id " + id + " was found");
-            return null;
-
+        List<Student> results = new ArrayList<>();
+        for (int i=0;i<inputs.size();i++) {
+            Student input=inputs.get(i), old=records.get(i); Update update=new Update();
+            set(update,"firstName",input.getFirstName());set(update,"lastName",input.getLastName());
+            set(update,"parentEmail",input.getParentEmail());set(update,"address",input.getAddress());set(update,"grade",input.getGrade());
+            set(update,"parentPhoneNumber",input.getParentPhoneNumber());set(update,"studentPhoneNumber",input.getStudentPhoneNumber());
+            set(update,"stateStudentId",input.getStateStudentId());
+            set(update,"guidanceEmail",input.getGuidanceEmail()==null?null:input.getGuidanceEmail().trim().toLowerCase(Locale.ROOT));
+            set(update,"adminEmail",input.getAdminEmail()==null?null:input.getAdminEmail().trim().toLowerCase(Locale.ROOT));
+            Criteria revision=old.getProfileRevision()==0
+                    ? new Criteria().orOperator(Criteria.where("profileRevision").is(0),Criteria.where("profileRevision").exists(false))
+                    : Criteria.where("profileRevision").is(old.getProfileRevision());
+            results.add(modify(active(old).addCriteria(revision), update.inc("profileRevision",1)));
         }
-
-        Student record = studentOptional.get();
-        LocalDate timePosted = LocalDate.now();
-
-        List<ThreadEvent> events = record.getNotesArray() == null ? new ArrayList<>() : record.getNotesArray();
-
-        ThreadEvent newEvent = new ThreadEvent();
-        newEvent.setEvent(event.getEvent());
-        newEvent.setDate(timePosted);
-        newEvent.setContent(event.getContent());
-        events.add(newEvent);
-//
-        record.setNotesArray(events);
-
-        return studentRepository.save(record);
-
-
+        return results;
     }
+    private boolean changed(Object input,Object old) { return input!=null && !Objects.equals(input,old); }
+    private void set(Update update,String name,Object value) { if(value!=null)update.set(name,value); }
+    private void conflict() { throw new ResponseStatusException(HttpStatus.CONFLICT,"Student profile changed; refresh before retrying"); }
 
+    public Student updateStudentNotes(String id,ThreadEvent input) {
+        access.requireStaff();
+        Student student=studentRepository.findById(id).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
+        if (!access.sameSchool(student.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        staffStudent(student.getStudentEmail());
+        if(input==null || input.getContent()==null || input.getContent().isBlank() || input.getContent().length()>10000
+                || input.getEvent()==null || input.getEvent().length()>100)throw new IllegalArgumentException("Valid note required");
+        ThreadEvent event=new ThreadEvent();event.setCreatedBy(users.getCurrentStaffEmail());event.setDate(LocalDate.now());
+        event.setEvent(input.getEvent());event.setContent(input.getContent());
+        return modify(active(student),new Update().push("notesArray",event));
+    }
     public Optional<School> getStudentSchool() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
-
-        return schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
+        access.requireStudent();
+        Student student=studentRepository.findByStudentEmailIgnoreCase(users.getCurrentUsername());
+        return schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());
     }
-
     public List<Student> massAssignForSchool() {
-        List<Student> students = studentRepository.findAll();
-        List<Student> assignedStudents = new ArrayList<>();
-        for (Student student : students) {
-            String parentPhone = student.getParentPhoneNumber();
-
-            // Check if parentPhone is not null and contains a hyphen
-            if (parentPhone != null && parentPhone.contains("-")) {
-                // Remove hyphens and add +1 at the beginning
-                String formattedPhone = "+1" + parentPhone.replace("-", "");
-                student.setParentPhoneNumber(formattedPhone);
-                studentRepository.save(student);
-                assignedStudents.add(student);
-            }
-        }
-        return assignedStudents;
+        throw new ResponseStatusException(HttpStatus.GONE,"Legacy global maintenance is retired");
     }
 }

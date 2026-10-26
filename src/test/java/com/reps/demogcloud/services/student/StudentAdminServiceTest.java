@@ -1,147 +1,61 @@
 package com.reps.demogcloud.services.student;
-
-import com.reps.demogcloud.data.SchoolRepository;
-import com.reps.demogcloud.data.StudentRepository;
-import com.reps.demogcloud.models.punishment.ThreadEvent;
-import com.reps.demogcloud.models.school.School;
+import com.reps.demogcloud.data.*;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.punishment.ThreadEvent;
+import com.reps.demogcloud.services.*;
 import com.reps.demogcloud.utils.StudentUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.util.List;
-import java.util.Optional;
-
+import org.junit.jupiter.api.*;
+import org.springframework.data.mongodb.core.*;
+import org.springframework.data.mongodb.core.query.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.ArgumentMatchers.*;
+import java.util.*;
 class StudentAdminServiceTest {
-
-    @Mock private SchoolRepository schoolRepository;
-    @Mock private StudentRepository studentRepository;
-    @Mock private StudentUtils studentUtils;
-
-    @Mock private SecurityContext securityContext;
-    @Mock private Authentication authentication;
-
-    @Mock com.reps.demogcloud.services.WorkflowAccessService access;
-
-    @InjectMocks
-    private StudentAdminService service;
-
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
+    StudentRepository records;MongoTemplate mongo;WorkflowAccessService access;UserContextService users;UserAdministrationService administration;
+    StudentAdminService service;Student child;
+    @BeforeEach void setup(){
+        records=mock(StudentRepository.class);mongo=mock(MongoTemplate.class);access=mock(WorkflowAccessService.class);users=mock(UserContextService.class);administration=mock(UserAdministrationService.class);
+        service=new StudentAdminService(mock(SchoolRepository.class),records,mock(StudentUtils.class),access,users,mongo,administration);
+        child=new Student();child.setStudentIdNumber("child");child.setStudentEmail("child@example.test");child.setSchool("Testing");child.setCurrency(50);child.setPoints(7);
+        when(access.sameSchool("Testing")).thenReturn(true);
+        when(records.findById("child")).thenReturn(Optional.of(child));when(records.findByStudentEmailIgnoreCase(child.getStudentEmail())).thenReturn(child);
+        when(mongo.findAndModify(any(Query.class),any(Update.class),any(FindAndModifyOptions.class),eq(Student.class))).thenReturn(child);
     }
-
-    @Test
-    void addTimeToStudent_shouldHandleMinuteOverflow() {
-        Student student = new Student();
-        student.setStudentEmail("test@test.com");
-        student.setTimeBank(new Student.TimeBank(1, 50));
-
-        when(studentRepository.findByStudentEmailIgnoreCase("test@test.com")).thenReturn(student);
-        when(studentRepository.save(student)).thenReturn(student);
-
-        Student result = service.addTimeToStudent("test@test.com", 1, 20);
-
-        assertEquals(3, result.getTimeBank().getHours());
-        assertEquals(10, result.getTimeBank().getMinutes());
+    Student input(){var s=new Student();s.setStudentIdNumber("child");s.setFirstName("Updated");return s;}
+    @Test void legacyRevisionZeroUsesTargetedProfileUpdateWithoutTouchingProtectedFields(){
+        service.updateStudents(List.of(input()));var query=org.mockito.ArgumentCaptor.forClass(Query.class);var update=org.mockito.ArgumentCaptor.forClass(Update.class);
+        verify(mongo).findAndModify(query.capture(),update.capture(),any(FindAndModifyOptions.class),eq(Student.class));
+        assertTrue(query.getValue().getQueryObject().toJson().contains("$exists"));
+        assertEquals("Updated",((org.bson.Document)update.getValue().getUpdateObject().get("$set")).get("firstName"));
+        assertFalse(update.getValue().getUpdateObject().toJson().contains("currency"));assertFalse(update.getValue().getUpdateObject().toJson().contains("spotters"));
+        verify(records,never()).save(any());
     }
-
-    @Test
-    void addTimeToStudent_shouldThrowWhenNotFound() {
-        when(studentRepository.findByStudentEmailIgnoreCase("missing")).thenReturn(null);
-
-        assertThrows(RuntimeException.class,
-                () -> service.addTimeToStudent("missing", 1, 1));
+    @Test void staleRevisionAndConcurrentProfileChangesReturnConflict(){
+        child.setProfileRevision(1);assertEquals(409,assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.updateStudents(List.of(input()))).getStatusCode().value());
+        child.setProfileRevision(0);when(mongo.findAndModify(any(Query.class),any(Update.class),any(FindAndModifyOptions.class),eq(Student.class))).thenReturn(null);
+        assertEquals(409,assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.updateStudents(List.of(input()))).getStatusCode().value());
     }
-
-    @Test
-    void updateStudents_shouldUpdateOnlyChangedFields() {
-        Student existing = new Student();
-        existing.setStudentIdNumber("1");
-        existing.setFirstName("Old");
-
-        Student updated = new Student();
-        updated.setStudentIdNumber("1");
-        updated.setFirstName("New");
-
-        when(studentRepository.findById("1")).thenReturn(Optional.of(existing));
-        when(studentUtils.isDifferent("Old", "New")).thenReturn(true);
-
-        List<Student> result = service.updateStudents(List.of(updated));
-
-        assertEquals(1, result.size());
-        assertEquals("New", result.get(0).getFirstName());
-
-        verify(studentRepository).save(existing);
+    @Test void protectedPointHistoryAndSubscriptionsCannotBeChangedThroughProfiles(){
+        var s=input();s.setPoints(100);assertThrows(IllegalArgumentException.class,()->service.updateStudents(List.of(s)));
+        s.setPoints(null);s.setSpotters(List.of("attacker@example.test"));assertThrows(IllegalArgumentException.class,()->service.updateStudents(List.of(s)));verifyNoInteractions(mongo);
     }
-
-    @Test
-    void updateStudentNotes_shouldAddNewEvent() {
-        Student student = new Student();
-        student.setStudentIdNumber("1");
-
-        ThreadEvent event = new ThreadEvent();
-        event.setEvent("NOTE");
-        event.setContent("Test");
-
-        when(studentRepository.findById("1")).thenReturn(Optional.of(student));
-        when(studentRepository.save(any())).thenReturn(student);
-
-        Student result = service.updateStudentNotes("1", event);
-
-        assertNotNull(result.getNotesArray());
-        assertEquals(1, result.getNotesArray().size());
+    @Test void guidanceAssignmentRequiresAdministratorAndVerifiedSchoolRole(){
+        var s=input();s.setGuidanceEmail("guidance@example.test");service.updateStudents(List.of(s));
+        verify(access).requireAdmin();verify(administration).studentStaffReference("guidance@example.test","Testing","GUIDANCE");
     }
-
-    @Test
-    void updateStudentNotes_shouldReturnNullWhenNotFound() {
-        when(studentRepository.findById("1")).thenReturn(Optional.empty());
-
-        Student result = service.updateStudentNotes("1", new ThreadEvent());
-
-        assertNull(result);
+    @Test void notesAppendAuthenticatedAuthorWithoutReplacingHistory(){
+        when(users.getCurrentStaffEmail()).thenReturn("staff@example.test");var event=new ThreadEvent();event.setEvent("Note");event.setContent("Synthetic");event.setCreatedBy("forged");
+        service.updateStudentNotes("child",event);var update=org.mockito.ArgumentCaptor.forClass(Update.class);
+        verify(mongo).findAndModify(any(Query.class),update.capture(),any(FindAndModifyOptions.class),eq(Student.class));
+        var saved=(ThreadEvent)((org.bson.Document)update.getValue().getUpdateObject().get("$push")).get("notesArray");assertEquals("staff@example.test",saved.getCreatedBy());verify(records,never()).save(any());
     }
-
-    @Test
-    void getStudentSchool_shouldReturnSchool() {
-        Student student = new Student();
-        student.setSchool("Test School");
-
-        School school = new School();
-
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getName()).thenReturn("test@test.com");
-
-        when(studentRepository.findByStudentEmailIgnoreCase("test@test.com")).thenReturn(student);
-        when(schoolRepository.findBySchoolNameIgnoreCase("Test School")).thenReturn(Optional.of(school));
-
-        Optional<School> result = service.getStudentSchool();
-
-        assertTrue(result.isPresent());
-    }
-
-    @Test
-    void massAssignForSchool_shouldFormatPhoneNumbers() {
-        Student student = new Student();
-        student.setParentPhoneNumber("843-123-4567");
-
-        when(studentRepository.findAll()).thenReturn(List.of(student));
-        when(studentRepository.save(student)).thenReturn(student);
-
-        List<Student> result = service.massAssignForSchool();
-
-        assertEquals("+18431234567", result.get(0).getParentPhoneNumber());
+    @Test void detentionTimeUsesCompareAndSetAndRejectsInvalidAmounts(){
+        child.setTimeBank(new Student.TimeBank(1,55));service.addTimeToStudent(child.getStudentEmail(),0,10);
+        var query=org.mockito.ArgumentCaptor.forClass(Query.class);var update=org.mockito.ArgumentCaptor.forClass(Update.class);
+        verify(mongo).findAndModify(query.capture(),update.capture(),any(FindAndModifyOptions.class),eq(Student.class));
+        assertEquals(child.getTimeBank(),query.getValue().getQueryObject().get("timeBank"));
+        var bank=(Student.TimeBank)((org.bson.Document)update.getValue().getUpdateObject().get("$set")).get("timeBank");assertEquals(2,bank.getHours());assertEquals(5,bank.getMinutes());
+        assertThrows(IllegalArgumentException.class,()->service.addTimeToStudent(child.getStudentEmail(),0,0));assertThrows(IllegalArgumentException.class,()->service.addTimeToStudent(child.getStudentEmail(),-1,0));
     }
 }

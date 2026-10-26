@@ -345,7 +345,7 @@ class StudentServiceTest {
         StudentRequest request = new StudentRequest();
 
         when(studentMutationService.deleteStudent(request))
-                .thenThrow(new Exception("delete failed"));
+                .thenThrow(new IllegalArgumentException("delete failed"));
 
         Exception exception = assertThrows(
                 Exception.class,

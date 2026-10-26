@@ -81,65 +81,9 @@ class StudentMutationServiceTest {
         var s=input();s.setFirstName("");assertThrows(IllegalArgumentException.class,()->studentMutationService.createNewStudent(s));verifyNoInteractions(authService,studentRepository);
     }
 
-    @Test
-    void deleteStudent_shouldDeleteAndReturnMessage_whenStudentExists() throws Exception {
-        Student student = new Student();
-        student.setFirstName("John");
-        student.setLastName("Doe");
-
-        StudentRequest request = new StudentRequest();
-        request.setStudent(student);
-
-        doNothing().when(studentRepository).delete(student);
-
-        String result = studentMutationService.deleteStudent(request);
-
-        assertEquals("John Doe has been deleted", result);
-
-        verify(studentRepository, times(1)).delete(student);
-        verifyNoMoreInteractions(studentRepository, authService, userRepository, studentQueryService);
-    }
-
-    @Test
-    void deleteStudent_shouldThrowException_whenDeleteFails() {
-        Student student = new Student();
-        student.setFirstName("John");
-        student.setLastName("Doe");
-
-        StudentRequest request = new StudentRequest();
-        request.setStudent(student);
-
-        doThrow(new RuntimeException("delete failed")).when(studentRepository).delete(student);
-
-        Exception exception = assertThrows(
-                Exception.class,
-                () -> studentMutationService.deleteStudent(request)
-        );
-
-        assertEquals("That student does not exist", exception.getMessage());
-
-        verify(studentRepository, times(1)).delete(student);
-        verifyNoMoreInteractions(studentRepository, authService, userRepository, studentQueryService);
-    }
-
-    @Test
-    void archiveRecord_shouldArchiveStudentAndSave() {
-        Student existingStudent = new Student();
-        existingStudent.setStudentEmail("student@test.com");
-        existingStudent.setArchived(false);
-
-        when(studentQueryService.findByStudentId("S-1")).thenReturn(existingStudent);
-        when(studentRepository.save(existingStudent)).thenReturn(existingStudent);
-
-        Student result = studentMutationService.archiveRecord("S-1");
-
-        assertNotNull(result);
-        assertTrue(result.isArchived());
-        assertEquals("S-1", result.getArchivedBy());
-        assertEquals(LocalDate.now(), result.getArchivedOn());
-
-        verify(studentQueryService, times(1)).findByStudentId("S-1");
-        verify(studentRepository, times(1)).save(existingStudent);
-        verifyNoMoreInteractions(studentRepository, authService, userRepository, studentQueryService);
+    @Test void destructiveDeletionIsRetiredBeforeAnyRepositoryAccess() {
+        var failure=assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> studentMutationService.deleteStudent(new StudentRequest()));
+        assertEquals(410,failure.getStatusCode().value()); verifyNoInteractions(studentRepository);
     }
 }

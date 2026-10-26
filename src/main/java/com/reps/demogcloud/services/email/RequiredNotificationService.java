@@ -291,7 +291,7 @@ public class RequiredNotificationService {
             List<String> cc=new ArrayList<>(); List<String> bcc=new ArrayList<>();
             cc.add(address(student.getStudentEmail()));
             for(String staff:Arrays.asList(author,owner,actor,student.getAdminEmail(),student.getGuidanceEmail())) addStaff(cc,staff,student);
-            if(student.getSpotters()!=null) for(String staff:student.getSpotters()) { List<String> valid=new ArrayList<>(); addStaff(valid,staff,student); for(String email:valid) if(!cc.contains(email) && !bcc.contains(email)) bcc.add(email); }
+            if(student.getSpotters()!=null) for(String staff:student.getSpotters()) { if(!users.hasIndependentStudentAccess(staff,student)) continue; List<String> valid=new ArrayList<>(); addStaff(valid,staff,student); for(String email:valid) if(!cc.contains(email) && !bcc.contains(email)) bcc.add(email); }
             String to=kind.equals("guidance")?address(student.getStudentEmail()):address(student.getParentEmail());
             cc.removeIf(email->email.equalsIgnoreCase(to)); bcc.removeIf(email->email.equalsIgnoreCase(to));
             var recipients=new TreeSet<String>(); recipients.add(to); recipients.addAll(cc); recipients.addAll(bcc);
