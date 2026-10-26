@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface GuidanceRepository extends MongoRepository<GuidanceReferral, String> {
     List<GuidanceReferral> findAllByStatus(String status);
+    List<GuidanceReferral> findBySchoolIgnoreCase(String school);
+    List<GuidanceReferral> findBySchoolIgnoreCaseAndStatus(String school, String status);
 }

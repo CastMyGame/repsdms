@@ -49,6 +49,9 @@ public class PunishmentCreationService {
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
         String actor = userContextService.getCurrentStaffEmail();
         userContextService.requireStaffInStudentSchool(actor, student);
+        if(formRequest.getGuidanceDescription()!=null && !formRequest.getGuidanceDescription().isBlank()
+                && !userContextService.hasIndependentStudentAccess(actor,student))
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
         formRequest.setTeacherEmail(actor);
         String managedId = null;
         if (requiredNotifications.isEnabled() || InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName())) {

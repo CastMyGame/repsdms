@@ -347,4 +347,11 @@ class PunishmentCreationServiceTest {
         punishment.setClosedTimes(closedTimes);
         return punishment;
     }
+    @Test void linkedGuidanceAuthorizationIsCheckedBeforeAnyDisciplinaryPersistence() {
+        var request=new PunishmentFormRequest();request.setStudentEmail("child@example.test");request.setGuidanceDescription("Synthetic help request");
+        var student=new Student();student.setSchool("Testing");when(punishmentUtils.fetchStudent("child@example.test")).thenReturn(student);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->punishmentCreationService.createNewPunishForm(request));
+        verify(punishmentUtils,never()).fetchSchool(anyString());verifyNoInteractions(requiredNotifications);
+    }
+
 }

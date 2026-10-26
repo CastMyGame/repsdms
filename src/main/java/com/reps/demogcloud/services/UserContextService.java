@@ -82,7 +82,7 @@ public class UserContextService {
                 || "ADMIN".equalsIgnoreCase(role.getRole())));
         if (!staff || employee == null || employee.isArchived()
                 || employee.getEmail() == null || !employee.getEmail().equalsIgnoreCase(user.getUsername())
-                || employee.getSchool() == null || user.getSchool() == null
+                || employee.getSchool() == null || employee.getSchool().isBlank() || user.getSchool() == null || user.getSchool().isBlank()
                 || !employee.getSchool().equalsIgnoreCase(user.getSchool())) {
             throw new AccessDeniedException("A verified staff sender is required");
         }
@@ -159,6 +159,41 @@ public class UserContextService {
         boolean participant = actor.equalsIgnoreCase(originalTeacher) || actor.equalsIgnoreCase(owner)
                 || hasAuthorizedStudentSubscription(actor, student);
         if (!admin && !participant) throw new AccessDeniedException("Staff must be an authorized case participant");
+    }
+
+    /** Guidance notes are not a general student-record or spotter permission. */
+    public boolean canReadGuidance(com.reps.demogcloud.models.guidance.GuidanceReferral record) {
+        return canReadGuidanceFor(getCurrentStaffEmail(), record);
+    }
+
+    private boolean canReadGuidanceFor(String actor, com.reps.demogcloud.models.guidance.GuidanceReferral record) {
+        if (record == null || record.getStudentEmail() == null || record.getStudentEmail().isBlank()) return false;
+        getVerifiedStaffEmail(actor);
+        Student student = studentRepository.findByStudentEmailIgnoreCase(record.getStudentEmail());
+        UserModel account = userRepository.findByUsername(actor);
+        if (student == null || student.getStudentEmail() == null || !record.getStudentEmail().equalsIgnoreCase(student.getStudentEmail())
+                || record.getSchool() == null || record.getSchool().isBlank() || student.getSchool() == null || student.getSchool().isBlank()
+                || !record.getSchool().equalsIgnoreCase(student.getSchool())
+                || !record.getSchool().equalsIgnoreCase(account.getSchool())) return false;
+        if (hasRole(account,"ADMIN")) return true;
+        if (!hasIndependentStudentAccess(actor,student)) return false;
+        return (hasRole(account,"GUIDANCE") && actor.equalsIgnoreCase(student.getGuidanceEmail()))
+                || (hasRole(account,"TEACHER") && (actor.equalsIgnoreCase(record.getTeacherEmail())
+                || actor.equalsIgnoreCase(record.getOriginalAuthorEmail())));
+    }
+
+    public void requireGuidanceAccess(com.reps.demogcloud.models.guidance.GuidanceReferral record, boolean manage) {
+        String actor = getCurrentStaffEmail();
+        requireRecordedGuidanceAccess(actor, record);
+        if (manage && !hasRole(userRepository.findByUsername(actor),"ADMIN")) {
+            Student student = studentRepository.findByStudentEmailIgnoreCase(record.getStudentEmail());
+            if (!hasRole(userRepository.findByUsername(actor),"GUIDANCE") || !actor.equalsIgnoreCase(student.getGuidanceEmail()))
+                throw new AccessDeniedException("Access denied");
+        }
+    }
+
+    public void requireRecordedGuidanceAccess(String actor, com.reps.demogcloud.models.guidance.GuidanceReferral record) {
+        if (!canReadGuidanceFor(actor,record)) throw new AccessDeniedException("Access denied");
     }
 
     public void requireAdministratorInSchool(String school) {

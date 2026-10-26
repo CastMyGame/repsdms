@@ -47,6 +47,8 @@ public class WorkflowAccessService {
         if (!role(actor(), "ADMIN")) denied();
     }
 
+    public boolean hasCurrentRole(String name) { return role(actor(), name); }
+
     public boolean isStudentActor() { return role(actor(), "STUDENT"); }
 
     public void requireStudent() {

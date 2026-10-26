@@ -23,7 +23,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @CrossOrigin(
         origins = {
-                "http://localhost:3000/",
+                "http://localhost:3000",
                 "https://repsdiscipline.vercel.app",
                 "https://repsdev.vercel.app"
         }
@@ -33,7 +33,7 @@ public class GuidanceController {
         private final PunishmentService punishmentService;
         private final GuidanceService guidanceService;
 
-        @GetMapping("/referrals")
+        @GetMapping({"/referrals", "/referrals/"})
         public ResponseEntity<List<GuidanceReferral>> getAll() {
                 var message = guidanceService.findAll();
                 return ResponseEntity
@@ -74,15 +74,16 @@ public class GuidanceController {
         @PutMapping("/guidance/followup/{id}")
         public ResponseEntity<GuidanceReferral> updateGuidanceFollowUp(@PathVariable String id, @RequestBody Map<String, String> payload) {
 
+                if(payload==null) return ResponseEntity.badRequest().body(null);
                 String scheduleFollowUp = payload.get("followUpDate");
                 String newStatus = payload.get("status");
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("uuuuMMdd").withResolverStyle(java.time.format.ResolverStyle.STRICT);
 
                 LocalDate followUpDate;
                 try {
                         followUpDate = LocalDate.parse(scheduleFollowUp, formatter);
-                } catch (DateTimeParseException e) {
+                } catch (DateTimeParseException | NullPointerException e) {
                         return ResponseEntity.badRequest().body(null);  // or handle the error as appropriate
                 }
                 GuidanceReferral updatedGuidance = guidanceService.updateGuidanceFollowUp(id, followUpDate,newStatus);
@@ -93,6 +94,7 @@ public class GuidanceController {
         @PutMapping("/guidance/status/{id}")
         public ResponseEntity<GuidanceReferral> updateGuidanceStatus(@PathVariable String id, @RequestBody Map<String, String> payload) {
 
+                if(payload==null) return ResponseEntity.badRequest().body(null);
                 String newStatus = payload.get("status");
                 GuidanceReferral updatedPunishment = guidanceService.updateGuidanceStatus(id, newStatus);
 
