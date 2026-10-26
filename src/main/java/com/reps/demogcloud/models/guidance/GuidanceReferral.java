@@ -42,6 +42,10 @@ public class GuidanceReferral implements org.springframework.data.domain.Persist
 
     @Id
     private String guidanceId;
+    private boolean archived;
+    private LocalDate archivedOn;
+    private String archivedBy;
+    private String requestedByEmail;
     private String studentEmail;
     private String school;
     private LocalDate timeCreated;

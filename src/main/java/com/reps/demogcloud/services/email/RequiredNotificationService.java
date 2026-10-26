@@ -116,7 +116,9 @@ public class RequiredNotificationService {
             if(!background && (!Set.of("SUBMITTED","COMPLETED").contains(event) || !student.getStudentEmail().equalsIgnoreCase(users.getCurrentUserEmail())))
                 throw new AccessDeniedException("Students may submit only their own work");
         } else {
-            actor=users.getCurrentStaffEmail(); authorize(actor,author,owner,student);
+            actor=users.getCurrentStaffEmail();
+            if(entity instanceof GuidanceReferral guidance) users.requireRecordedGuidanceAccess(actor,guidance);
+            authorize(actor,author,owner,student);
         }
         String id=stable(kind(entity)+":"+text(entity,"id")+":"+event+":"+action);
         if(intents(entity).stream().anyMatch(n->id.equals(n.getNotificationId()))) return false;
@@ -182,6 +184,7 @@ public class RequiredNotificationService {
         Object entity=mongo.findById(id,type); if(entity==null) throw new com.reps.demogcloud.exceptions.ResourceNotFoundException("Case not found"); return entity;
     }
     private Student authorizedViewer(Object entity) {
+        if(entity instanceof GuidanceReferral guidance) users.requireGuidanceAccess(guidance,false);
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school mismatch");
         authorize(users.getCurrentStaffEmail(),text(entity,"originalAuthorEmail").isBlank()?text(entity,"teacherEmail"):text(entity,"originalAuthorEmail"),
@@ -281,7 +284,10 @@ public class RequiredNotificationService {
             Student student=students.findByStudentEmailIgnoreCase(text(claimed,"studentEmail"));
             if(student==null || student.isArchived() || !Objects.equals(student.getSchool(),text(claimed,"school"))) throw new AccessDeniedException("Student is unavailable");
             String author=text(claimed,"originalAuthorEmail"), owner=text(claimed,"responsibleStaffEmail");
-            if(!intent.isSystem()) authorize(intent.getActor(),author,owner,student);
+            if(!intent.isSystem()) {
+                if(claimed instanceof GuidanceReferral guidance) users.requireRecordedGuidanceAccess(intent.getActor(),guidance);
+                authorize(intent.getActor(),author,owner,student);
+            }
             String actor=intent.isSystem()?null:users.getVerifiedStaffEmail(intent.getActor());
             String sendingIdentity=actor;
             if(intent.isSystem()) {
@@ -290,8 +296,23 @@ public class RequiredNotificationService {
             }
             List<String> cc=new ArrayList<>(); List<String> bcc=new ArrayList<>();
             cc.add(address(student.getStudentEmail()));
-            for(String staff:Arrays.asList(author,owner,actor,student.getAdminEmail(),student.getGuidanceEmail())) addStaff(cc,staff,student);
-            if(student.getSpotters()!=null) for(String staff:student.getSpotters()) { if(!users.hasIndependentStudentAccess(staff,student)) continue; List<String> valid=new ArrayList<>(); addStaff(valid,staff,student); for(String email:valid) if(!cc.contains(email) && !bcc.contains(email)) bcc.add(email); }
+            for(String staff:Arrays.asList(author,owner,actor,student.getAdminEmail(),student.getGuidanceEmail())) {
+                if(claimed instanceof GuidanceReferral guidance) {
+                    if(staff==null || staff.isBlank())continue;
+                    try { users.requireRecordedGuidanceAccess(staff,guidance); }
+                    catch(AccessDeniedException denied) { continue; }
+                }
+                addStaff(cc,staff,student);
+            }
+            if(student.getSpotters()!=null) for(String staff:student.getSpotters()) {
+                if(!users.hasIndependentStudentAccess(staff,student)) continue;
+                if(claimed instanceof GuidanceReferral guidance) {
+                    try { users.requireRecordedGuidanceAccess(staff,guidance); }
+                    catch(AccessDeniedException denied) { continue; }
+                }
+                List<String> valid=new ArrayList<>(); addStaff(valid,staff,student);
+                for(String email:valid) if(!cc.contains(email) && !bcc.contains(email)) bcc.add(email);
+            }
             String to=kind.equals("guidance")?address(student.getStudentEmail()):address(student.getParentEmail());
             cc.removeIf(email->email.equalsIgnoreCase(to)); bcc.removeIf(email->email.equalsIgnoreCase(to));
             var recipients=new TreeSet<String>(); recipients.add(to); recipients.addAll(cc); recipients.addAll(bcc);

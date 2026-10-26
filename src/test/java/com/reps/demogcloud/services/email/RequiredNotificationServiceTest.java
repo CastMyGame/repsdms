@@ -371,4 +371,17 @@ class RequiredNotificationServiceTest {
         dispatchLast();assertTrue(last().getRecipients().contains("spotter@example.test"));assertEquals("ACCEPTED",last().getState());
     }
 
+    @Test void guidanceStatusAccessUsesCurrentGuidancePolicyBeforeReturningNotifications() throws Exception {
+        var record=new GuidanceReferral();record.setGuidanceId("guidance");record.setStudentEmail(student.getStudentEmail());record.setSchool("School");
+        when(mongo.findById("guidance",GuidanceReferral.class)).thenReturn(record);
+        doThrow(new AccessDeniedException("revoked guidance")).when(users).requireGuidanceAccess(record,false);
+        assertThrows(AccessDeniedException.class,()->service.statuses("guidance","guidance"));verify(router,never()).sendRequiredNotification(any(),any(),any(),any(),any(),any(),anyBoolean(),any(),any(),any());
+    }
+    @Test void guidanceNotificationCaptureRejectsRevokedCounselorBeforeIntent() {
+        var record=new GuidanceReferral();record.setGuidanceId("guidance");record.setStudentEmail(student.getStudentEmail());record.setSchool("School");record.setTeacherEmail(TEACHER);
+        doThrow(new AccessDeniedException("revoked guidance")).when(users).requireRecordedGuidanceAccess(TEACHER,record);
+        assertThrows(AccessDeniedException.class,()->service.prepare(record,"RESOURCES",UUID.randomUUID().toString(),"Synthetic"));
+        assertTrue(record.getRequiredNotifications()==null || record.getRequiredNotifications().isEmpty());
+    }
+
 }
