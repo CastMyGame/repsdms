@@ -65,7 +65,8 @@ class CurrencyMongoIntegrationTest {
         // Create namespaces outside transactions (also supports older replica-set versions).
         for(Class<?> type:List.of(CurrencyOperation.class,Punishment.class)) if(!mongo.collectionExists(type))mongo.createCollection(type);
         var teacher=new Employee();teacher.setEmployeeId("teacher");teacher.setEmail(STAFF);teacher.setSchool(SCHOOL);teacher.setCurrency(20);
-        teacher.setRoles(Set.of(new RoleModel(null,"TEACHER")));teacher.setClasses(List.of());mongo.insert(teacher);
+        teacher.setRoles(Set.of(new RoleModel(null,"TEACHER")));
+        var roster=new Employee.ClassRoster();roster.setClassRoster(List.of(CHILD,CHILD2));teacher.setClasses(List.of(roster));mongo.insert(teacher);
         var account=new UserModel();account.setUsername(STAFF);account.setSchool(SCHOOL);account.setRoles(teacher.getRoles());mongo.insert(account);
         student("child",CHILD);student("second",CHILD2);
         var school=new School();school.setSchoolIdNumber("school");school.setSchoolName(SCHOOL);mongo.insert(school);
@@ -124,7 +125,7 @@ class CurrencyMongoIntegrationTest {
     }
     @Test void invalidSecondStudentIsRejectedBeforeCurrencyWrites(){mongo.updateFirst(Query.query(Criteria.where("_id").is("second")),new Update().set("school","Other"),Student.class);assertThrows(org.springframework.security.access.AccessDeniedException.class,()->award(4));empty();}
     @Test void archivedStudentCannotReceive(){mongo.updateFirst(Query.query(Criteria.where("_id").is("child")),new Update().set("archived",true),Student.class);assertThrows(org.springframework.security.access.AccessDeniedException.class,()->creation.createNewPunishForm(form(CHILD,3)));empty();}
-    @Test void unrelatedTeacherCannotAward(){mongo.updateFirst(Query.query(Criteria.where("_id").is("child")),new Update().set("spotters",List.of()),Student.class);assertThrows(org.springframework.security.access.AccessDeniedException.class,()->creation.createNewPunishForm(form(CHILD,3)));empty();}
+    @Test void unrelatedTeacherCannotAward(){mongo.updateFirst(Query.query(Criteria.where("_id").is("teacher")),new Update().set("classes",List.of()),Employee.class);assertThrows(org.springframework.security.access.AccessDeniedException.class,()->creation.createNewPunishForm(form(CHILD,3)));empty();}
     @Test void negativeAwardAndDuplicateStudentsRejected(){assertThrows(IllegalArgumentException.class,()->award(-1));assertThrows(IllegalArgumentException.class,()->creation.createNewPunishFormBulk(List.of(form(CHILD,2),form(CHILD,2))));empty();}
     @Test void zeroCurrencyRecognitionDoesNotTransfer(){assertDoesNotThrow(()->award(0));assertEquals(20,teacherBalance());assertEquals(2,cases.count());}
     @Test void staleStudentAndEmployeeSavesCannotOverwriteCommittedBalances() throws Exception {

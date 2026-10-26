@@ -49,8 +49,7 @@ public class PunishmentCreationService {
         Student student = punishmentUtils.fetchStudent(formRequest.getStudentEmail());
         String actor = userContextService.getCurrentStaffEmail();
         userContextService.requireStaffInStudentSchool(actor, student);
-        if(formRequest.getGuidanceDescription()!=null && !formRequest.getGuidanceDescription().isBlank()
-                && !userContextService.hasIndependentStudentAccess(actor,student))
+        if (!userContextService.hasIndependentStudentAccess(actor, student))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
         formRequest.setTeacherEmail(actor);
         String managedId = null;
@@ -139,8 +138,10 @@ public class PunishmentCreationService {
         if(listRequest!=null && listRequest.stream().anyMatch(r->r!=null && InfractionType.POSITIVE.getLabel().equals(r.getInfractionName())))
             return award(listRequest);
         List<PunishmentResponse> punishmentResponses = new ArrayList<>();
-        for (PunishmentFormRequest punishmentFormRequest : listRequest) {
-            punishmentResponses.add(createNewPunishForm(punishmentFormRequest));
+        // Validate every student before any case, phone log, guidance or notification write.
+        List<Prepared> prepared = listRequest.stream().map(this::prepare).toList();
+        for (Prepared item : prepared) {
+            punishmentResponses.add(persist(item));
         }
         return punishmentResponses;
     }
@@ -149,7 +150,14 @@ public class PunishmentCreationService {
                 || r.isAdminReferral() || r.isGuidanceReferral()))
             throw new IllegalArgumentException("Positive recognition cannot be mixed with referrals or other case types");
         String actor=userContextService.getCurrentStaffEmail();
-        requests.forEach(request->request.setTeacherEmail(actor));
+        // Check even receipt replays before entering the transactional currency path.
+        for (var request : requests) {
+            var student = punishmentUtils.fetchStudent(request.getStudentEmail());
+            userContextService.requireStaffInStudentSchool(actor, student);
+            if (!userContextService.hasIndependentStudentAccess(actor, student))
+                throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            request.setTeacherEmail(actor);
+        }
         // Hash trusted actor identity; frontend sender overrides cannot affect the receipt.
         return currency.award(requests,()->requests.stream().map(this::prepare).toList(),item->{
             try {persist(item);} catch(MessagingException impossible) {throw new IllegalStateException("Recognition persistence failed",impossible);}

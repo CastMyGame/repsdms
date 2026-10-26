@@ -130,6 +130,8 @@ class LegacyStaffIdentityTest {
         var notifications = new RequiredNotificationService(mongo, env, students, identity, router, templates);
         var student = new Student(); student.setStudentEmail("student@example.test");
         student.setParentEmail("guardian@example.test"); student.setSchool("Testing");
+        var roster = new Employee.ClassRoster(); roster.setClassRoster(List.of(student.getStudentEmail()));
+        employee.setClasses(List.of(roster));
         when(students.findByStudentEmailIgnoreCase(student.getStudentEmail())).thenReturn(student);
         var schools = mock(SchoolRepository.class); var school = new School();
         school.setMaxPunishLevel(4); when(schools.findBySchoolNameIgnoreCase("Testing")).thenReturn(Optional.of(school));

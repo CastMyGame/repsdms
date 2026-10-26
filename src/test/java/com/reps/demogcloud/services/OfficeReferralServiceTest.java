@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OfficeReferralServiceTest {
-    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { org.mockito.Mockito.lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com"); }
+    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { org.mockito.Mockito.lenient().when(userContextService.hasIndependentStudentAccess(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(true); org.mockito.Mockito.lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com"); }
     @org.mockito.Mock
     private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
@@ -184,12 +184,12 @@ class OfficeReferralServiceTest {
 
         when(studentRepository.findByStudentEmailIgnoreCase("missing@test.com")).thenReturn(null);
 
-        IllegalStateException ex = assertThrows(
-                IllegalStateException.class,
+        org.springframework.security.access.AccessDeniedException ex = assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
                 () -> officeReferralService.createNewOfficeReferral(request)
         );
 
-        assertEquals("Student not found: missing@test.com", ex.getMessage());
+        assertEquals("Access denied", ex.getMessage());
     }
 
 

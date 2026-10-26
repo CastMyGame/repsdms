@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PunishmentCreationServiceTest {
-    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@school.com"); }
+    @org.junit.jupiter.api.BeforeEach void verifiedStaffFixture() { org.mockito.Mockito.lenient().when(userContextService.hasIndependentStudentAccess(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(true); lenient().when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@school.com"); }
     @org.mockito.Mock
     private com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
@@ -348,6 +348,7 @@ class PunishmentCreationServiceTest {
         return punishment;
     }
     @Test void linkedGuidanceAuthorizationIsCheckedBeforeAnyDisciplinaryPersistence() {
+        when(userContextService.hasIndependentStudentAccess(anyString(), any())).thenReturn(false);
         var request=new PunishmentFormRequest();request.setStudentEmail("child@example.test");request.setGuidanceDescription("Synthetic help request");
         var student=new Student();student.setSchool("Testing");when(punishmentUtils.fetchStudent("child@example.test")).thenReturn(student);
         assertThrows(org.springframework.security.access.AccessDeniedException.class,()->punishmentCreationService.createNewPunishForm(request));

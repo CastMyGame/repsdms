@@ -77,22 +77,30 @@ public class OfficeReferralService {
     }
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
-        for (OfficeReferralRequest officeReferralRequest : officeReferralRequests) {
-            punishmentResponse.add(createNewOfficeReferral(officeReferralRequest));
+        // Prepare the whole batch before persisting any referral or notification.
+        List<OfficeReferral> prepared = officeReferralRequests.stream().map(this::prepareCreation).toList();
+        for (OfficeReferral referral : prepared) {
+            punishmentResponse.add(persistCreation(referral));
         }
         return punishmentResponse;
     }
 
     public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
+        return persistCreation(prepareCreation(officeReferralRequest));
+    }
+
+    private OfficeReferral prepareCreation(OfficeReferralRequest officeReferralRequest) {
         LocalDate now = LocalDate.now();
 
         Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
         if (findMe == null) {
-            throw new IllegalStateException("Student not found: " + officeReferralRequest.getStudentEmail());
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
         }
 
         String actor = userContextService.getCurrentStaffEmail();
         userContextService.requireStaffInStudentSchool(actor, findMe);
+        if (!userContextService.hasIndependentStudentAccess(actor, findMe))
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
         officeReferralRequest.setTeacherEmail(actor);
 
         Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
@@ -105,8 +113,6 @@ public class OfficeReferralService {
         if(requiredNotifications.isEnabled()) {
             managedId = requiredNotifications.creationId("office", findMe.getStudentEmail(),java.util.Arrays.asList(
                     officeReferralRequest.getReferralCode(),officeReferralRequest.getClassPeriod(),officeReferralRequest.getReferralDescription(),officeReferralRequest.getCurrency()));
-            OfficeReferral existing = requiredNotifications.existingCreation(managedId, OfficeReferral.class);
-            if(existing != null) return existing;
         }
         OfficeReferral request = new OfficeReferral();
         request.setAdminEmail(findMe.getAdminEmail());
@@ -120,8 +126,15 @@ public class OfficeReferralService {
         request.setInfractionLevel("4");
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
-        if(requiredNotifications.isEnabled()) {
-            request.setOfficeReferralId(managedId); return (OfficeReferral) requiredNotifications.saveCreated(request);
+        if (managedId != null) request.setOfficeReferralId(managedId);
+        return request;
+    }
+
+    private OfficeReferral persistCreation(OfficeReferral request) {
+        if (requiredNotifications.isEnabled()) {
+            OfficeReferral existing = requiredNotifications.existingCreation(request.getOfficeReferralId(), OfficeReferral.class);
+            if (existing != null) return existing;
+            return (OfficeReferral) requiredNotifications.saveCreated(request);
         }
         return officeReferralRepository.save(request);
     }
