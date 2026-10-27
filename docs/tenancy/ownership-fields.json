@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "reps-tenant-fields/v1",
+  "preparationOnly": true,
+  "runtimeModelAdoption": false,
+  "canonicalField": "tenantSchoolId",
+  "authority": "Exact existing schools._id as represented by School.schoolIdNumber; do not regenerate or lowercase IDs",
+  "invariants": [
+    "server-owned, never bound from request authority",
+    "mandatory for tenant-owned roots at cutover",
+    "immutable after reviewed assignment",
+    "missing/conflicting/nonexistent IDs denied; names are never fallback authority"
+  ],
+  "tenantOwnedCollections": [
+    "users",
+    "employee",
+    "students",
+    "Punishments",
+    "OfficeReferrals",
+    "Guidance",
+    "TrackedBehaviorEvents",
+    "assignment_templates (except verified system defaults)",
+    "assignment_template_bindings",
+    "currency_operations",
+    "oauth2_authorized_clients",
+    "registration_intents"
+  ],
+  "inheritedOwnership": {
+    "employee.classes": "employee.tenantSchoolId",
+    "students.notesArray": "students.tenantSchoolId",
+    "Punishments.assignmentWork": "Punishments.tenantSchoolId; preserve immutable snapshot content",
+    "requiredNotifications": "parent case tenantSchoolId; revalidate actor and referenced accounts"
+  },
+  "legacyFields": "school, schoolName, schoolId and schoolIdNumber outside schools remain unmodified compatibility/history data; existing schoolId fields are not reinterpreted in place",
+  "additionalFutureMetadata": {
+    "oauth2_authorized_clients": "verified ownerAccountId required before runtime adoption; keep current email key/cipher/AAD",
+    "currency_operations": "versioned legacy receipt replay bridge required before ID-based key generation"
+  },
+  "globalExemptions": [
+    "Infractions",
+    "roles",
+    "legacy assignments",
+    "jwt_token_revocations",
+    "stripe_event_log",
+    "verified system-default assignment_templates"
+  ],
+  "activationProperty": "reps.tenancy.id-enforcement-enabled",
+  "activationInThisPR": "Only false/default accepted; true/malformed values fail startup. No ID enforcement activation implemented."
+}

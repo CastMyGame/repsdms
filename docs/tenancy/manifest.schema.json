@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "REPS reviewed tenant manifest v1 (preparation, not executable)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "targetTag",
+    "keyTag",
+    "inventoryDigest",
+    "reviewedBy",
+    "schoolIds",
+    "entries"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "reps-tenant-manifest/v1"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,120}$"
+    },
+    "targetTag": {
+      "$ref": "#/$defs/digest"
+    },
+    "keyTag": {
+      "$ref": "#/$defs/digest"
+    },
+    "inventoryDigest": {
+      "$ref": "#/$defs/digest"
+    },
+    "reviewedBy": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,80}$"
+    },
+    "schoolIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "recordKey",
+          "beforeDigest",
+          "tenantSchoolId",
+          "evidence"
+        ],
+        "properties": {
+          "recordKey": {
+            "$ref": "#/$defs/digest"
+          },
+          "beforeDigest": {
+            "$ref": "#/$defs/digest"
+          },
+          "tenantSchoolId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "reference"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "verified-existing-id",
+                  "reviewed-onboarding",
+                  "reviewed-historical-record"
+                ]
+              },
+              "reference": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:/-]{1,120}$"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
