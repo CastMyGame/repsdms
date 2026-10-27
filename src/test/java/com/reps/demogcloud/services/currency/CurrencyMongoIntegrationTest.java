@@ -110,6 +110,17 @@ class CurrencyMongoIntegrationTest {
         doCallRealMethod().when(notifications).saveCurrencyCreated(any());award(4);assertEquals(12,teacherBalance());assertEquals(2,cases.count());
     }
     @Test void duplicateActionDoesNotChargeAgain() throws Exception {var first=award(3);var second=award(3);assertEquals(first.get(0).getCurrencyOperationId(),second.get(0).getCurrencyOperationId());assertEquals(14,teacherBalance());assertEquals(2,cases.count());}
+    @Test void addingProfileOwnershipDoesNotGenerateASecondReceiptOrAward() throws Exception {
+        var first=award(3);
+        var before=mongo.getCollection("currency_operations").find().first();
+        // Synthetic fixture metadata only; no deployed mapping or currency-key change.
+        mongo.updateFirst(Query.query(Criteria.where("_id").is("teacher")),new Update().set("tenantSchoolId","school"),Employee.class);
+        mongo.updateMulti(new Query(),new Update().set("tenantSchoolId","school"),Student.class);
+        var second=award(3);
+        assertEquals(first.get(0).getCurrencyOperationId(),second.get(0).getCurrencyOperationId());
+        assertEquals(before,mongo.getCollection("currency_operations").find().first());
+        assertEquals(14,teacherBalance());assertEquals(3,childBalance("child"));assertEquals(3,childBalance("second"));assertEquals(2,cases.count());
+    }
     @Test void actionCannotChangePayload() throws Exception {award(2);assertEquals(409,assertThrows(ResponseStatusException.class,()->award(3)).getStatusCode().value());assertEquals(16,teacherBalance());}
     @Test void simultaneousSameActionCommitsOnce() throws Exception {
         concurrent(true,3);assertEquals(14,teacherBalance());assertEquals(3,childBalance("child"));assertEquals(2,cases.count());assertEquals(1,mongo.count(new Query(),CurrencyOperation.class));
