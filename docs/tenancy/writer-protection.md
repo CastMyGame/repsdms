@@ -22,7 +22,7 @@ All currently used profile writes were reviewed: repository fragments, explicit 
 
 | Record | Reason / next dependency |
 | --- | --- |
-| UserModel/users | Replace-on-save provisioning/auth paths plus targeted setup/activation/billing writes. Need insert-only provisioning, immutable ownership repository semantics, persisted account/profile agreement and setup-session compatibility. |
+| UserModel/users | Phase 3 now maps HTTP-ignored membership and makes generic repository save/saveAll insert-only. Existing fixed-field setup/activation/billing updates preserve it. CanonicalAccountContext validates persisted agreement but is not called by production routes/login/workers; see account-membership.md. |
 | Punishments/OfficeReferrals/Guidance | Versioned replacement saves, legacy maintenance, reminders and nested notification state must preserve ownership and revisions atomically; adding a field alone would not protect stale snapshots. |
 | assignment_templates/bindings | Replacement saves, legacy conversion and existing ambiguous schoolId need canonical field handling without modifying pinned snapshots or teacher/system scope. |
 | TrackedBehaviorEvents | New bulk records need trusted canonical actor/student context; no IDs inferred from names. |
