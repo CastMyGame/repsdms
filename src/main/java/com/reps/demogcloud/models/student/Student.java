@@ -39,6 +39,9 @@ public class Student {
     private long profileRevision; // Missing legacy field is revision zero; profile edits use compare-and-set.
     private Integer points;
     private String school;
+    /** Stored metadata only until coordinated A7 cutover; never accepted from an HTTP payload. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
     private Integer currency;
     private Integer stateStudentId;
     private List<ThreadEvent> notesArray;

@@ -28,6 +28,9 @@ public class Employee {
     private String email;
     private Set<RoleModel> roles;
     private String school;
+    /** Stored metadata only until coordinated A7 cutover; never accepted from an HTTP payload. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
     private boolean archived = false;
     private String archivedBy;
     private String archivedExplanation;

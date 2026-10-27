@@ -1,4 +1,8 @@
-# A7 Phase 1: preparation only
+# A7 School ID preparation
+
+Phase 2 adds **stored-only employee/student ownership fields and profile save protection**. Read [writer-protection.md](writer-protection.md) and [writer-inventory.md](writer-inventory.md) for the current boundary; the Phase 1 description below records the original preparation design. All other mapped fields, ID-only authorization and migration remain deferred. `tenantSchoolId` remains the canonical field name to avoid overloading existing ambiguous `schoolId` fields.
+
+## Original Phase 1 reference (PR #177)
 
 Base: backend dev 75d5f09 (school/catalog restrictions merged), frontend dev c302615 (approved onboarding merged).
 

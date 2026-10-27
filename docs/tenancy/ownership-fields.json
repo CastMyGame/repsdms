@@ -1,7 +1,10 @@
 {
   "schemaVersion": "reps-tenant-fields/v1",
   "preparationOnly": true,
-  "runtimeModelAdoption": false,
+  "runtimeModelAdoption": true,
+  "mappedCollections": ["employee", "students"],
+  "automaticOwnershipAssignment": false,
+  "otherMappedFields": "Deferred until their complete replacement-save and receipt replay paths are protected",
   "canonicalField": "tenantSchoolId",
   "authority": "Exact existing schools._id as represented by School.schoolIdNumber; do not regenerate or lowercase IDs",
   "invariants": [
