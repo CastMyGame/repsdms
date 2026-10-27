@@ -1,5 +1,7 @@
 # A7 School ID preparation
 
+Phase 3 prepares persisted account membership and an **unwired canonical account context**. See [account-membership.md](account-membership.md) for the current account writer contract, real MongoDB verification, authentication boundary and remaining cutover work. No existing route, login, worker, JWT claim or frontend presentation switches to ID-only authorization.
+
 Phase 2 adds **stored-only employee/student ownership fields and profile save protection**. Read [writer-protection.md](writer-protection.md) and [writer-inventory.md](writer-inventory.md) for the current boundary; the Phase 1 description below records the original preparation design. All other mapped fields, ID-only authorization and migration remain deferred. `tenantSchoolId` remains the canonical field name to avoid overloading existing ambiguous `schoolId` fields.
 
 ## Original Phase 1 reference (PR #177)

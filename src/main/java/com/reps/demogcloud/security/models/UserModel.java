@@ -24,6 +24,9 @@ public class UserModel {
     private String firstName;
     private String lastName;
     private String school;
+    /** Stored membership only. Ordinary HTTP payloads cannot establish or transfer a tenant. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
     // Older user documents store this membership under schoolName.
     // Keep it separate so it cannot override an explicitly stored school.
     @org.springframework.data.mongodb.core.mapping.Field("schoolName")

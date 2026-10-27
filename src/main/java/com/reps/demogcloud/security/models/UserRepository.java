@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends MongoRepository<UserModel,String> {
+public interface UserRepository extends UserInsertOnlyRepository<UserModel>, MongoRepository<UserModel,String> {
     List<UserModel> findBySchool(String school);
 UserModel findByUsername(String username);
 UserModel findByUsernameIgnoreCase(String username);
