@@ -8,6 +8,9 @@ import java.util.*;
 @Data
 @lombok.ToString(onlyExplicitlyIncluded=true)
 public class RequiredNotification {
+    @com.fasterxml.jackson.annotation.JsonIgnore private String tenantSchoolId;
+    @com.fasterxml.jackson.annotation.JsonIgnore private String actorAccountId;
+    @com.fasterxml.jackson.annotation.JsonIgnore private String actorProfileId;
     private String notificationId;
     private String actionId;
     private String event;
