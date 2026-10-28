@@ -1,5 +1,7 @@
 # A7 School ID preparation
 
+Phase 4B-2 currency preparation adds an isolated versioned replay engine; read [currency-replay.md](currency-replay.md) and the [supporting-system inventory](supporting-systems.md). Production currency routes remain disconnected, historical receipts remain unchanged, and no cutover is enabled.
+
 Phase 4B-1 adds protected case/template/event root saves and **isolated-only real domain integration**. Read [root-persistence.md](root-persistence.md) for the current writer inventory, actual Mongo/security coverage, disabled activation boundary, disconnected routes and Phase 4B-2 dependencies. Earlier phase descriptions below are historical; their deferred model/writer entries are superseded only where explicitly listed in that document.
 
 
