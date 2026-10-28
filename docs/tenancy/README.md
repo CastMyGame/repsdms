@@ -1,5 +1,7 @@
 # A7 School ID preparation
 
+Phase 4A adds a **disabled canonical core-workflow preparation adapter**, without changing production routes or adopting ownership fields on case/template models. See [core-workflows.md](core-workflows.md) and [core-endpoints.md](core-endpoints.md) for the prepared operations, endpoint/caller inventory, execution limits and Phase 4B dependencies.
+
 Phase 3 prepares persisted account membership and an **unwired canonical account context**. See [account-membership.md](account-membership.md) for the current account writer contract, real MongoDB verification, authentication boundary and remaining cutover work. No existing route, login, worker, JWT claim or frontend presentation switches to ID-only authorization.
 
 Phase 2 adds **stored-only employee/student ownership fields and profile save protection**. Read [writer-protection.md](writer-protection.md) and [writer-inventory.md](writer-inventory.md) for the current boundary; the Phase 1 description below records the original preparation design. All other mapped fields, ID-only authorization and migration remain deferred. `tenantSchoolId` remains the canonical field name to avoid overloading existing ambiguous `schoolId` fields.
