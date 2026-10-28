@@ -1,5 +1,8 @@
 # A7 School ID preparation
 
+Phase 4B-1 adds protected case/template/event root saves and **isolated-only real domain integration**. Read [root-persistence.md](root-persistence.md) for the current writer inventory, actual Mongo/security coverage, disabled activation boundary, disconnected routes and Phase 4B-2 dependencies. Earlier phase descriptions below are historical; their deferred model/writer entries are superseded only where explicitly listed in that document.
+
+
 Phase 4A adds a **disabled canonical core-workflow preparation adapter**, without changing production routes or adopting ownership fields on case/template models. See [core-workflows.md](core-workflows.md) and [core-endpoints.md](core-endpoints.md) for the prepared operations, endpoint/caller inventory, execution limits and Phase 4B dependencies.
 
 Phase 3 prepares persisted account membership and an **unwired canonical account context**. See [account-membership.md](account-membership.md) for the current account writer contract, real MongoDB verification, authentication boundary and remaining cutover work. No existing route, login, worker, JWT claim or frontend presentation switches to ID-only authorization.

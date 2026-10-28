@@ -75,6 +75,17 @@ public class AssignmentWork {
         return work;
     }
     public static <T> T copy(T value, Class<T> type) {
-        return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().convertValue(value,type);
+        T copied=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().convertValue(value,type);
+        // HTTP-ignored ownership is copied only from trusted server-side snapshots, never input JSON.
+        if(value instanceof AssignmentTemplate source && copied instanceof AssignmentTemplate target) owner(source,target);
+        if(value instanceof AssignmentWork source && copied instanceof AssignmentWork target) {
+            owner(source.getTemplate(),target.getTemplate());
+            if(source.getSubmissions()!=null && target.getSubmissions()!=null)
+                for(int i=0;i<source.getSubmissions().size();i++)if(source.getSubmissions().get(i)!=null && target.getSubmissions().get(i)!=null)
+                    owner(source.getSubmissions().get(i).getTemplate(),target.getSubmissions().get(i).getTemplate());
+        }
+        if(value instanceof Submission source && copied instanceof Submission target)owner(source.getTemplate(),target.getTemplate());
+        return copied;
     }
+    private static void owner(AssignmentTemplate source,AssignmentTemplate target){if(source!=null && target!=null){target.setTenantSchoolId(source.getTenantSchoolId());target.setPersistenceRevision(source.getPersistenceRevision());}}
 }

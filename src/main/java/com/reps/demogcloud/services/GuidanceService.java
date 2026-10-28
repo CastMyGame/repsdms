@@ -43,12 +43,18 @@ public class GuidanceService {
    // @Value("${sm://RepsDiscipline-twilio_password}")
     private String twilioPassword;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalDomainAccess canonical;
+    @Autowired(required=false) public void setCanonicalDomainAccess(com.reps.demogcloud.services.tenancy.CanonicalDomainAccess value){canonical=value;}
+    private String staffEmail(){return canonical==null?users.getCurrentStaffEmail():canonical.email(true);}
+
     public List<GuidanceReferral> findAll() {
+        if(canonical!=null)return canonical.guidanceList(null);
         access.requireStaff();
         return visible(guidanceRepository.findBySchoolIgnoreCase(users.getCurrentUserSchool()));
     }
 
     public List<GuidanceReferral> findByStatus(String status) {
+        if(canonical!=null){validateStatus(status);return canonical.guidanceList(status);}
         access.requireStaff();
         validateStatus(status);
         return visible(guidanceRepository.findBySchoolIgnoreCaseAndStatus(users.getCurrentUserSchool(),status));
@@ -70,7 +76,7 @@ public class GuidanceService {
     }
 
     public void createNewGuidanceForm(GuidanceRequest request, PunishmentFormRequest punishmentRequest) {
-        access.requireStaff();
+        if(canonical==null)access.requireStaff();else canonical.email(true);
         if(request==null || request.getGuidance()==null || punishmentRequest==null) throw new IllegalArgumentException("Guidance request required");
         if(!Objects.equals(request.getGuidance().getStudentEmail(),punishmentRequest.getStudentEmail())) denied();
         request.getGuidance().setReferralDescription(List.of(Objects.toString(punishmentRequest.getGuidanceDescription(),"")));
@@ -80,25 +86,37 @@ public class GuidanceService {
     public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) {
         if(request==null || request.getGuidance()==null) throw new IllegalArgumentException("Guidance request required");
         GuidanceReferral input=request.getGuidance();
-        access.requireStudentAccess(input.getStudentEmail());
-        Student student=studentRepository.findByStudentEmailIgnoreCase(input.getStudentEmail());
-        if(student==null || student.isArchived() || !access.sameSchool(student.getSchool())) denied();
-        String actor=users.getCurrentUsername();
-        if(access.isStudentActor()) access.requireStudent(); else access.requireStaff();
-        if((input.getSchool()!=null && !input.getSchool().isBlank() && !input.getSchool().equalsIgnoreCase(student.getSchool()))
-                || (input.getTeacherEmail()!=null && !input.getTeacherEmail().isBlank() && !input.getTeacherEmail().equalsIgnoreCase(actor))) denied();
+        Student student;String actor;boolean studentActor;
+        if(canonical!=null){
+            student=canonical.student(input.getStudentEmail(),false);actor=canonical.email(false);studentActor=canonical.actor().roles().contains("STUDENT");
+            if(input.getSchool()!=null || input.getTenantSchoolId()!=null || input.getTeacherEmail()!=null && !actor.equalsIgnoreCase(input.getTeacherEmail()))denied();
+            canonical.prepareGuidance(student);
+        }else{
+            access.requireStudentAccess(input.getStudentEmail());student=studentRepository.findByStudentEmailIgnoreCase(input.getStudentEmail());
+            if(student==null || student.isArchived() || !access.sameSchool(student.getSchool()))denied();
+            actor=users.getCurrentUsername();studentActor=access.isStudentActor();if(studentActor)access.requireStudent();else access.requireStaff();
+            if(input.getSchool()!=null && !input.getSchool().isBlank() && !input.getSchool().equalsIgnoreCase(student.getSchool())
+                    || input.getTeacherEmail()!=null && !input.getTeacherEmail().isBlank() && !input.getTeacherEmail().equalsIgnoreCase(actor))denied();
+        }
         if(input.getReferralDescription()==null || input.getReferralDescription().isEmpty() || input.getReferralDescription().size()>20
                 || input.getReferralDescription().stream().anyMatch(v -> v==null || v.isBlank() || v.length()>10000))
             throw new IllegalArgumentException("A guidance description is required");
         GuidanceReferral record=new GuidanceReferral();
         record.setGuidanceId(UUID.randomUUID().toString());record.setStudentEmail(student.getStudentEmail());record.setSchool(student.getSchool());
-        record.setRequestedByEmail(actor);record.setTeacherEmail(access.isStudentActor()?null:users.getCurrentStaffEmail());
+        record.setRequestedByEmail(actor);record.setTeacherEmail(studentActor?null:staffEmail());
+        if(canonical!=null)record.setTenantSchoolId(canonical.actor().tenantSchoolId());
         record.setGuidanceEmail(student.getGuidanceEmail());record.setClassPeriod(input.getClassPeriod());
         record.setReferralDescription(new ArrayList<>(input.getReferralDescription()));record.setTimeCreated(LocalDate.now());record.setStatus("OPEN");
         if(input.getLinkToPunishment()!=null && !input.getLinkToPunishment().isBlank()) {
+            if(canonical!=null){
+                canonical.email(true);var linked=canonical.linkedPunishment(input.getLinkToPunishment());
+                if(!student.getStudentEmail().equalsIgnoreCase(linked.getString("studentEmail")))denied();
+                record.setLinkToPunishment(input.getLinkToPunishment());record.setInfractionName(linked.getString("infractionName"));
+            }else{
             access.requireStaff();var punishment=access.requireCase(input.getLinkToPunishment());
             if(!student.getStudentEmail().equalsIgnoreCase(punishment.getStudentEmail()) || !student.getSchool().equalsIgnoreCase(punishment.getSchool())) denied();
             record.setLinkToPunishment(punishment.getPunishmentId());record.setInfractionName(punishment.getInfractionName());
+            }
         }
         record=guidanceRepository.save(record);
         GuidanceResponse response=new GuidanceResponse();response.setGuidance(List.of(record));response.setMessage("Guidance request saved");return response;
@@ -108,6 +126,7 @@ public class GuidanceService {
         return records.stream().filter(users::canReadGuidance).toList();
     }
     private GuidanceReferral requireRecord(String id,boolean manage) {
+        if(canonical!=null)return canonical.guidance(id,manage);
         access.requireStaff();
         GuidanceReferral record=guidanceRepository.findById(id).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
         users.requireGuidanceAccess(record,manage);
@@ -131,7 +150,7 @@ public class GuidanceService {
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Status");
         newEvent.setDate(timePosted);
-        newEvent.setCreatedBy(users.getCurrentStaffEmail());
+        newEvent.setCreatedBy(staffEmail());
         newEvent.setContent("The Status of This Task was Changed to " + newStatus);
         events.add(newEvent);
         record.setNotesArray(events);
@@ -155,7 +174,7 @@ public class GuidanceService {
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Follow Up");
         newEvent.setDate(timePosted);
-        newEvent.setCreatedBy(users.getCurrentStaffEmail());
+        newEvent.setCreatedBy(staffEmail());
         newEvent.setContent("Follow up for this task has been set for " + guidance.getFollowUpDate().toString());
         events.add(newEvent);
         guidance.setNotesArray(events);
@@ -165,6 +184,7 @@ public class GuidanceService {
     }
 
     public GuidanceResponse sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
+        if(canonical!=null)canonical.disconnected(); // Notification/grant ownership belongs to 4B-2.
         GuidanceReferral guidance=requireRecord(id,true);
         if(request==null) throw new IllegalArgumentException("Resource request required");
         if(requiredNotifications.isEnabled() && requiredNotifications.hasAction(guidance,"RESOURCES")) {
@@ -177,7 +197,7 @@ public class GuidanceService {
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent("Resources");
         newEvent.setDate(timePosted);
-        newEvent.setCreatedBy(users.getCurrentStaffEmail());
+        newEvent.setCreatedBy(staffEmail());
 
         List<ResourceOption> options = request.getResourceOptionList() == null
                 ? new ArrayList<>()
@@ -258,6 +278,10 @@ public class GuidanceService {
     }
 
     public List<GuidanceReferral> getLoggedInUserGuidanceReferrals(List<GuidanceReferral> guidanceList, String loggedInGuidanceEmail) {
+        if(canonical!=null){
+            if(!canonical.email(true).equalsIgnoreCase(loggedInGuidanceEmail))denied();
+            return canonical.guidanceList(null).stream().filter(g->loggedInGuidanceEmail.equalsIgnoreCase(canonical.student(g.getStudentEmail(),true).getGuidanceEmail())).toList();
+        }
         access.requireStaff();
         if(!users.getCurrentStaffEmail().equalsIgnoreCase(loggedInGuidanceEmail)) denied();
         return visible(guidanceList).stream().filter(g -> { var student=studentRepository.findByStudentEmailIgnoreCase(g.getStudentEmail()); return student!=null && loggedInGuidanceEmail.equalsIgnoreCase(student.getGuidanceEmail()); }).toList();
@@ -274,7 +298,7 @@ public class GuidanceService {
         ThreadEvent newEvent = new ThreadEvent();
         newEvent.setEvent(event.getEvent());
         newEvent.setDate(timePosted);
-        newEvent.setCreatedBy(users.getCurrentStaffEmail());
+        newEvent.setCreatedBy(staffEmail());
         newEvent.setContent(event.getContent());
         events.add(newEvent);
 //
@@ -287,12 +311,12 @@ public class GuidanceService {
 
     public List<GuidanceReferral> getAllGuidanceReferrals(String status, boolean filterByLoggedIn) {
         var records="ALL".equals(status)?findAll():findByStatus(status);
-        return filterByLoggedIn?getLoggedInUserGuidanceReferrals(records,users.getCurrentStaffEmail()):records;
+        return filterByLoggedIn?getLoggedInUserGuidanceReferrals(records,staffEmail()):records;
     }
 
     public String deleteGuidanceReferral(String id) throws ResourceNotFoundException {
         GuidanceReferral record=requireRecord(id,true);
-        record.setArchived(true);record.setArchivedOn(LocalDate.now());record.setArchivedBy(users.getCurrentStaffEmail());
+        record.setArchived(true);record.setArchivedOn(LocalDate.now());record.setArchivedBy(staffEmail());
         record.setStatus("CLOSED");record.setTimeClosed(LocalDate.now());
         guidanceRepository.save(record);
         return "Guidance referral archived; history retained";

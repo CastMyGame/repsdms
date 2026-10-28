@@ -15,6 +15,8 @@ import java.util.*;
 @Getter
 @Document(collection = "OfficeReferrals")
 public class OfficeReferral implements Comparable<OfficeReferral>, org.springframework.data.domain.Persistable<String>{
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
     @org.springframework.data.annotation.Version
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Long revision;

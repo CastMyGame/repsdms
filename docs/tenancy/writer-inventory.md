@@ -1,5 +1,7 @@
 # Tenant-owned writer inventory
 
+**Phase 4B-1 update:** [root-persistence.md](root-persistence.md) supersedes the case/template/event deferrals below and records the protected root repository fragments, direct reminder save, snapshot copies and isolated real-service integration. This table is retained as the historical Phase 2 baseline. No current production ID-only cutover is implied.
+
 Reviewed source baseline: backend origin/dev 69ba42c, including merged PR #177. This inventory covers application persistence entry points, not live data, indexes or external maintenance tools. Repository interface inherited save/insert/delete methods remain available and must not be mistaken for ownership-protected operations unless explicitly listed.
 
 | Root / paths (relative to src/main/java/com/reps/demogcloud) | Operation and confirmed risk | Phase 2 treatment |

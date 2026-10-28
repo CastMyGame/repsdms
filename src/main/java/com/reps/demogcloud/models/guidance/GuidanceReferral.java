@@ -19,6 +19,8 @@ import java.util.*;
 @Getter
 @Document(collection = "Guidance")
 public class GuidanceReferral implements org.springframework.data.domain.Persistable<String> {
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
 
     @org.springframework.data.annotation.Version
     @com.fasterxml.jackson.annotation.JsonIgnore
