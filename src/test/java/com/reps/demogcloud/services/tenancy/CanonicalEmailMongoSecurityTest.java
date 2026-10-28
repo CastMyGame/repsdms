@@ -71,6 +71,7 @@ class CanonicalEmailMongoSecurityTest {
         @PostMapping("/__test__/email/disconnect/{email}") Object disconnect(@PathVariable String email){return Map.of("revoked",grants.disconnect(email));}
         @GetMapping("/__test__/email/grant/{email}") Object state(@PathVariable String email){return Map.of("state",grants.getConnectionState(email));}
         @GetMapping("/__test__/email/status/{id}") Object status(@PathVariable String id){return notifications.statuses("punishment",id);}
+        @PostMapping("/__test__/email/forged/{id}/{email}") Object forged(@PathVariable String id,@PathVariable String email){var record=cases.findById(id).orElseThrow();record.setStudentEmail(email);notifications.prepare(record,"CREATED","synthetic-action",null);return Map.of("saved",true);}
         @PostMapping("/__test__/email/capture/{id}") Object capture(@PathVariable String id){var record=cases.findById(id).orElseThrow();notifications.prepare(record,"CREATED","synthetic-action",null);cases.save(record);return Map.of("saved",true);}
         @PostMapping("/__test__/email/retry/{id}/{notification}") Object retry(@PathVariable String id,@PathVariable String notification){notifications.retry("punishment",id,notification);return Map.of("saved",true);}
         @PostMapping("/__test__/email/dispatch") Object dispatch(){notifications.dispatchPending();return Map.of("saved",true);}
@@ -181,6 +182,12 @@ class CanonicalEmailMongoSecurityTest {
         mongo.getCollection("Punishments").updateOne(new Document("_id","PUNISHMENTA"),new Document("$set",new Document("requiredNotifications.0.state","FAILED").append("requiredNotifications.0.retrySafe",true)));
         mongo.getCollection("users").updateOne(new Document("_id","teacherA"),new Document("$set",new Document("enabled",false)));
         mvc.perform(postAs("retry/PUNISHMENTA/"+n.getString("notificationId"),"adminA")).andExpect(status().isForbidden());
+    }
+
+    @Test void forgedStudentReferenceCannotRebindAnExistingCase()throws Exception{
+        var student=new Student();student.setStudentIdNumber("secondA");student.setStudentEmail("second@example.test");student.setSchool("Same School");student.setTenantSchoolId("school-A");mongo.insert(student);
+        var before=mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first();
+        mvc.perform(postAs("forged/PUNISHMENTA/second@example.test","adminA")).andExpect(status().isForbidden());assertEquals(before,mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first());
     }
 
 }

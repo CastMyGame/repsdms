@@ -54,7 +54,7 @@ public class CanonicalEmailOwnership {
                 entity instanceof com.reps.demogcloud.models.guidance.GuidanceReferral?CanonicalCoreWorkflows.Kind.GUIDANCE:null;
         if(kind==null)throw denied();
         String id=Objects.toString(bean.getPropertyValue("id"),"");
-        if(mongo.exists(Query.query(Criteria.where("_id").is(id)),entity.getClass()))core.readRecord(kind,id);
+        if(mongo.exists(Query.query(Criteria.where("_id").is(id)),entity.getClass())){var stored=core.readRecord(kind,id);if(!student.getStudentEmail().equalsIgnoreCase(stored.getString("studentEmail")))throw denied();}
         else core.prepareCreations(List.of(new CanonicalCoreWorkflows.Draft(kind,student.getStudentIdNumber(),null)));
         if(actor.roles().contains("STUDENT") && !Set.of("SUBMITTED","COMPLETED").contains(event))throw denied();
         return student;
