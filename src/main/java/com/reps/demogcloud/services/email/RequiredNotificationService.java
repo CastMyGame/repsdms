@@ -32,6 +32,9 @@ public class RequiredNotificationService {
     private final UserContextService users;
     private final EmailRoutingService router;
     private final EmailTemplateBuilderService templates;
+    private com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalEmailOwnership(com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership value){canonical=value;}
     private static final Map<String,Class<?>> TYPES = Map.of("punishment",Punishment.class,"office",OfficeReferral.class,"guidance",GuidanceReferral.class);
     private static final Map<String,String> COLLECTIONS = Map.of("punishment","Punishments","office","OfficeReferrals","guidance","Guidance");
 
@@ -57,14 +60,14 @@ public class RequiredNotificationService {
     }
     private String stable(String value) { return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8)).toString(); }
     public String creationId(String kind,String studentEmail,Object item) {
-        String actor=users.getCurrentStaffEmail();
+        String actor=currentStaff();
         try {
             String content=new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(item);
             return stable(kind+":"+actor.toLowerCase(Locale.ROOT)+":"+studentEmail.toLowerCase(Locale.ROOT)+":"+actionId()+":"+content);
         } catch(com.fasterxml.jackson.core.JsonProcessingException invalid) { throw new IllegalArgumentException("Invalid action item"); }
     }
     public <T> T existingCreation(String id,Class<T> type) {
-        T existing=mongo.findById(id,type); if(existing!=null) requireActionAccess(existing,"CREATED"); return existing;
+        T existing=canonical==null?mongo.findById(id,type):mongo.findOne(canonical.caseQuery(id),type); if(existing!=null) requireActionAccess(existing,"CREATED"); return existing;
     }
     public PunishmentResponse response(Punishment punishment) {
         var response=new PunishmentResponse(); response.setPunishment(punishment);
@@ -79,8 +82,9 @@ public class RequiredNotificationService {
         response.setMessage("Action saved. Required email status is tracked separately."); return response;
     }
     public boolean prepare(Object entity,String event) { return prepare(entity,event,actionId(),null); }
-    public String currentStaff() { return users.getCurrentStaffEmail(); }
+    public String currentStaff() { return canonical==null?users.getCurrentStaffEmail():canonical.email(true); }
     public void requireActionAccess(Object entity,String event) {
+        if(canonical!=null){canonical.caseAccess(entity,event,false);return;}
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school mismatch");
         if(users.isCurrentUserStudent()) {
@@ -95,6 +99,7 @@ public class RequiredNotificationService {
     public Punishment previousSubmission(String studentEmail,String infractionName) {
         Query query=Query.query(Criteria.where("studentEmail").is(studentEmail).and("infractionName").is(infractionName)
                 .and("requiredNotifications").elemMatch(Criteria.where("actionId").is(actionId()).and("event").in("SUBMITTED","COMPLETED")));
+        if(canonical!=null)query.addCriteria(Criteria.where("tenantSchoolId").is(canonical.actor().tenantSchoolId()));
         Punishment previous=mongo.findOne(query,Punishment.class);
         if(previous!=null) requireActionAccess(previous,"COMPLETED"); return previous;
     }
@@ -103,6 +108,7 @@ public class RequiredNotificationService {
     }
     private boolean prepareInternal(Object entity,String event,String action,String body,boolean currency) {
         if(!currency && !isEnabled()) return true;
+        if(canonical!=null)return prepareCanonical(entity,event,action,body);
         String author=text(entity,"originalAuthorEmail"); if(author.isBlank()) author=text(entity,"teacherEmail");
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school and student must match");
@@ -127,6 +133,18 @@ public class RequiredNotificationService {
         var intent=new RequiredNotification(); intent.setNotificationId(id); intent.setActionId(action); intent.setEvent(event);
         intent.setActor(actor); intent.setSystem(system); intent.setBody(body); intent.setRfcMessageId("<"+id+"@notifications.repsdiscipline.com>");
         intents(entity).add(intent); return true;
+    }
+    private boolean prepareCanonical(Object entity,String event,String action,String body){
+        if(event.startsWith("REMINDER_"))canonical.disconnectedWorker();
+        canonical.caseAccess(entity,event,false);
+        String id=stable(kind(entity)+":"+text(entity,"id")+":"+event+":"+action);
+        if(intents(entity).stream().anyMatch(n->id.equals(n.getNotificationId())))return false;
+        boolean system=canonical.actor().roles().contains("STUDENT");
+        var intent=new RequiredNotification();intent.setNotificationId(id);intent.setActionId(action);intent.setEvent(event);
+        intent.setSystem(system);intent.setActor(system?null:canonical.email(true));intent.setBody(body);
+        intent.setRfcMessageId("<"+id+"@notifications.repsdiscipline.com>");canonical.bind(intent);
+        if(text(entity,"conversationId").isBlank())set(entity,"conversationId",stable(kind(entity)+":"+text(entity,"id")));
+        intents(entity).add(intent);return true;
     }
     /** Currency recognitions always retain their obligation; dispatch still requires all existing email gates. */
     public Object saveCurrencyCreated(Object entity) {
@@ -181,9 +199,10 @@ public class RequiredNotificationService {
     }
     private Object load(String kind,String id) {
         Class<?> type=TYPES.get(kind); if(type==null) throw new IllegalArgumentException("Unsupported case type");
-        Object entity=mongo.findById(id,type); if(entity==null) throw new com.reps.demogcloud.exceptions.ResourceNotFoundException("Case not found"); return entity;
+        Object entity=canonical==null?mongo.findById(id,type):mongo.findOne(canonical.caseQuery(id),type); if(entity==null) throw new com.reps.demogcloud.exceptions.ResourceNotFoundException("Case not found"); return entity;
     }
     private Student authorizedViewer(Object entity) {
+        if(canonical!=null)return canonical.caseAccess(entity,"STATUS",true);
         if(entity instanceof GuidanceReferral guidance) users.requireGuidanceAccess(guidance,false);
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school mismatch");
@@ -206,9 +225,9 @@ public class RequiredNotificationService {
     }
     public Map<String,Object> listStatuses() {
         if(!isEnabled()) return Map.of("available",false,"cases",List.of());
-        String school=users.getCurrentUserSchool(); users.getCurrentStaffEmail(); List<Map<String,Object>> cases=new ArrayList<>();
+        String school=canonical==null?users.getCurrentUserSchool():canonical.actor().tenantSchoolId(); if(canonical==null)users.getCurrentStaffEmail();else canonical.email(true); List<Map<String,Object>> cases=new ArrayList<>();
         for(var entry:TYPES.entrySet()) {
-            Query query=Query.query(Criteria.where("school").is(school).and("requiredNotifications.0").exists(true));
+            Query query=Query.query(Criteria.where(canonical==null?"school":"tenantSchoolId").is(school).and("requiredNotifications.0").exists(true));
             for(Object entity:mongo.find(query,entry.getValue())) {
                 try { cases.add(statuses(entry.getKey(),text(entity,"id"))); } catch(AccessDeniedException ignored) { }
             }
@@ -218,19 +237,22 @@ public class RequiredNotificationService {
     public void retry(String kind,String id,String notificationId) {
         requireEnabled(); Object entity=load(kind,id); authorizedViewer(entity);
         var n=intents(entity).stream().filter(value->notificationId.equals(value.getNotificationId())).findFirst().orElseThrow();
-        if(!n.isRetrySafe() || !Set.of("FAILED","RECONNECT_REQUIRED").contains(n.getState()))
+        if(canonical!=null)canonical.requireIntent(n);
+        if(!n.isRetrySafe() || !Set.of("FAILED","RECONNECT_REQUIRED").contains(n.getState())) {
+            if(canonical!=null)throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"This outcome cannot be retried safely; request manual resolution");
             throw new IllegalStateException("This outcome cannot be retried safely; request manual resolution");
+        }
         update(kind,id,n.getNotificationId(),n.getState(),n.getAttemptId(),new Update().set("requiredNotifications.$.state","PENDING")
                 .set("requiredNotifications.$.retrySafe",false).set("requiredNotifications.$.reason","STAFF_RETRY"));
     }
     public void resolve(String kind,String id,String notificationId,String note) {
         requireEnabled(); Object entity=load(kind,id); Student student=authorizedViewer(entity);
-        users.requireAdministratorInSchool(student.getSchool());
+        if(canonical==null)users.requireAdministratorInSchool(student.getSchool());else canonical.requireAdmin();
         if(note==null || note.isBlank() || note.length()>500) throw new IllegalArgumentException("A resolution explanation is required (maximum 500 characters)");
         var n=intents(entity).stream().filter(value->notificationId.equals(value.getNotificationId())).findFirst().orElseThrow();
         if(!Set.of("UNCERTAIN","FAILED","RECONNECT_REQUIRED").contains(n.getState())) throw new IllegalStateException("Only unresolved outcomes may be resolved");
         update(kind,id,n.getNotificationId(),n.getState(),n.getAttemptId(),new Update().set("requiredNotifications.$.state","RESOLVED")
-                .set("requiredNotifications.$.resolvedBy",users.getCurrentStaffEmail()).set("requiredNotifications.$.resolution",note));
+                .set("requiredNotifications.$.resolvedBy",currentStaff()).set("requiredNotifications.$.resolution",note));
     }
     private void requireEnabled() { if(!isEnabled()) throw new IllegalStateException("Managed notifications are disabled"); }
     public void deleteLegacyCase(String kind,String id) {
@@ -246,7 +268,8 @@ public class RequiredNotificationService {
     private Query notificationQuery(String caseId,String id,String state,String attempt) {
         Criteria match=Criteria.where("notificationId").is(id).and("state").is(state);
         if(attempt!=null) match=match.and("attemptId").is(attempt);
-        return Query.query(Criteria.where("_id").is(caseId).and("requiredNotifications").elemMatch(match));
+        Query query=Query.query(Criteria.where("_id").is(caseId).and("requiredNotifications").elemMatch(match));
+        if(canonical!=null)query.addCriteria(Criteria.where("tenantSchoolId").is(canonical.actor().tenantSchoolId()));return query;
     }
     private void update(String kind,String caseId,String id,String state,String attempt,Update update) {
         var result=mongo.updateFirst(notificationQuery(caseId,id,state,attempt),update.inc("revision",1),COLLECTIONS.get(kind));
@@ -256,6 +279,7 @@ public class RequiredNotificationService {
     @Scheduled(fixedDelayString="${reps.email.notifications.poll-ms:30000}")
     public void dispatchPending() {
         if(!isEnabled() || !Boolean.parseBoolean(env.getProperty("reps.email.notifications.dispatch-enabled","false"))) return;
+        if(canonical!=null)canonical.disconnectedWorker();
         for(String kind:TYPES.keySet()) {
             Query query=Query.query(Criteria.where("requiredNotifications.state").in("PENDING","DISPATCHING")).limit(25);
             for(Object entity:mongo.find(query,TYPES.get(kind))) {
@@ -274,6 +298,7 @@ public class RequiredNotificationService {
     public void dispatchOne(String kind,String caseId,String notificationId) {
         requireEnabled();
         if(!Boolean.parseBoolean(env.getProperty("reps.email.notifications.dispatch-enabled","false"))) return;
+        if(canonical!=null)canonical.disconnectedWorker();
         String attempt=UUID.randomUUID().toString();
         Update claim=new Update().set("requiredNotifications.$.state","DISPATCHING").set("requiredNotifications.$.attemptId",attempt)
                 .set("requiredNotifications.$.claimedAt",Date.from(Instant.now())).inc("requiredNotifications.$.attempts",1).inc("revision",1);

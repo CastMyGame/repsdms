@@ -41,6 +41,21 @@ public class CanonicalAccountContext {
         if (account == null || !username.equals(account.getUsername()) || !valid(account.getId())
                 || !account.isEnabled() || account.isPasswordSetupRequired()
                 || principal.credentialVersion != account.getCredentialVersion()) throw denied();
+        return membership(account);
+    }
+
+    /** Validate immutable recorded IDs for internal jobs; not authentication or student-access authority. */
+    public Actor requireRecorded(String accountId,String tenantSchoolId,String profileId) {
+        try {
+            var account=users.findById(accountId).orElseThrow(CanonicalAccountContext::denied);
+            var actor=membership(account);
+            if(!actor.accountId().equals(accountId) || !actor.tenantSchoolId().equals(tenantSchoolId) || !actor.profileId().equals(profileId))throw denied();
+            return actor;
+        } catch(IncorrectResultSizeDataAccessException ambiguous) { throw denied(); }
+    }
+    private Actor membership(UserModel account) {
+        String username=account.getUsername();
+        if(username==null || username.isBlank() || !valid(account.getId()) || !account.isEnabled() || account.isPasswordSetupRequired())throw denied();
         Set<String> roles=roles(account.getRoles());
         boolean student=roles.equals(Set.of("STUDENT"));
         if (!student && !Set.of("TEACHER","GUIDANCE","ADMIN").containsAll(roles)) throw denied();

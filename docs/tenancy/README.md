@@ -137,3 +137,7 @@ A future separately approved executor must privately resolve each HMAC recordKey
 ## Verification recorded for this preparation
 
 Final results are recorded in the PR description. Offline exporter tests use a fake read-only Mongo interface, not a live server. PowerShell syntax is parsed but actual mongosh execution is pending because the CLI is not installed. The Node planner tests use synthetic metadata only. No frontend files are changed; frontend tests are not rerun for this backend-only preparation.
+
+## Phase 4B-2 email preparation
+
+See [email-ownership.md](email-ownership.md) for isolated Gmail query guards, stored notification actor metadata, canonical request/retry checks and the deliberately disconnected worker/provider boundary. Production enforcement remains inactive.
