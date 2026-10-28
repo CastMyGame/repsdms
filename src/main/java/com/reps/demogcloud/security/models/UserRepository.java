@@ -9,6 +9,10 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends UserInsertOnlyRepository<UserModel>, MongoRepository<UserModel,String> {
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0, 'stripeCustomerId': ?1, 'stripeSubscriptionId': ?2, 'enabled': {'$ne': false}}")
+    @org.springframework.data.mongodb.repository.Update("{'$set': {'paid': true, 'stripeStatus': 'active', 'lastPaymentAt': ?3}}")
+    long confirmExistingBilling(String id, String customerId, String subscriptionId, java.time.Instant paidAt);
+
     List<UserModel> findBySchool(String school);
 UserModel findByUsername(String username);
 UserModel findByUsernameIgnoreCase(String username);

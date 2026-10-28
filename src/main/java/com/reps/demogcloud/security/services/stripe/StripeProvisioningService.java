@@ -88,26 +88,27 @@ public class StripeProvisioningService {
             // A public checkout may not transfer, reactivate or promote an existing account.
             UserModel existingUser = userRepository.findByUsername(email);
             Employee existingEmployee = employeeRepository.findByEmailIgnoreCase(email);
-            boolean pendingSameCheckout = existingUser != null && !existingUser.isEnabled() && existingUser.isPaid()
-                    && stripeCustomerId.equals(existingUser.getStripeCustomerId())
-                    && stripeSubscriptionId.equals(existingUser.getStripeSubscriptionId())
-                    && existingUser.getRoles() != null && !existingUser.getRoles().isEmpty()
-                    && existingUser.getRoles().stream().allMatch(r -> r != null && "TEACHER".equalsIgnoreCase(r.getRole()));
-            // A retry may finish recording the same pending checkout, but must never enable the account.
-            if (existingUser != null && ((!existingUser.isEnabled() && !pendingSameCheckout) || !schoolName.equalsIgnoreCase(existingUser.getSchool())
+            // Signed payment proves payment only. Never provision, activate, transfer or relink an account.
+            if (existingUser == null || existingEmployee == null || existingEmployee.isArchived()
+                    || !email.equalsIgnoreCase(existingUser.getUsername()) || !email.equalsIgnoreCase(existingEmployee.getEmail())
+                    || !schoolName.equalsIgnoreCase(existingUser.getSchool()) || !schoolName.equalsIgnoreCase(existingEmployee.getSchool())
                     || existingUser.getRoles() == null || existingUser.getRoles().isEmpty()
-                    || existingUser.getRoles().stream().anyMatch(r -> r == null
-                    || r.getRole() == null || !Set.of("TEACHER", "GUIDANCE", "ADMIN")
-                    .contains(r.getRole().toUpperCase(java.util.Locale.ROOT)))))
-                throw new IllegalStateException("Existing account requires school administrator review");
-            if (existingUser != null && existingEmployee == null)
-                throw new IllegalStateException("Existing account profile requires school administrator review");
-            if (existingEmployee != null && (existingEmployee.isArchived()
-                    || !schoolName.equalsIgnoreCase(existingEmployee.getSchool())))
-                throw new IllegalStateException("Existing employee requires school administrator review");
-
-            ensureEmployeeTeacherExists(email, firstName, lastName, schoolName);
-            ensureUserModelTeacherExists(email, schoolName, stripeCustomerId, stripeSubscriptionId, stripePriceId);
+                    || existingUser.getRoles().stream().anyMatch(r -> r == null || r.getRole() == null
+                    || !Set.of("TEACHER", "GUIDANCE", "ADMIN").contains(r.getRole().toUpperCase(java.util.Locale.ROOT)))
+                    || !stripeCheckoutSessionId.equals(intent.getStripeCheckoutSessionId())
+                    || !stripeCustomerId.equals(existingUser.getStripeCustomerId())
+                    || !stripeSubscriptionId.equals(existingUser.getStripeSubscriptionId())
+                    || !stripePriceId.equals(existingUser.getStripePriceId()))
+                throw new IllegalStateException("Existing billing association requires controlled review");
+            String accountOwner=existingUser.getTenantSchoolId(), profileOwner=existingEmployee.getTenantSchoolId();
+            if ((accountOwner != null || profileOwner != null)
+                    && (!schoolIdNumber.equals(accountOwner) || !schoolIdNumber.equals(profileOwner)))
+                throw new IllegalStateException("Billing tenant ownership requires controlled review");
+            // Legacy unbound billing is supported only for the exact already-recorded customer/subscription.
+            // It grants no membership, role or activation and changes no billing identifiers.
+            if (existingUser.isEnabled() && userRepository.confirmExistingBilling(existingUser.getId(),
+                    stripeCustomerId, stripeSubscriptionId, Instant.now()) != 1)
+                throw new IllegalStateException("Existing billing association changed concurrently");
 
             // ✅ mark completed atomically (also writes Stripe ids)
             boolean completed = registrationIntentLockService.markCompleted(
