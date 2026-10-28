@@ -34,7 +34,14 @@ public class StripeBillingService {
     }
 
 
+    public static final String CHECKOUT_UNAVAILABLE = "New checkout is unavailable during the approved-onboarding pilot. Contact the REPS team for billing and onboarding.";
+
     public String createCheckoutSessionUrl(StripeController.CreateCheckoutSessionRequest req) throws StripeException {
+        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, CHECKOUT_UNAVAILABLE);
+    }
+
+    /** Retained integration implementation; unreachable until a separately reviewed controlled-billing design. */
+    private String createCheckoutAfterControlledApproval(StripeController.CreateCheckoutSessionRequest req) throws StripeException {
         String stripeSecretKey = env.getProperty("stripe.secret.key");
         if (isBlank(stripeSecretKey)) {
             throw new IllegalStateException("Missing stripe.secret.key");

@@ -28,6 +28,8 @@ class StripeOnboardingAuthorizationTest {
         when(intents.findById("synthetic-intent")).thenReturn(Optional.of(intent));
         when(locks.claimForProcessing("synthetic-intent")).thenReturn(true);
         when(locks.markCompleted(any(),any(),any(),any())).thenReturn(true);
+        when(users.confirmExistingBilling(any(),any(),any(),any())).thenReturn(1L);
+        intent.setStripeCheckoutSessionId("synthetic-checkout");
         var school=new School();school.setSchoolIdNumber("school-id");school.setSchoolName("Testing");
         when(schools.findById("school-id")).thenReturn(Optional.of(school));
         when(encoder.encode(any())).thenReturn("synthetic-encoded");
@@ -36,31 +38,28 @@ class StripeOnboardingAuthorizationTest {
     }
     UserModel user(String role,String school,boolean enabled) {
         var user=new UserModel();user.setId("synthetic-user");user.setUsername("new@example.test");user.setSchool(school);
-        user.setRoles(Set.of(new RoleModel(null,role)));user.setEnabled(enabled);return user;
+        user.setRoles(Set.of(new RoleModel(null,role)));user.setEnabled(enabled);user.setStripeCustomerId("synthetic-customer");user.setStripeSubscriptionId("synthetic-subscription");user.setStripePriceId("synthetic-price");return user;
     }
-    @Test void publicCheckoutCreatesPendingTeacherOnly() {
-        service.provisionTeacherFromCheckoutSession(session);
-        var account=org.mockito.ArgumentCaptor.forClass(UserModel.class);verify(users).save(account.capture());
-        assertFalse(account.getValue().isEnabled());
-        assertEquals(Set.of(new RoleModel(null,"TEACHER")),account.getValue().getRoles());
-        var employee=org.mockito.ArgumentCaptor.forClass(Employee.class);verify(employees).save(employee.capture());
-        assertEquals("Testing",employee.getValue().getSchool());
+    @Test void paymentCannotCreateAnAccountOrProfile() {
+        assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
+        verify(users,never()).save(any());verify(employees,never()).save(any());
+        verify(locks).releaseProcessing("synthetic-intent");
     }
     @Test void existingTeacherBillingNeverChangesMembershipRolesOrActivation() {
         when(users.findByUsername("new@example.test")).thenReturn(user("teacher","Testing",true));
         var employee=new Employee();employee.setEmail("new@example.test");employee.setSchool("Testing");
         when(employees.findByEmailIgnoreCase("new@example.test")).thenReturn(employee);
         service.provisionTeacherFromCheckoutSession(session);
-        verify(users).updateBillingIfEnabled(eq("synthetic-user"),eq("Testing"),any(),any(),any(),any());
+        verify(users).confirmExistingBilling(eq("synthetic-user"),eq("synthetic-customer"),eq("synthetic-subscription"),any());
         verify(users,never()).save(any());verify(employees,never()).save(any());
     }
     @Test void existingDisabledStudentAndForeignAccountsAreNeverPromotedOrReactivated() {
-        for(var account:List.of(user("TEACHER","Testing",false),user("STUDENT","Testing",true),user("ADMIN","Other school",true))) {
+        for(var account:List.of(user("STUDENT","Testing",true),user("ADMIN","Other school",true))) {
             when(users.findByUsername("new@example.test")).thenReturn(account);
             assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
         }
         verify(users,never()).save(any());verify(employees,never()).save(any());
-        verify(users,never()).updateBillingIfEnabled(any(),any(),any(),any(),any(),any());
+        verify(users,never()).confirmExistingBilling(any(),any(),any(),any());
     }
     @Test void mismatchedSchoolIdNameAndArchivedEmployeeFailBeforeProvisioning() {
         intent.setSchoolName("Other school");
@@ -76,7 +75,7 @@ class StripeOnboardingAuthorizationTest {
         when(users.findByUsername("new@example.test")).thenReturn(user("ADMIN","Testing",true));
         assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
         verify(users,never()).save(any());verify(employees,never()).save(any());
-        verify(users,never()).updateBillingIfEnabled(any(),any(),any(),any(),any(),any());
+        verify(users,never()).confirmExistingBilling(any(),any(),any(),any());
     }
 
     @Test void samePendingCheckoutCanRecoverWithoutGrantingAccess() {
@@ -92,4 +91,18 @@ class StripeOnboardingAuthorizationTest {
         session.setSubscription("different-subscription");
         assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
     }
+    @Test void mismatchedCanonicalOwnersAndNewBillingLinksAreRejected() {
+        var account=user("TEACHER","Testing",true);account.setTenantSchoolId("other-school");when(users.findByUsername("new@example.test")).thenReturn(account);
+        var employee=new Employee();employee.setEmail("new@example.test");employee.setSchool("Testing");employee.setTenantSchoolId("school-id");when(employees.findByEmailIgnoreCase("new@example.test")).thenReturn(employee);
+        assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
+        account.setTenantSchoolId("school-id");account.setStripeSubscriptionId("unrelated-subscription");
+        assertThrows(IllegalStateException.class,()->service.provisionTeacherFromCheckoutSession(session));
+        verify(users,never()).confirmExistingBilling(any(),any(),any(),any());
+    }
+    @Test void directCheckoutServiceCannotStartStripeOrSaveAnIntent() {
+        var billing=new StripeBillingService(new org.springframework.mock.env.MockEnvironment(),intents);
+        var result=assertThrows(org.springframework.web.server.ResponseStatusException.class,()->billing.createCheckoutSessionUrl(null));
+        assertEquals(503,result.getStatusCode().value());verify(intents,never()).save(any());
+    }
+
 }
