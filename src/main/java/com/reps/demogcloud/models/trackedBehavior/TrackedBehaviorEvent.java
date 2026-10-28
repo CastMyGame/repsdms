@@ -15,6 +15,11 @@ import java.time.LocalDateTime;
 @Builder
 @Document(collection = "TrackedBehaviorEvents")
 public class TrackedBehaviorEvent {
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
+    @org.springframework.data.annotation.Version
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long persistenceRevision;
 
     @Id
     private String trackedBehaviorEventId;

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PunishRepository extends MongoRepository<Punishment, String> {
+public interface PunishRepository extends TenantRootRepository<Punishment>, MongoRepository<Punishment, String> {
     //May need PunishResponse if that gets made for record keeping instead
     List<Punishment> findByStatusAndTeacherEmailAndStudentEmailAndInfractionId (String status, String studentEmail, String teacherEmail, String infractionId);
 

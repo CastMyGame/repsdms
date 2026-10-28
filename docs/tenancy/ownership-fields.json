@@ -2,9 +2,19 @@
   "schemaVersion": "reps-tenant-fields/v1",
   "preparationOnly": true,
   "runtimeModelAdoption": true,
-  "mappedCollections": ["employee", "students", "users"],
+  "mappedCollections": [
+    "employee",
+    "students",
+    "users",
+    "Punishments",
+    "OfficeReferrals",
+    "Guidance",
+    "TrackedBehaviorEvents",
+    "assignment_templates",
+    "assignment_template_bindings"
+  ],
   "automaticOwnershipAssignment": false,
-  "otherMappedFields": "Deferred until their complete replacement-save and receipt replay paths are protected",
+  "otherMappedFields": "Currency receipts, OAuth grants and registration intents deferred until reviewed replay/ownership compatibility; see root-persistence.md",
   "canonicalField": "tenantSchoolId",
   "authority": "Exact existing schools._id as represented by School.schoolIdNumber; do not regenerate or lowercase IDs",
   "invariants": [
@@ -47,5 +57,7 @@
     "verified system-default assignment_templates"
   ],
   "activationProperty": "reps.tenancy.id-enforcement-enabled",
-  "activationInThisPR": "Only false/default accepted; true/malformed values fail startup. No ID enforcement activation implemented."
+  "activationInThisPR": "Only false/default accepted; true/malformed values fail startup. No ID enforcement activation implemented.",
+  "rootPersistenceRevision": "Nullable persistenceRevision on TrackedBehaviorEvents, assignment_templates and assignment_template_bindings; owner/revision CAS; existing case revisions unchanged",
+  "domainPreparationBoundary": "Absent by default; domain-preparation-enabled=true requires core-preparation-enabled=true and tenant-isolated-verification active profile; not a production cutover switch"
 }

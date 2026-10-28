@@ -18,6 +18,8 @@ import java.util.*;
 @Builder
 @Document(collection = "Punishments")
 public class Punishment implements Comparable<Punishment>, org.springframework.data.domain.Persistable<String>{
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
 
     @org.springframework.data.annotation.Version
     @com.fasterxml.jackson.annotation.JsonIgnore

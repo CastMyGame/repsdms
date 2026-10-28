@@ -13,6 +13,11 @@ import java.time.Instant;
 @NoArgsConstructor
 @Document(collection = "assignment_template_bindings")
 public class AssignmentTemplateBinding {
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
+    @org.springframework.data.annotation.Version
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long persistenceRevision;
 
     @Id
     private String id;

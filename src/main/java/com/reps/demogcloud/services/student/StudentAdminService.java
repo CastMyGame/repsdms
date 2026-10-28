@@ -24,13 +24,17 @@ public class StudentAdminService {
     private final MongoTemplate mongo;
     private final UserAdministrationService administration;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalDomainAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalDomainAccess(com.reps.demogcloud.services.tenancy.CanonicalDomainAccess value){canonical=value;}
     private Student staffStudent(String email) {
+        if(canonical!=null)return canonical.student(email,true);
         access.requireStaff(); access.requireStudentAccess(email);
         return studentRepository.findByStudentEmailIgnoreCase(email);
     }
     private Query active(Student student) {
         return Query.query(Criteria.where("_id").is(student.getStudentIdNumber())
-                .and("school").is(student.getSchool()).and("archived").ne(true));
+                .and(canonical==null?"school":"tenantSchoolId").is(canonical==null?student.getSchool():canonical.actor().tenantSchoolId()).and("archived").ne(true));
     }
     private Student modify(Query query, Update update) {
         Student result = mongo.findAndModify(query, update, FindAndModifyOptions.options().returnNew(true), Student.class);
@@ -48,6 +52,7 @@ public class StudentAdminService {
                 new Update().set("timeBank",new Student.TimeBank(total/60,total%60)));
     }
     public List<Student> updateStudents(List<Student> inputs) {
+        if(canonical!=null)canonical.disconnected(); // Canonical profile field/relationship changes require 4B-2.
         access.requireStaff();
         if (inputs == null || inputs.isEmpty() || inputs.size() > 200) throw new IllegalArgumentException("Invalid student batch");
         List<Student> records = new ArrayList<>(); Set<String> ids = new HashSet<>();
@@ -95,17 +100,21 @@ public class StudentAdminService {
     private void conflict() { throw new ResponseStatusException(HttpStatus.CONFLICT,"Student profile changed; refresh before retrying"); }
 
     public Student updateStudentNotes(String id,ThreadEvent input) {
-        access.requireStaff();
-        Student student=studentRepository.findById(id).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
-        if (!access.sameSchool(student.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
-        staffStudent(student.getStudentEmail());
+        Student student;
+        if(canonical!=null)student=canonical.studentId(id);
+        else {
+            access.requireStaff();student=studentRepository.findById(id).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
+            if(!access.sameSchool(student.getSchool()))throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            staffStudent(student.getStudentEmail());
+        }
         if(input==null || input.getContent()==null || input.getContent().isBlank() || input.getContent().length()>10000
                 || input.getEvent()==null || input.getEvent().length()>100)throw new IllegalArgumentException("Valid note required");
-        ThreadEvent event=new ThreadEvent();event.setCreatedBy(users.getCurrentStaffEmail());event.setDate(LocalDate.now());
+        ThreadEvent event=new ThreadEvent();event.setCreatedBy(canonical==null?users.getCurrentStaffEmail():canonical.email(true));event.setDate(LocalDate.now());
         event.setEvent(input.getEvent());event.setContent(input.getContent());
-        return modify(active(student),new Update().push("notesArray",event));
+        var update=new Update().push("notesArray",event);if(canonical!=null)update.inc("profileRevision",1);return modify(active(student),update);
     }
     public Optional<School> getStudentSchool() {
+        if(canonical!=null){var actor=canonical.actor();if(!actor.roles().contains("STUDENT"))throw new org.springframework.security.access.AccessDeniedException("Access denied");return schoolRepository.findById(actor.tenantSchoolId());}
         access.requireStudent();
         Student student=studentRepository.findByStudentEmailIgnoreCase(users.getCurrentUsername());
         return schoolRepository.findBySchoolNameIgnoreCase(student.getSchool());

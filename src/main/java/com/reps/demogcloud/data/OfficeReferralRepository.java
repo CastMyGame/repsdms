@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface OfficeReferralRepository extends MongoRepository<OfficeReferral, String> {
+public interface OfficeReferralRepository extends TenantRootRepository<OfficeReferral>, MongoRepository<OfficeReferral, String> {
     List<OfficeReferral> findByAdminEmail(String adminEmail);
 
     List<OfficeReferral> findByArchivedAndSchool(Boolean archived, String school);

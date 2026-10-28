@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface TrackedBehaviorEventRepository extends MongoRepository<TrackedBehaviorEvent, String> {
+public interface TrackedBehaviorEventRepository extends TenantRootRepository<TrackedBehaviorEvent>, MongoRepository<TrackedBehaviorEvent, String> {
 
     List<TrackedBehaviorEvent> findByStudentEmailOrderByTimeCreatedDesc(String studentEmail);
 

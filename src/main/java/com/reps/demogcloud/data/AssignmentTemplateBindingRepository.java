@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AssignmentTemplateBindingRepository
-        extends MongoRepository<AssignmentTemplateBinding, String> {
+        extends TenantRootRepository<AssignmentTemplateBinding>, MongoRepository<AssignmentTemplateBinding, String> {
 
     Optional<AssignmentTemplateBinding> findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
             String teacherEmail,

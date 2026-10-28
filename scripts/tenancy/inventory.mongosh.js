@@ -28,7 +28,7 @@
     const projection={_id:1,tenantSchoolId:1,school:1,schoolName:1,schoolId:1,schoolIdNumber:1,username:1,email:1,studentEmail:1,
       teacherEmail:1,originalAuthorEmail:1,responsibleStaffEmail:1,guidanceEmail:1,adminEmail:1,spotters:1,"roles.role":1,"classes.classRoster":1,
       createdByUserId:1,createdBySystem:1,scope:1,assignmentTemplateId:1,linkToPunishment:1,actor:1,caseIds:1,studentIds:1,employeeIds:1,
-      revision:1,profileRevision:1,rosterRevision:1,credentialVersion:1,ownerAccountId:1,stripeSubscriptionId:1,"assignmentWork.template.id":1,"assignmentWork.template.schoolId":1,"assignmentWork.template.tenantSchoolId":1,"requiredNotifications.actor":1,"requiredNotifications.state":1,"requiredNotifications.notificationId":1,"gmailAuthorization.state":1};
+      revision:1,persistenceRevision:1,profileRevision:1,rosterRevision:1,credentialVersion:1,ownerAccountId:1,stripeSubscriptionId:1,"assignmentWork.template.id":1,"assignmentWork.template.schoolId":1,"assignmentWork.template.tenantSchoolId":1,"requiredNotifications.actor":1,"requiredNotifications.state":1,"requiredNotifications.notificationId":1,"gmailAuthorization.state":1};
     // Projection never reads passwords, reset tickets, OAuth ciphertext, recipient/message content or student names.
     const schools=EJSON.serialize(await database.getCollection("schools").find({},{_id:1,schoolName:1}).limit(10001).maxTimeMS(30000).toArray(),{relaxed:false});
     if(schools.length>10000)throw new Error();

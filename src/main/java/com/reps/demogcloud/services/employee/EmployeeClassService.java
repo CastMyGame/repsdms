@@ -21,6 +21,9 @@ import java.util.*;
 public class EmployeeClassService {
     private final EmployeeRepository employeeRepository;
     private final MongoTemplate mongo;
+    private com.reps.demogcloud.services.tenancy.CanonicalDomainAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalDomainAccess(com.reps.demogcloud.services.tenancy.CanonicalDomainAccess value){canonical=value;}
 
     public Employee addOrUpdateClassToEmployee(String email, ClassRequest request) {
         return change(email, request, false);
@@ -33,7 +36,7 @@ public class EmployeeClassService {
         var input = request.getClassToUpdate();
         String name = text(input.getClassName()), period = text(input.getClassPeriod());
         if (name.isEmpty() || period.isEmpty()) throw new IllegalArgumentException("Class name and period are required");
-        var teacher = employeeRepository.findByEmailIgnoreCase(email);
+        var teacher = canonical==null?employeeRepository.findByEmailIgnoreCase(email):canonical.roster(email,request);
         if (teacher == null) throw new ResourceNotFoundException("Teacher not found");
         if (teacher.isArchived()) throw new org.springframework.security.access.AccessDeniedException("Access denied");
         if (request.getExpectedRosterRevision() == null || request.getExpectedRosterRevision() != teacher.getRosterRevision()) throw conflict();
@@ -61,7 +64,7 @@ public class EmployeeClassService {
                 ? new Criteria().orOperator(Criteria.where("rosterRevision").exists(false), Criteria.where("rosterRevision").is(0))
                 : Criteria.where("rosterRevision").is(teacher.getRosterRevision());
         var query = new Query(new Criteria().andOperator(Criteria.where("_id").is(teacher.getEmployeeId()),
-                Criteria.where("school").is(teacher.getSchool()), Criteria.where("archived").ne(true), revision));
+                (canonical==null?Criteria.where("school").is(teacher.getSchool()):Criteria.where("tenantSchoolId").is(canonical.actor().tenantSchoolId())), Criteria.where("archived").ne(true), revision));
         var result = mongo.findAndModify(query, new Update().set("classes", classes).inc("rosterRevision", 1),
                 FindAndModifyOptions.options().returnNew(true), Employee.class);
         if (result == null) throw conflict();

@@ -145,7 +145,7 @@ public class RequiredNotificationService {
     }
     public void reminder(Punishment punishment,String type) {
         if(!Set.of("ISS","DETENTION").contains(type)) throw new IllegalArgumentException("Unsupported reminder");
-        if(prepare(punishment,"REMINDER_"+type,"REMINDER_"+type+":"+LocalDate.now(),null)) { captureContent(punishment); mongo.save(punishment); }
+        if(prepare(punishment,"REMINDER_"+type,"REMINDER_"+type+":"+LocalDate.now(),null)) { captureContent(punishment); com.reps.demogcloud.data.TenantRootSave.save(mongo,punishment); }
     }
     public void captureContent(Object entity) {
         List<RequiredNotification> list=intents(entity); if(list.isEmpty()) return;
@@ -235,9 +235,11 @@ public class RequiredNotificationService {
     private void requireEnabled() { if(!isEnabled()) throw new IllegalStateException("Managed notifications are disabled"); }
     public void deleteLegacyCase(String kind,String id) {
         Object entity=load(kind,id); authorizedViewer(entity);
+        if(new BeanWrapperImpl(entity).getPropertyValue("tenantSchoolId")!=null)
+            throw new AccessDeniedException("Canonical case retirement requires a reviewed workflow");
         if(!intents(entity).isEmpty()) throw new IllegalStateException("Cases with retained notification obligations must be archived, not deleted");
         Object revision=new BeanWrapperImpl(entity).getPropertyValue("revision");
-        Query query=Query.query(Criteria.where("_id").is(id).and("revision").is(revision).and("requiredNotifications.0").exists(false));
+        Query query=Query.query(Criteria.where("_id").is(id).and("revision").is(revision).and("tenantSchoolId").exists(false).and("requiredNotifications.0").exists(false));
         if(mongo.remove(query,COLLECTIONS.get(kind)).getDeletedCount()!=1)
             throw new IllegalStateException("Case changed; reload before deleting");
     }

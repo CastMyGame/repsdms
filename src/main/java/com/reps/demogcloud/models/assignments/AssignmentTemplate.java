@@ -14,6 +14,11 @@ import java.util.List;
 @NoArgsConstructor
 @Document(collection = "assignment_templates")
 public class AssignmentTemplate {
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String tenantSchoolId;
+    @org.springframework.data.annotation.Version
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long persistenceRevision;
 
     @Id
     private String id;               // will map from legacy assignmentId
