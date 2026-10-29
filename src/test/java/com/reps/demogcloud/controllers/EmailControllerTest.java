@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -70,7 +71,7 @@ class EmailControllerTest {
 
     @Test
     void sendClassAnnouncement_returnsOk() throws Exception {
-        doNothing().when(emailService).sendClassAnnouncement(any(ClassAnnouncementRequest.class));
+        doNothing().when(emailService).sendClassAnnouncements(anyList());
 
         mockMvc.perform(post("/email/v1/classAnnouncement")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -82,7 +83,7 @@ class EmailControllerTest {
     void sendClassAnnouncement_whenMessagingExceptionThrown_returnsInternalServerError() throws Exception {
         doThrow(new MessagingException("SMTP error"))
                 .when(emailService)
-                .sendClassAnnouncement(any(ClassAnnouncementRequest.class));
+                .sendClassAnnouncements(anyList());
 
         mockMvc.perform(post("/email/v1/classAnnouncement")
                         .contentType(MediaType.APPLICATION_JSON)

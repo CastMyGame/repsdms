@@ -35,6 +35,7 @@ public class EmailNotificationService {
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
     private final UserContextService userContextService;
+    private final ClassAnnouncementAccess announcementAccess;
 
     // Keep identity-sensitive orchestration on the request thread until a durable actor is recorded (Phase 3).
     public void sendPtsEmail(String parentEmail, String teacherEmail, String studentEmail, String msg, String subject, String languageCode) throws MessagingException {
@@ -76,35 +77,21 @@ public class EmailNotificationService {
     }
 
     public void sendClassAnnouncement(ClassAnnouncementRequest request) throws MessagingException {
-        if (!userContextService.getCurrentStaffEmail().equalsIgnoreCase(request.getTeacherEmail())) {
-            throw new AccessDeniedException("Class announcement sender must be the acting staff member");
-        }
-        var teacher = employeeRepository.findByEmailIgnoreCase(request.getTeacherEmail());
+        sendClassAnnouncements(List.of(request));
+    }
 
-        if (teacher == null || teacher.getClasses() == null) throw new IllegalArgumentException("Class is unavailable");
-        var matches = teacher.getClasses().stream()
-                .filter(c -> Objects.equals(c.getClassName(),request.getClassName()))
-                .filter(c -> request.getClassPeriod()==null || Objects.equals(c.getClassPeriod(),request.getClassPeriod())).toList();
-        if(matches.isEmpty()) throw new IllegalArgumentException("Class is unavailable");
-        if(matches.size()!=1) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Choose the class period before sending an announcement");
-        List<String> rosterEmails = matches.get(0).getClassRoster();
-        if (rosterEmails == null || rosterEmails.isEmpty()) throw new IllegalArgumentException("Class has no recipients");
+    public void sendClassAnnouncements(List<ClassAnnouncementRequest> requests) throws MessagingException {
+        if (requests == null || requests.isEmpty()) throw new IllegalArgumentException("Choose a class before sending an announcement");
+        // Validate ALL requested classes and recipients before translation, persistence or provider calls.
+        var audiences = requests.stream().map(announcementAccess::resolve).toList();
+        for (int i = 0; i < requests.size(); i++) sendAnnouncement(requests.get(i), audiences.get(i));
+    }
 
+    private void sendAnnouncement(ClassAnnouncementRequest request, ClassAnnouncementAccess.Audience audience) throws MessagingException {
         Map<String, List<String>> recipientsByLang = new HashMap<>();
-
-        for (String email : rosterEmails) {
-            if (email == null || email.isBlank()) continue;
-
-            Student s = studentRepository.findByStudentEmailIgnoreCase(email);
-            if (s == null || s.isArchived() || s.getSchool() == null
-                    || !s.getSchool().equalsIgnoreCase(teacher.getSchool())) {
-                throw new AccessDeniedException("Class recipients must be active students in the staff member's school");
-            }
-            String lang = (s == null)
-                    ? "en"
-                    : templateBuilderService.normalizeLanguage(s.getPreferredLanguage());
-
-            recipientsByLang.computeIfAbsent(lang, k -> new ArrayList<>()).add(email);
+        for (Student student : audience.students()) {
+            String lang = templateBuilderService.normalizeLanguage(student.getPreferredLanguage());
+            recipientsByLang.computeIfAbsent(lang, k -> new ArrayList<>()).add(student.getStudentEmail());
         }
 
         Map<String, String> subjectByLang = new HashMap<>();
@@ -125,7 +112,7 @@ public class EmailNotificationService {
             List<String> recipients = entry.getValue();
 
             emailSenderService.sendClassAnnouncement(
-                    request.getTeacherEmail(),
+                    audience.sender(),
                     recipients,
                     subjectByLang.get(lang),
                     EmailContent.render("<p style=\"white-space:pre-wrap\">{{message}}</p>",Map.of("message",bodyByLang.get(lang)),true)

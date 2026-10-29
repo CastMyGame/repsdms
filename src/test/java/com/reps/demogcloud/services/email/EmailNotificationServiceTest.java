@@ -43,6 +43,8 @@ class EmailNotificationServiceTest {
     @Mock
     private UserContextService userContextService;
 
+    @Mock private ClassAnnouncementAccess announcementAccess;
+
     @InjectMocks
     private EmailNotificationService service;
 
@@ -119,7 +121,7 @@ class EmailNotificationServiceTest {
 
     @Test
     void announcementCannotBorrowAnotherTeachersIdentity() {
-        when(userContextService.getCurrentStaffEmail()).thenReturn("admin@test.com");
+        when(announcementAccess.resolve(any())).thenThrow(new org.springframework.security.access.AccessDeniedException("Unavailable"));
         ClassAnnouncementRequest request = new ClassAnnouncementRequest();
         request.setTeacherEmail("teacher@test.com");
         assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> service.sendClassAnnouncement(request));
@@ -161,23 +163,9 @@ class EmailNotificationServiceTest {
 
     @Test
     void sendClassAnnouncement_shouldGroupByLanguageAndSend() throws Exception {
-        Employee teacher = new Employee();teacher.setSchool("School");
-        when(userContextService.getCurrentStaffEmail()).thenReturn("teacher@test.com");
-        Employee.ClassRoster roster = new Employee.ClassRoster();
-        roster.setClassName("Math");
-        roster.setClassRoster(List.of("s1@test.com", "s2@test.com"));
-        teacher.setClasses(List.of(roster));
-
-        when(employeeRepository.findByEmailIgnoreCase("teacher@test.com")).thenReturn(teacher);
-
-        Student s1 = new Student();
-        s1.setPreferredLanguage("en");s1.setSchool("School");
-
-        Student s2 = new Student();
-        s2.setPreferredLanguage("es");s2.setSchool("School");
-
-        when(studentRepository.findByStudentEmailIgnoreCase("s1@test.com")).thenReturn(s1);
-        when(studentRepository.findByStudentEmailIgnoreCase("s2@test.com")).thenReturn(s2);
+        Student s1 = new Student(); s1.setStudentEmail("s1@test.com"); s1.setPreferredLanguage("en");
+        Student s2 = new Student(); s2.setStudentEmail("s2@test.com"); s2.setPreferredLanguage("es");
+        when(announcementAccess.resolve(any())).thenReturn(new ClassAnnouncementAccess.Audience("teacher@test.com", List.of(s1, s2)));
 
         when(templateBuilderService.normalizeLanguage("en")).thenReturn("en");
         when(templateBuilderService.normalizeLanguage("es")).thenReturn("es");
@@ -200,17 +188,13 @@ class EmailNotificationServiceTest {
 
     @Test
     void sendClassAnnouncement_shouldReject_whenNoClass() throws Exception {
-        Employee teacher = new Employee();
-        teacher.setClasses(List.of());
-
-        when(employeeRepository.findByEmailIgnoreCase(any())).thenReturn(teacher);
+        when(announcementAccess.resolve(any())).thenThrow(new org.springframework.security.access.AccessDeniedException("Unavailable"));
 
         ClassAnnouncementRequest req = new ClassAnnouncementRequest();
         req.setTeacherEmail("t");
         req.setClassName("none");
 
-        when(userContextService.getCurrentStaffEmail()).thenReturn("t");
-        assertThrows(IllegalArgumentException.class,()->service.sendClassAnnouncement(req));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->service.sendClassAnnouncement(req));
         verify(emailSenderService, never()).sendClassAnnouncement(any(), any(), any(), any());
     }
 

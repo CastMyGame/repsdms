@@ -17,6 +17,7 @@ public class EmailSenderService {
 
     private final JavaMailSender javaMailSender;
     private final EmailRoutingService emailRoutingService;
+    private final ClassAnnouncementAccess announcementAccess;
 
     public boolean isPhase1RoutingEnabled() {
         return emailRoutingService.isPhase1RoutingEnabled();
@@ -83,6 +84,7 @@ public class EmailSenderService {
     ) throws MessagingException {
         if (recipients == null || recipients.isEmpty()) return;
 
+        from = announcementAccess.requireRecipients(from, recipients);
         if (isPhase1RoutingEnabled()) {
             // A class roster is not permission to disclose classmates' addresses to one another.
             for (String recipient : recipients) {
