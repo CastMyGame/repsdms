@@ -17,6 +17,9 @@ import java.util.*;
 public class OfficeReferral implements Comparable<OfficeReferral>, org.springframework.data.domain.Persistable<String>{
     @com.fasterxml.jackson.annotation.JsonIgnore
     private String tenantSchoolId;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @lombok.ToString.Exclude
+    private java.util.List<org.bson.Document> historicalAccess;
     @org.springframework.data.annotation.Version
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Long revision;

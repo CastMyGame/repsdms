@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
     private final JwtUtils jwtUtils;
     private final UserAccountService userAccountService;
     private final CustomUserDetailsService customUserDetailsService;
@@ -61,6 +62,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             throw new ServletException("Account is disabled for " + email + ".");
         }
 
+        if(canonical!=null)canonical.provisioned(userModel);
         boolean isStudent = hasRole(userModel, "STUDENT");
         boolean isTeacher = hasRole(userModel, "TEACHER");
         boolean isAdmin = hasRole(userModel, "ADMIN");

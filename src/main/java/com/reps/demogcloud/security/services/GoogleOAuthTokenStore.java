@@ -72,9 +72,10 @@ public class GoogleOAuthTokenStore implements OAuth2AuthorizedClientService {
         if (username == null || username.isBlank()) throw new AccessDeniedException("A REPS account is required");
         return username.trim().toLowerCase(Locale.ROOT);
     }
+    @Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess workflow;
     private com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership canonical;
     @Autowired(required=false) public void setCanonicalEmailOwnership(com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership value){canonical=value;}
-    private Query user(String username) { return canonical==null?Query.query(Criteria.where("_id").is(account(username))):canonical.grant(username); }
+    private Query user(String username) { if(workflow!=null && canonical==null)throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Canonical Gmail ownership verification is required");return canonical==null?Query.query(Criteria.where("_id").is(account(username))):canonical.grant(username); }
     private Document connection(String username) {
         Query query = user(username); query.fields().include(FIELD);
         Document document = mongo.findOne(query, Document.class, COLLECTION);

@@ -67,7 +67,8 @@ public class CanonicalCurrencyTransactions {
                 raw.append("receiptVersion",2).append("tenantSchoolId",actor.tenantSchoolId()).append("actorAccountId",actor.accountId())
                         .append("actorProfileId",actor.profileId()).append("state","RESERVED");
                 mongo.insert(raw,RECEIPTS); // unique _id serializes concurrent attempts
-                work.accept(receipt); // future domain caller must validate its entire batch before wallet changes
+                com.reps.demogcloud.services.tenancy.CanonicalAuthorizationFence.actor(mongo,actor);
+                work.accept(receipt); // Domain caller validates the entire batch and fences target relationships before wallet changes
                 if(!id.equals(receipt.getId()) || !digest.equals(receipt.getPayloadHash()) || !kind.equals(receipt.getKind())
                         || !account.getUsername().equals(receipt.getActor()) || !Objects.equals(account.getSchool(),receipt.getSchool()))throw CurrencyReplayManifest.blocked();
                 var query=Query.query(Criteria.where("_id").is(id).and("tenantSchoolId").is(actor.tenantSchoolId()).and("actorAccountId").is(actor.accountId()).and("state").is("RESERVED"));

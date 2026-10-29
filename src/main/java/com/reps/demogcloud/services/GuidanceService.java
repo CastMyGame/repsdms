@@ -84,6 +84,7 @@ public class GuidanceService {
     }
 
     public GuidanceResponse createNewGuidanceFormSimple(GuidanceRequest request) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->createNewGuidanceFormSimple(request));
         if(request==null || request.getGuidance()==null) throw new IllegalArgumentException("Guidance request required");
         GuidanceReferral input=request.getGuidance();
         Student student;String actor;boolean studentActor;
@@ -104,7 +105,7 @@ public class GuidanceService {
         GuidanceReferral record=new GuidanceReferral();
         record.setGuidanceId(UUID.randomUUID().toString());record.setStudentEmail(student.getStudentEmail());record.setSchool(student.getSchool());
         record.setRequestedByEmail(actor);record.setTeacherEmail(studentActor?null:staffEmail());
-        if(canonical!=null)record.setTenantSchoolId(canonical.actor().tenantSchoolId());
+
         record.setGuidanceEmail(student.getGuidanceEmail());record.setClassPeriod(input.getClassPeriod());
         record.setReferralDescription(new ArrayList<>(input.getReferralDescription()));record.setTimeCreated(LocalDate.now());record.setStatus("OPEN");
         if(input.getLinkToPunishment()!=null && !input.getLinkToPunishment().isBlank()) {
@@ -118,6 +119,7 @@ public class GuidanceService {
             record.setLinkToPunishment(punishment.getPunishmentId());record.setInfractionName(punishment.getInfractionName());
             }
         }
+        if(canonical!=null)canonical.ownNew(record);
         record=guidanceRepository.save(record);
         GuidanceResponse response=new GuidanceResponse();response.setGuidance(List.of(record));response.setMessage("Guidance request saved");return response;
     }
@@ -140,7 +142,9 @@ public class GuidanceService {
     private static void denied() { throw new org.springframework.security.access.AccessDeniedException("Access denied"); }
 
     public GuidanceReferral updateGuidanceStatus(String id, String newStatus) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->updateGuidanceStatus(id, newStatus));
         GuidanceReferral record=requireRecord(id,true);
+        if(canonical!=null)canonical.student(record.getStudentEmail(),true);
         validateStatus(newStatus);
         record.setTimeClosed("CLOSED".equals(newStatus)?LocalDate.now():null);
         record.setStatus(newStatus);
@@ -159,7 +163,9 @@ public class GuidanceService {
     }
 
     public GuidanceReferral updateGuidanceFollowUp(String id, LocalDate scheduleFollowUp, String statusChange) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->updateGuidanceFollowUp(id, scheduleFollowUp, statusChange));
         GuidanceReferral guidance=requireRecord(id,true);
+        if(canonical!=null)canonical.student(guidance.getStudentEmail(),true);
         validateStatus(statusChange);
         if(scheduleFollowUp==null) throw new IllegalArgumentException("Follow-up date required");
         LocalDate timePosted=LocalDate.now();
@@ -184,8 +190,10 @@ public class GuidanceService {
     }
 
     public GuidanceResponse sendResourcesAndMakeNotes(String id, ResourceUpdateRequest request) throws MessagingException {
-        if(canonical!=null)canonical.disconnected(); // Notification/grant ownership belongs to 4B-2.
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->{try{return sendResourcesAndMakeNotes(id,request);}catch(MessagingException failure){throw new IllegalStateException("Canonical resource action failed",failure);}});
+        if(canonical!=null && !requiredNotifications.isEnabled())throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Managed communication must be configured before sharing resources");
         GuidanceReferral guidance=requireRecord(id,true);
+        if(canonical!=null)canonical.student(guidance.getStudentEmail(),true);
         if(request==null) throw new IllegalArgumentException("Resource request required");
         if(requiredNotifications.isEnabled() && requiredNotifications.hasAction(guidance,"RESOURCES")) {
             GuidanceResponse prior = new GuidanceResponse(); prior.setGuidance(List.of(guidance)); return prior;
@@ -214,7 +222,7 @@ public class GuidanceService {
 
         guidance.setNotesArray(events);
 
-        Student student = studentRepository.findByStudentEmailIgnoreCase(guidance.getStudentEmail());
+        Student student = canonical==null?studentRepository.findByStudentEmailIgnoreCase(guidance.getStudentEmail()):canonical.student(guidance.getStudentEmail(),true);
         if (student == null) {
             throw new IllegalStateException("Student not found: " + guidance.getStudentEmail());
         }
@@ -288,7 +296,9 @@ public class GuidanceService {
     }
 
     public GuidanceReferral updateGuidance(String id, ThreadEvent event) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->updateGuidance(id, event));
         GuidanceReferral record=requireRecord(id,false);
+        if(canonical!=null)canonical.student(record.getStudentEmail(),true);
         if(event==null || event.getContent()==null || event.getContent().isBlank() || event.getContent().length()>10000
                 || event.getEvent()==null || event.getEvent().length()>100) throw new IllegalArgumentException("Valid guidance note required");
         LocalDate timePosted = LocalDate.now();
@@ -315,7 +325,9 @@ public class GuidanceService {
     }
 
     public String deleteGuidanceReferral(String id) throws ResourceNotFoundException {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->deleteGuidanceReferral(id));
         GuidanceReferral record=requireRecord(id,true);
+        if(canonical!=null)canonical.student(record.getStudentEmail(),true);
         record.setArchived(true);record.setArchivedOn(LocalDate.now());record.setArchivedBy(staffEmail());
         record.setStatus("CLOSED");record.setTimeClosed(LocalDate.now());
         guidanceRepository.save(record);

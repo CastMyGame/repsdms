@@ -35,11 +35,15 @@ public class PunishmentCreationService {
 
     private final com.reps.demogcloud.services.currency.CurrencyService currency;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public record Prepared(PunishmentFormRequest request,Student student,Punishment punishment,Infraction infraction,LocalDate now) {}
 
     public PunishmentResponse createNewPunishForm(PunishmentFormRequest formRequest) throws MessagingException {
         if (formRequest!=null && InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName()))
             return award(java.util.List.of(formRequest)).get(0);
+        if(canonical!=null)return canonical.atomic(()->{try{return persist(prepare(formRequest));}catch(MessagingException failure){throw new IllegalStateException("Canonical case persistence failed",failure);}});
         return persist(prepare(formRequest));
     }
     private Prepared prepare(PunishmentFormRequest formRequest) {
@@ -51,9 +55,10 @@ public class PunishmentCreationService {
         userContextService.requireStaffInStudentSchool(actor, student);
         if (!userContextService.hasIndependentStudentAccess(actor, student))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        if(canonical!=null){canonical.staff();if(formRequest.getTeacherEmail()!=null && !formRequest.getTeacherEmail().isBlank() && !actor.equalsIgnoreCase(formRequest.getTeacherEmail()))throw new org.springframework.security.access.AccessDeniedException("Access denied");canonical.prepare(com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT,student);}
         formRequest.setTeacherEmail(actor);
         String managedId = null;
-        if (requiredNotifications.isEnabled() || InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName())) {
+        if (canonical!=null || requiredNotifications.isEnabled() || InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName())) {
             managedId = requiredNotifications.creationId("punishment", student.getStudentEmail(),java.util.Arrays.asList(
                     formRequest.getInfractionName(),formRequest.getInfractionPeriod(),formRequest.getInfractionDescription(),formRequest.getCurrency(),
                     formRequest.getGuidanceDescription(),formRequest.getPhoneLogDescription(),formRequest.isAdminReferral(),formRequest.isGuidanceReferral()));
@@ -61,7 +66,7 @@ public class PunishmentCreationService {
             if (existing != null && !InfractionType.POSITIVE.getLabel().equals(formRequest.getInfractionName()))
                 return new Prepared(formRequest,student,existing,null,now);
         }
-        Optional<School> schoolOpt = punishmentUtils.fetchSchool(student.getSchool());
+        Optional<School> schoolOpt = canonical==null?punishmentUtils.fetchSchool(student.getSchool()):Optional.of(canonical.school());
 
         School school = schoolOpt.orElseThrow(() ->
                 new IllegalStateException("School not found: " + student.getSchool())
@@ -71,6 +76,10 @@ public class PunishmentCreationService {
         Infraction infraction = punishmentUtils.resolveInfraction(formRequest, school, maxLevel);
         Punishment punishment = punishmentUtils.buildPunishment(formRequest, infraction, student, maxLevel, now);
         if (managedId != null) punishment.setPunishmentId(managedId);
+        if(canonical!=null){
+            if(formRequest.isAdminReferral() || punishment.getClosedTimes()>=4)canonical.prepare(com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE,student);
+            if(formRequest.getGuidanceDescription()!=null && !formRequest.getGuidanceDescription().isBlank())canonical.prepare(com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.GUIDANCE,student);
+        }
 
         if (!InfractionType.isSpecialCase(infraction.getInfractionName()) && !formRequest.isAdminReferral()
                 && punishment.getClosedTimes()<4) try {
@@ -78,7 +87,7 @@ public class PunishmentCreationService {
             if(level<1) throw new IllegalArgumentException("Invalid assignment level");
 
             String teacherEmail = punishment.getTeacherEmail();
-            String schoolIdOrName = student.getSchool();
+            String schoolIdOrName = canonical==null?student.getSchool():canonical.tenant();
             String infractionName = infraction.getInfractionName();
 
             AssignmentTemplate template = assignmentService.resolveForCase(
@@ -96,6 +105,7 @@ public class PunishmentCreationService {
             log.info("Assignment could not be attached; case creation continues with assignment unavailable");
         }
 
+        if(canonical!=null)canonical.bindNew(punishment);
         return new Prepared(formRequest,student,punishment,infraction,now);
     }
     private PunishmentResponse persist(Prepared prepared) throws MessagingException {
@@ -137,6 +147,10 @@ public class PunishmentCreationService {
     public List<PunishmentResponse> createNewPunishFormBulk(List<PunishmentFormRequest> listRequest) throws MessagingException {
         if(listRequest!=null && listRequest.stream().anyMatch(r->r!=null && InfractionType.POSITIVE.getLabel().equals(r.getInfractionName())))
             return award(listRequest);
+        if(canonical!=null)return canonical.atomic(()->{
+            var prepared=listRequest.stream().map(this::prepare).toList();var results=new ArrayList<PunishmentResponse>();
+            for(var item:prepared)try{results.add(persist(item));}catch(MessagingException failure){throw new IllegalStateException("Canonical case persistence failed",failure);}return results;
+        });
         List<PunishmentResponse> punishmentResponses = new ArrayList<>();
         // Validate every student before any case, phone log, guidance or notification write.
         List<Prepared> prepared = listRequest.stream().map(this::prepare).toList();

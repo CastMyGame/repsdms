@@ -23,7 +23,11 @@ public class EmployeeCreationService {
     private final AuthService authService;
     private final com.reps.demogcloud.security.services.AccountAccessService accounts;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public EmployeeResponse createNewEmployee(Employee request) {
+        if(canonical!=null){canonical.admin();canonical.label(request.getSchool());canonical.bindNew(request);}
         //Check it email exist in system
         // Staff establish their password through reset or use their verified Google login.
 
@@ -38,7 +42,8 @@ public class EmployeeCreationService {
         if (doesEmployeeExist == null) {
             try {
                 var user=authService.createEmployeeUser(authenticationRequest);
-                var employee=employeeRepository.save(request);
+                if(canonical!=null)request.setCurrency(0);
+                var employee=canonical==null?employeeRepository.save(request):employeeRepository.insert(request);
                 accounts.createdStaff(user);
                 return new EmployeeResponse("", employee);
             } catch (IllegalArgumentException e) {

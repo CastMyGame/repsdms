@@ -20,6 +20,9 @@ public class SchoolService {
     private final UserContextService users;
     private final org.springframework.data.mongodb.core.MongoTemplate mongo;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     /** Provisioning is an approved maintenance operation, never a public registration side effect. */
     public SchoolResponse createNewSchool(School schoolRequest) {
         throw new org.springframework.web.server.ResponseStatusException(
@@ -28,7 +31,8 @@ public class SchoolService {
 
     public SchoolResponse editSchool(String schoolName, Map<String, String> updates) {
         access.requireAdmin();
-        if (!access.sameSchool(schoolName))
+        if(canonical!=null)canonical.label(schoolName);
+        if (canonical==null && !access.sameSchool(schoolName))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
         // Validate the complete allowlist before any mutation. Identity/location remain maintenance-only.
         if (updates == null || updates.isEmpty() || !java.util.Set.of("currency", "maxPunishLevel").containsAll(updates.keySet()))
@@ -49,13 +53,13 @@ public class SchoolService {
             }
         }
         School school;
-        try { school = schoolRepository.findBySchoolNameIgnoreCase(users.getCurrentUserSchool()).orElse(null); }
+        try { school = canonical==null?schoolRepository.findBySchoolNameIgnoreCase(users.getCurrentUserSchool()).orElse(null):canonical.school(); }
         catch (org.springframework.dao.IncorrectResultSizeDataAccessException ambiguous) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
                     "School identity requires REPS support review.");
         }
         if (school == null) return new SchoolResponse(null, "School not found");
-        if (!access.sameSchool(school.getSchoolName())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        if (!(canonical==null?access.sameSchool(school.getSchoolName()):canonical.owns(school))) throw new org.springframework.security.access.AccessDeniedException("Access denied");
         var query = org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria
                 .where("_id").is(school.getSchoolIdNumber()).and("schoolName").is(school.getSchoolName()));
         School saved = mongo.findAndModify(query, update,

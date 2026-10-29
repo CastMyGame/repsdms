@@ -36,7 +36,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Real Mongo, security chain, token-store HTTP mocks and notification request service; workers intentionally disconnected. */
+/** Real Mongo, security chain, token-store HTTP mocks and notification request service; recorded-owner workers with provider mocks. */
 @EnabledIfEnvironmentVariable(named="REPS_TENANCY_TEST_MONGODB_URI",matches=".+")
 class CanonicalEmailMongoSecurityTest {
     static MongoClient client;static MongoTemplate mongo;static String database;
@@ -161,7 +161,8 @@ class CanonicalEmailMongoSecurityTest {
     }
     @Test void isolatedWorkerRemainsDisconnectedAndDoesNotResetClaimsOrSend()throws Exception{
         mvc.perform(postAs("capture/PUNISHMENTA","teacherA")).andExpect(status().isOk());var before=mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first();
-        mvc.perform(postAs("dispatch","adminA")).andExpect(status().isServiceUnavailable());assertEquals(before,mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first());
+        mongo.getCollection("Punishments").updateOne(new Document("_id","PUNISHMENTA"),new Document("$unset",new Document("requiredNotifications.0.actorAccountId","")));before=mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first();
+        mvc.perform(postAs("dispatch","adminA")).andExpect(status().isOk());assertEquals(before,mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first());
         mailEnv.setProperty("reps.email.notifications.dispatch-enabled","false");mvc.perform(postAs("dispatch","adminA")).andExpect(status().isOk());assertEquals(before,mongo.getCollection("Punishments").find(new Document("_id","PUNISHMENTA")).first());
     }
     @Test void retryPreservesIdentityAndRejectsUncertainOrUnmappedHistory()throws Exception{

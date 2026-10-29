@@ -47,12 +47,15 @@ public class PunishmentUtils {
     private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
     private Punishment saveCreatedPunishment(Punishment punishment) {
-        if (!requiredNotifications.isEnabled()) return punishRepository.save(punishment);
-        School school = schoolRepository.findBySchoolNameIgnoreCase(punishment.getSchool()).orElseThrow();
+        if (canonical==null && !requiredNotifications.isEnabled()) return punishRepository.save(punishment);
+        School school = canonical==null?schoolRepository.findBySchoolNameIgnoreCase(punishment.getSchool()).orElseThrow():canonical.school();
         if (!"CFR".equals(punishment.getStatus()) && punishment.getClosedTimes() == school.getMaxPunishLevel())
             punishment.setStatus("REFERRAL");
         return (Punishment) requiredNotifications.saveCreated(punishment);
     }
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public void validateFormRequest(PunishmentFormRequest formRequest) {
         if (formRequest == null
                 || formRequest.getInfractionDescription() == null
@@ -62,16 +65,16 @@ public class PunishmentUtils {
     }
 
     public Student fetchStudent(String email) {
-        return studentRepository.findByStudentEmailIgnoreCase(email);
+        return canonical==null?studentRepository.findByStudentEmailIgnoreCase(email):canonical.student(email);
     }
 
     public Optional<School> fetchSchool(String schoolName) {
-        return schoolRepository.findBySchoolNameIgnoreCase(schoolName);
+        if(canonical!=null){canonical.label(schoolName);return Optional.of(canonical.school());}return schoolRepository.findBySchoolNameIgnoreCase(schoolName);
     }
 
     public String getClosedLevel(String email, String name, int maxLevel) {
-        List<Punishment> closed = punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                email, name, "CLOSED");
+        List<Punishment> closed = canonical==null?punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(email, name, "CLOSED"):
+                mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(email)).and("infractionName").is(name).and("status").is("CLOSED")),Punishment.class);
 
         int highest = closed.stream()
                 .mapToInt(Punishment::getClosedTimes)
@@ -115,6 +118,7 @@ public class PunishmentUtils {
         descriptions.add(formRequest.getInfractionDescription());
         punishment.setInfractionDescription(descriptions);
 
+        if(canonical!=null)punishment.setTenantSchoolId(canonical.tenant());
         return punishment;
     }
 
@@ -134,7 +138,7 @@ public class PunishmentUtils {
 
             student.getNotesArray().add(log);
             var query=org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria
-                    .where("_id").is(student.getStudentIdNumber()).and("school").is(student.getSchool()).and("archived").ne(true));
+                    .where("_id").is(student.getStudentIdNumber()).and(canonical==null?"school":"tenantSchoolId").is(canonical==null?student.getSchool():canonical.tenant()).and("archived").ne(true));
             if(mongo.updateFirst(query,new org.springframework.data.mongodb.core.query.Update().push("notesArray",log),Student.class).getMatchedCount()!=1)
                 throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Student changed; phone note was not saved");
         }
@@ -170,7 +174,7 @@ public class PunishmentUtils {
         Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
+        if (canonical!=null || requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -198,7 +202,7 @@ public class PunishmentUtils {
         Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
+        if (canonical!=null || requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -212,7 +216,7 @@ public class PunishmentUtils {
         Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
+        if (canonical!=null || requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         return emailService.sendEmailBasedOnType(formRequest, saved, emailService);
     }
@@ -221,10 +225,8 @@ public class PunishmentUtils {
                                                 Punishment punishment,
                                                 Student student) throws MessagingException {
         List<Punishment> openOrPending = new ArrayList<>();
-        openOrPending.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                punishment.getStudentEmail(), punishment.getInfractionName(), "OPEN"));
-        openOrPending.addAll(punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(
-                punishment.getStudentEmail(), punishment.getInfractionName(), "PENDING"));
+        openOrPending.addAll(canonical==null?punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(punishment.getStudentEmail(),punishment.getInfractionName(),"OPEN"):mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("studentEmail").is(punishment.getStudentEmail()).and("infractionName").is(punishment.getInfractionName()).and("status").is("OPEN")),Punishment.class));
+        openOrPending.addAll(canonical==null?punishRepository.findByStudentEmailIgnoreCaseAndInfractionNameAndStatus(punishment.getStudentEmail(),punishment.getInfractionName(),"PENDING"):mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("studentEmail").is(punishment.getStudentEmail()).and("infractionName").is(punishment.getInfractionName()).and("status").is("PENDING")),Punishment.class));
 
         List<Punishment> existing = openOrPending.stream()
                 .filter(p -> !p.isArchived())
@@ -240,7 +242,7 @@ public class PunishmentUtils {
         Punishment saved = saveCreatedPunishment(punishment);
 
         linkGuidanceIfNeeded(formRequest, student, saved);
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
+        if (canonical!=null || requiredNotifications.isEnabled()) return requiredNotifications.response(saved);
 
         if ("CFR".equals(punishment.getStatus())) {
             return emailService.sendCFREmailBasedOnType(saved);

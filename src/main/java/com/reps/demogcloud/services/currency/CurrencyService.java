@@ -19,6 +19,14 @@ import java.util.function.*;
 @Service
 @RequiredArgsConstructor
 public class CurrencyService {
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private CanonicalCurrencyTransactions canonicalTransactions;
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical(){return access.canonical();}
+    private CurrencyOperation execute(String kind,Object payload,Consumer<CurrencyOperation> work){
+        if(canonical()==null){if(canonicalTransactions!=null)throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Canonical currency requires domain ownership validation");return transactions.execute(kind,payload,work);}
+        if(canonicalTransactions==null)throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Canonical currency replay verification is required");
+        return canonicalTransactions.execute(kind,payload,work);
+    }
+
     private final CurrencyTransactions transactions;
     private final MongoTemplate mongo;
     private final EmployeeRepository employees;
@@ -31,10 +39,10 @@ public class CurrencyService {
     public List<PunishmentResponse> award(List<PunishmentFormRequest> requests,
             Supplier<List<Prepared>> prepare,Consumer<Prepared> persist) {
         access.requireStaff(); batch(requests);
-        var receipt=transactions.execute("AWARD",requests,operation->{
-            var teacher=employees.findByEmailIgnoreCase(users.getCurrentStaffEmail());
+        var receipt=execute("AWARD",requests,operation->{
+            var teacher=(canonical()==null?employees.findByEmailIgnoreCase(users.getCurrentStaffEmail()):canonical().employee(users.getCurrentStaffEmail()));
             access.requireStaff();
-            if(teacher==null || teacher.isArchived() || !operation.getSchool().equalsIgnoreCase(teacher.getSchool())) denied();
+            if(teacher==null || teacher.isArchived() || !(canonical()==null?operation.getSchool().equalsIgnoreCase(teacher.getSchool()):canonical().owns(teacher))) denied();
             int balance=balance(teacher.getCurrency());
             var seen=new HashSet<String>(); long total=0;
             // All identity, template/infraction and payload validation precedes every wallet change.
@@ -65,7 +73,7 @@ public class CurrencyService {
         });
         var result=new ArrayList<PunishmentResponse>();
         for(String id:receipt.getCaseIds()) {
-            var punishment=punishments.findById(id).orElseThrow(()->new IllegalStateException("Committed recognition unavailable"));
+            var punishment=canonical()==null?punishments.findById(id).orElseThrow(()->new IllegalStateException("Committed recognition unavailable")):canonical().record(id,Punishment.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT);
             access.requireStudentAccess(punishment.getStudentEmail());
             var response=notifications.response(punishment);
             response.setCurrencyOperationId(receipt.getId());response.setCurrencyState("COMMITTED");
@@ -75,13 +83,13 @@ public class CurrencyService {
     }
     public List<Student> spend(List<CurrencySpendRequest> requests) {
         access.requireStaff();batch(requests);
-        var receipt=transactions.execute("REDEEM",requests,operation->{
-            access.requireStaff();if(!access.sameSchool(operation.getSchool())) denied();
+        var receipt=execute("REDEEM",requests,operation->{
+            access.requireStaff();if(canonical()==null && !access.sameSchool(operation.getSchool())) denied();
             var prepared=new LinkedHashMap<Student,Integer>();var seen=new HashSet<String>();
             for(var request:requests) {
                 if(request==null || request.getCurrencyTransferred()==null || request.getCurrencyTransferred()<=0)
                     throw new IllegalArgumentException("Redemption requires a positive whole amount");
-                Student student=students.findByStudentEmailIgnoreCase(request.getStudentEmail());requireStudent(student);
+                Student student=canonical()==null?students.findByStudentEmailIgnoreCase(request.getStudentEmail()):canonical().student(request.getStudentEmail());requireStudent(student);
                 if(!seen.add(student.getStudentIdNumber())) throw new IllegalArgumentException("Duplicate student in redemption");
                 if(balance(student.getCurrency())<request.getCurrencyTransferred()) conflict("Insufficient student balance");
                 prepared.put(student,request.getCurrencyTransferred());
@@ -93,16 +101,16 @@ public class CurrencyService {
         });
         var result=new ArrayList<Student>();
         for(String id:receipt.getStudentIds()) {
-            var student=students.findById(id).orElseThrow();requireStudent(student);result.add(student);
+            var student=canonical()==null?students.findById(id).orElseThrow():canonical().one(id,Student.class);requireStudent(student);result.add(student);
         }
         return result;
     }
     /** Existing administrator action: reset this school's staff budgets to five, now audited and atomic. */
     public List<Employee> resetSchool(String school) {
-        access.requireAdmin();if(!access.sameSchool(school)) denied();
-        var receipt=transactions.execute("RESET_STAFF_BUDGETS",school,operation->{
-            access.requireAdmin();if(!access.sameSchool(school)) denied();
-            var staff=employees.findBySchool(school);batch(staff);
+        access.requireAdmin();if(canonical()==null){if(!access.sameSchool(school)) denied();}else canonical().label(school);
+        var receipt=execute("RESET_STAFF_BUDGETS",school,operation->{
+            access.requireAdmin();if(canonical()==null){if(!access.sameSchool(school)) denied();}else canonical().label(school);
+            var staff=canonical()==null?employees.findBySchool(school):mongo.find(canonical().query(),Employee.class);batch(staff);
             for(var employee:staff) {
                 if(employee.isArchived()) continue;
                 int old=balance(employee.getCurrency());
@@ -111,7 +119,7 @@ public class CurrencyService {
                 operation.getAmounts().put(employee.getEmployeeId(),5-old);
             }
         });
-        return receipt.getEmployeeIds().stream().map(id->employees.findById(id).orElseThrow()).toList();
+        return receipt.getEmployeeIds().stream().map(id->canonical()==null?employees.findById(id).orElseThrow():canonical().one(id,Employee.class)).toList();
     }
     private void requireStudent(Student student) {
         if(student==null || student.isArchived()) denied();
@@ -130,7 +138,7 @@ public class CurrencyService {
     }
     private void change(Class<?> type,String id,String school,int old,int delta) {
         long next=(long)old+delta;if(next<0 || next>Integer.MAX_VALUE) conflict("Invalid resulting currency balance");
-        var query=Query.query(Criteria.where("_id").is(id).and("school").is(school).and("archived").ne(true).and("currency").is(old));
+        var query=canonical()==null?Query.query(Criteria.where("_id").is(id).and("school").is(school).and("archived").ne(true).and("currency").is(old)):canonical().id(id).addCriteria(Criteria.where("archived").ne(true).and("currency").is(old));
         if(mongo.updateFirst(query,new Update().inc("currency",delta),type).getMatchedCount()!=1)
             conflict("Currency changed; retry the same action");
     }

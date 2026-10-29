@@ -24,7 +24,11 @@ public class StudentMutationService {
     private final com.reps.demogcloud.services.UserContextService context;
     private final org.springframework.data.mongodb.core.MongoTemplate mongo;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public StudentResponse createNewStudent(Student input) {
+        if(canonical!=null){canonical.staff();if(input==null)throw new IllegalArgumentException("Student required");canonical.label(input.getSchool());if(input.getTenantSchoolId()!=null && !canonical.owns(input))throw new org.springframework.security.access.AccessDeniedException("Access denied");}
         if (input == null || input.getStudentEmail() == null || input.getStudentEmail().isBlank()
                 || input.getFirstName() == null || input.getFirstName().isBlank()
                 || input.getLastName() == null || input.getLastName().isBlank()
@@ -46,6 +50,7 @@ public class StudentMutationService {
         student.setGuidanceEmail(input.getGuidanceEmail()); student.setAdminEmail(input.getAdminEmail());
         student.setParentPhoneNumber(input.getParentPhoneNumber()); student.setStudentPhoneNumber(input.getStudentPhoneNumber());
         student.setPreferredLanguage(input.getPreferredLanguage()); student.setPoints(0); student.setCurrency(0);
+        if(canonical!=null)canonical.bindNew(student);
         try { return new StudentResponse("", studentRepository.insert(student)); }
         catch (DuplicateKeyException race) {
             return compatible(studentRepository.findByStudentEmailIgnoreCase(email), input);
@@ -53,10 +58,17 @@ public class StudentMutationService {
     }
 
     private StudentResponse compatible(Student existing, Student input) {
-        if (existing == null || existing.isArchived() || !input.getSchool().equalsIgnoreCase(existing.getSchool())
+        if(canonical!=null && existing!=null && !canonical.owns(existing))throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        if (existing == null || existing.isArchived() || canonical==null && !input.getSchool().equalsIgnoreCase(existing.getSchool())
                 || !input.getFirstName().trim().equalsIgnoreCase(existing.getFirstName())
                 || !input.getLastName().trim().equalsIgnoreCase(existing.getLastName()))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already exists; use existing-student enrollment or request administrator review");
+        if(canonical!=null && !canonical.independent(canonical.email(),existing)){
+            // Enrollment-directory visibility is not permission to read an unrelated student's profile.
+            var directory=new Student();directory.setStudentIdNumber(existing.getStudentIdNumber());directory.setStudentEmail(existing.getStudentEmail());
+            directory.setFirstName(existing.getFirstName());directory.setLastName(existing.getLastName());directory.setSchool(existing.getSchool());directory.setTenantSchoolId(existing.getTenantSchoolId());
+            return new StudentResponse("Existing student available for enrollment",directory);
+        }
         // Existing profile/account state is never overwritten by a creation retry.
         return new StudentResponse("", existing);
     }
@@ -66,19 +78,19 @@ public class StudentMutationService {
     }
     public Student archiveRecord(String studentId) {
         access.requireAdmin();
-        Student student=studentRepository.findByStudentIdNumber(studentId);
-        if(student==null || !access.sameSchool(student.getSchool()))
+        Student student=canonical==null?studentRepository.findByStudentIdNumber(studentId):canonical.one(studentId,Student.class);
+        if(student==null || !(canonical==null?access.sameSchool(student.getSchool()):canonical.owns(student)))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
         UserModel account=userRepository.findByUsernameIgnoreCase(student.getStudentEmail());
         if(account!=null) {
-            if(!access.sameSchool(account.getSchool()) || account.getRoles()==null
+            if(!(canonical==null?access.sameSchool(account.getSchool()):canonical.owns(account)) || account.getRoles()==null
                     || account.getRoles().size()!=1 || account.getRoles().stream().noneMatch(r -> r!=null && "STUDENT".equalsIgnoreCase(r.getRole())))
                 throw new org.springframework.security.access.AccessDeniedException("Access denied");
             // Existing deactivation revokes account tickets/sessions first. Fail closed on a later archive failure.
             administration.setEnabled(account.getId(),false);
         }
         var query=org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria.where("_id")
-                .is(studentId).and("school").is(student.getSchool()));
+                .is(studentId).and(canonical==null?"school":"tenantSchoolId").is(canonical==null?student.getSchool():canonical.tenant()));
         var update=new org.springframework.data.mongodb.core.query.Update().set("archived",true);
         if(!student.isArchived())update.set("archivedOn",LocalDate.now()).set("archivedBy",context.getCurrentStaffEmail());
         Student result=mongo.findAndModify(query,update,org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Student.class);

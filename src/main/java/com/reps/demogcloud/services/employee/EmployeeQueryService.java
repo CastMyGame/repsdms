@@ -27,6 +27,14 @@ public class EmployeeQueryService {
     private final SchoolRepository schoolRepository;
     private final SchoolUtils schoolUtils;
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.data.mongodb.core.MongoTemplate mongo;
+    private Employee ownedEmployee(String email){
+        canonical.staff();var rows=mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("email").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(email))).limit(2),Employee.class);
+        if(rows.size()!=1 || (!canonical.role("ADMIN") && !canonical.role("GUIDANCE") && !canonical.email().equalsIgnoreCase(email)))throw new org.springframework.security.access.AccessDeniedException("Access denied");return rows.get(0);
+    }
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public List<Employee> findAll() throws ResourceNotFoundException {
         return fetchEmployeeDataByArchivedAndSchool(false);
     }
@@ -52,7 +60,7 @@ public class EmployeeQueryService {
 
     public Employee findByLoggedInEmployee() throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
+        var findMe = canonical==null?employeeRepository.findByEmailIgnoreCase(authentication.getName()):ownedEmployee(authentication.getName());
 
         if (findMe == null) {
             throw new Exception("No employee with that email exists");
@@ -63,13 +71,13 @@ public class EmployeeQueryService {
 
     public Optional<School> getEmployeeSchool() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        var findMe = employeeRepository.findByEmailIgnoreCase(authentication.getName());
+        var findMe = canonical==null?employeeRepository.findByEmailIgnoreCase(authentication.getName()):ownedEmployee(authentication.getName());
 
-        return schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
+        return canonical==null?schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool()):Optional.of(canonical.school());
     }
 
     public Employee findByUserName(String email) {
-        Employee employee = employeeRepository.findByEmailIgnoreCase(email);
+        Employee employee = canonical==null?employeeRepository.findByEmailIgnoreCase(email):ownedEmployee(email);
         if (employee == null) {
             throw new ResourceNotFoundException("No employees with that email exist");
 
@@ -78,7 +86,7 @@ public class EmployeeQueryService {
     }
 
     public List<Employee> fetchEmployeeDataByArchivedAndSchool(boolean bool) throws ResourceNotFoundException {
-        List<Employee> archivedRecords = employeeRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName());
+        List<Employee> archivedRecords = canonical==null?employeeRepository.findByArchivedAndSchool(bool, schoolUtils.fetchSchoolName()):mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("archived").is(bool)),Employee.class).stream().filter(e->canonical.role("ADMIN") || canonical.role("GUIDANCE") || canonical.email().equalsIgnoreCase(e.getEmail())).toList();
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }

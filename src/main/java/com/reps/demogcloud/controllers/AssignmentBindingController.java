@@ -88,7 +88,7 @@ public class AssignmentBindingController {
         access.requireTemplateWrite(templateId);
         return ResponseEntity.ok(
                 assignmentService.getActiveBindingsForTemplate(templateId).stream()
-                        .filter(b -> access.sameSchool(b.getSchoolId())).toList()
+                        .filter(b -> access.canonical()!=null?access.canonical().owns(b):access.sameSchool(b.getSchoolId())).toList()
         );
     }
 }

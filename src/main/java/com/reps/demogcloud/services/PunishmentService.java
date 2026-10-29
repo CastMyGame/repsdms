@@ -41,6 +41,10 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class PunishmentService {
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+
 
     private final PunishmentCreationService punishmentCreationService;
     private final PunishmentClosureService punishmentClosureService;
@@ -175,6 +179,7 @@ public class PunishmentService {
     }
 
     private void filePositiveWithState(PunishmentFormRequest formRequest, HttpClient client) throws IOException, InterruptedException {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("External reporting requires a separately verified tenant integration");
         Student writeUp = studentRepository.findByStudentEmailIgnoreCase(formRequest.getStudentEmail());
         Employee wroteUp = employeeRepository.findByEmailIgnoreCase(formRequest.getTeacherEmail());
 
@@ -260,6 +265,14 @@ public class PunishmentService {
     }
 
     public void alertIssAndDetention() throws MessagingException {
+        if(canonical!=null){
+            canonical.admin();if(!requiredNotifications.isEnabled())throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Managed reminders are unavailable");
+            LocalDate tomorrow=LocalDate.now().plusDays(1);
+            for(Punishment p:punishmentQueryService.findAllSchool())if(!p.isArchived() && "OPEN".equals(p.getStatus())){
+                canonical.action(p,"REMINDER");requiredNotifications.reminder(p,studentUtils.getWorkDaysBetweenTwoDates(p.getTimeCreated(),tomorrow)==1?"DETENTION":"ISS");
+            }
+            return;
+        }
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
         List<Punishment> punishments = punishRepository.findByArchivedAndStatus(false, "OPEN");

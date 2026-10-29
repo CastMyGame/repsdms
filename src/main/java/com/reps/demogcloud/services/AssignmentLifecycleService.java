@@ -47,6 +47,9 @@ public class AssignmentLifecycleService {
         if(!text(p.getAssignmentTemplateId())) return AssignmentWork.unavailable("No original template binding was saved. Staff must explicitly attach an assignment.");
         return AssignmentWork.assigned(resolver.pinned(p.getAssignmentTemplateId(),p.getSchool()));
     }
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public View view(String id) {
         var p=access.requireCase(id);
         AssignmentWork w;
@@ -80,6 +83,8 @@ public class AssignmentLifecycleService {
         return false;
     }
     public View change(String id,String operation,Command c) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.atomic(()->change(id,operation,c));
+        if(canonical!=null){var target=canonical.student(access.requireCase(id).getStudentEmail());com.reps.demogcloud.services.tenancy.CanonicalAuthorizationFence.student(mongo,target,canonical.tenant());}
         var p=access.requireCase(id);
         if("save".equals(operation) || "submit".equals(operation)) access.requireStudent(); else staff(p);
         if(c==null || c.getVersion()<0 || c.getActionId()==null || !c.getActionId().matches("[A-Za-z0-9_-]{16,80}"))
@@ -161,6 +166,7 @@ public class AssignmentLifecycleService {
         p.setAssignmentWork(w);
         if(event!=null && notifications.isEnabled()) { notifications.prepare(p,event,c.getActionId(),null); notifications.captureContent(p); }
         var query=Query.query(Criteria.where("_id").is(id).and("revision").is(p.getRevision()));
+        if(canonical!=null)query.addCriteria(Criteria.where("tenantSchoolId").is(canonical.tenant()));
         var update=new Update().set("assignmentWork",w).set("assignmentTemplateId",p.getAssignmentTemplateId())
                 .set("status",p.getStatus()).set("timeClosed",p.getTimeClosed()).set("closedTimes",p.getClosedTimes())
                 .set("revision",p.getRevision()==null?0:p.getRevision()+1);
@@ -169,7 +175,7 @@ public class AssignmentLifecycleService {
                 .set("conversationId",p.getConversationId());
         var saved=mongo.findAndModify(query,update,FindAndModifyOptions.options().returnNew(true),Punishment.class);
         if(saved==null) {
-            var latest=cases.findById(id).orElseThrow(AssignmentLifecycleService::conflict);
+            var latest=canonical==null?cases.findById(id).orElseThrow(AssignmentLifecycleService::conflict):canonical.one(id,Punishment.class);
             if(!repeated(latest.getAssignmentWork(),c,fingerprint)) throw conflict();
         }
         return view(id);

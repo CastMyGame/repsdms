@@ -78,13 +78,16 @@ public class CanonicalCoreWorkflows {
         var actor=context.requireCurrent();
         return record(actor,kind,id);
     }
-    private Document record(CanonicalAccountContext.Actor actor,Kind kind,String id) {
+    public Document readAccessibleRecord(Kind kind,String id){return record(context.requireCurrent(),kind,id,true);}
+    private Document record(CanonicalAccountContext.Actor actor,Kind kind,String id){return record(actor,kind,id,false);}
+    private Document record(CanonicalAccountContext.Actor actor,Kind kind,String id,boolean allowArchived) {
         if(kind==null || !text(id)) throw denied();
-        var record=mongo.findOne(owned(id,actor).addCriteria(Criteria.where("archived").ne(true)),Document.class,kind.collection);
+        var query=owned(id,actor);if(!allowArchived)query.addCriteria(Criteria.where("archived").ne(true));
+        var record=mongo.findOne(query,Document.class,kind.collection);
         if(record==null || !(record.get("studentEmail") instanceof String email) || !text(email)) throw denied();
         var students=mongo.find(Query.query(Criteria.where(OWNER).is(actor.tenantSchoolId()).and("studentEmail").regex(exactEmail(email))).limit(2),Student.class);
         if(students.size()!=1) throw denied();
-        var scope=authorized(actor,students.get(0).getStudentIdNumber(),false);
+        var scope=allowArchived && actor.roles().contains("ADMIN")?new Scope(actor,students.get(0),staff(actor)):authorized(actor,students.get(0).getStudentIdNumber(),false);
         if(kind==Kind.GUIDANCE) {
             // Guidance notes stay limited to counselors/admins and independently related teacher authors.
             if(actor.roles().contains("STUDENT")) throw denied();
@@ -93,7 +96,7 @@ public class CanonicalCoreWorkflows {
                     || same(scope.staff().getEmail(),string(record,"originalAuthorEmail"))))) throw denied();
         }
         if(kind==Kind.GUIDANCE && text(string(record,"linkToPunishment"))) {
-            Document linked=record(actor,Kind.PUNISHMENT,string(record,"linkToPunishment"));
+            Document linked=record(actor,Kind.PUNISHMENT,string(record,"linkToPunishment"),allowArchived);
             if(!same(email,string(linked,"studentEmail"))) throw denied();
         }
         return record;

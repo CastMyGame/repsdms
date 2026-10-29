@@ -17,6 +17,10 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class PunishmentUpdateService {
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+
 
     private final PunishRepository punishRepository;
     private final InfractionRepository infractionRepository;
@@ -30,6 +34,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateTimeCreated() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findByArchived(false);
         List<Punishment> saved = new ArrayList<>();
 
@@ -53,6 +58,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateDescriptions() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
 
@@ -67,6 +73,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateStudentEmails() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
 
@@ -80,6 +87,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateInfractionName() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
 
@@ -93,6 +101,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateInfractionLevel() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
 
@@ -106,6 +115,7 @@ public class PunishmentUpdateService {
     }
 
     public List<Punishment> updateSchools() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
 

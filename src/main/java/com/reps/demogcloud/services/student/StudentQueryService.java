@@ -28,9 +28,17 @@ public class StudentQueryService {
     private final StudentRepository studentRepository;
     private final PunishRepository punishRepository;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.data.mongodb.core.MongoTemplate mongo;
+    private org.springframework.data.mongodb.core.query.Criteria field(String name,Object value){return org.springframework.data.mongodb.core.query.Criteria.where(name).is(value);}
+    private List<Student> scoped(org.springframework.data.mongodb.core.query.Criteria criteria){return mongo.find(canonical.query().addCriteria(criteria),Student.class);}
+    private boolean inSchool(Student student){return canonical==null?access.sameSchool(student.getSchool()):canonical.owns(student);}
+    private Student email(String email){return canonical==null?studentRepository.findByStudentEmailIgnoreCase(email):canonical.student(email);}
     public List<PunishmentDTO> getIssList(String schoolName) {
         requireSchoolStaff(schoolName);
-        List<Punishment> punishments = punishRepository.findAllBySchoolAndArchived(schoolName, false);
+        List<Punishment> punishments = canonical==null?punishRepository.findAllBySchoolAndArchived(schoolName, false):mongo.find(canonical.query().addCriteria(field("archived",false)),Punishment.class);
 
         Set<String> seenStudentEmails = new HashSet<>();
         List<PunishmentDTO> result = new ArrayList<>();
@@ -53,7 +61,7 @@ public class StudentQueryService {
                 continue;
             }
 
-            Student student = studentRepository.findByStudentEmailIgnoreCase(studentEmail);
+            Student student = email(studentEmail);
             if (student == null) {
                 continue;
             }
@@ -108,9 +116,9 @@ public class StudentQueryService {
 
     public List<Student> findStudentByParentEmail(String parentEmail) throws ResourceNotFoundException {
         access.requireStaff();
-        List<Student> fetchData = studentRepository.findByParentEmail(parentEmail);
+        List<Student> fetchData = canonical==null?studentRepository.findByParentEmail(parentEmail):scoped(field("parentEmail",parentEmail));
         List<Student> studentRecord = fetchData.stream()
-                .filter(x -> !x.isArchived() && access.sameSchool(x.getSchool()) && access.canReadStudent(x.getStudentEmail())) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived() && inSchool(x) && access.canReadStudent(x.getStudentEmail())) // Filter out punishments where isArchived is true
                 .toList();  // Collect the filtered punishments into a list
 
         if (studentRecord.isEmpty()) {
@@ -124,7 +132,7 @@ public class StudentQueryService {
     public List<Student> findByStudentLastName(String lastName) throws ResourceNotFoundException {
         List<Student> fetchData = findByLastNameAndSchool(lastName);
         List<Student> studentRecord = fetchData.stream()
-                .filter(x -> !x.isArchived() && access.sameSchool(x.getSchool()) && access.canReadStudent(x.getStudentEmail())) // Filter out punishments where isArchived is true
+                .filter(x -> !x.isArchived() && inSchool(x) && access.canReadStudent(x.getStudentEmail())) // Filter out punishments where isArchived is true
                 .toList(); // Collect the filtered punishments into a list
 
         if (studentRecord.isEmpty()) {
@@ -137,7 +145,7 @@ public class StudentQueryService {
 
     public Student findByStudentEmail(String email) throws Exception {
         access.requireStudentAccess(email);
-        var findMe = studentRepository.findByStudentEmailIgnoreCase(email);
+        var findMe = email(email);
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");
@@ -152,7 +160,7 @@ public class StudentQueryService {
 
         email.forEach(access::requireStudentAccess);
         for (String emailAddress : email) {
-            var findMe = studentRepository.findByStudentEmailIgnoreCase(emailAddress);
+            var findMe = email(emailAddress);
 
             if (findMe == null) {
                 throw new Exception("No student with that email exists");
@@ -168,7 +176,7 @@ public class StudentQueryService {
     public Student findByLoggedInStudent() throws Exception {
         access.requireStudent();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        var findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+        var findMe = email(authentication.getName());
 
         if (findMe == null) {
             throw new Exception("No student with that email exists");
@@ -185,7 +193,7 @@ public class StudentQueryService {
     }
 
     public Student findByStudentId(String studentId) throws ResourceNotFoundException {
-        var findMe = studentRepository.findByStudentIdNumber(studentId);
+        var findMe = canonical==null?studentRepository.findByStudentIdNumber(studentId):canonical.one(studentId,Student.class);
 
         if (findMe == null) {
             throw new ResourceNotFoundException("No students with that ID exist");
@@ -206,25 +214,25 @@ public class StudentQueryService {
 
     public List<Student> findBySchool(String school) {
         requireSchoolStaff(school);
-        return visible(studentRepository.findBySchool(school), false);
+        return visible(canonical==null?studentRepository.findBySchool(school):scoped(field("archived",false)), false);
     }
 
     public List<Student> findByLastNameAndSchool(String lastName) {
         access.requireStaff();
-        return visible(studentRepository.findByArchivedAndLastNameAndSchool(false, lastName, schoolUtils.fetchSchoolName()), false);
+        return visible(canonical==null?studentRepository.findByArchivedAndLastNameAndSchool(false, lastName, schoolUtils.fetchSchoolName()):scoped(field("archived",false).and("lastName").is(lastName)), false);
     }
 
     public List<Student> findByArchivedAndSchool(boolean b) {
         access.requireStaff();
         if (b) access.requireAdmin();
-        List<Student> archivedRecords = visible(studentRepository.findByArchivedAndSchool(b, schoolUtils.fetchSchoolName()), b);
+        List<Student> archivedRecords = visible(canonical==null?studentRepository.findByArchivedAndSchool(b, schoolUtils.fetchSchoolName()):scoped(field("archived",b)), b);
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
         return archivedRecords;
     }
     private void requireRecordSchool(Student student) {
-        if (!access.sameSchool(student.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        if (!inSchool(student)) throw new org.springframework.security.access.AccessDeniedException("Access denied");
     }
     private Student studentView(Student record) {
         if (!access.isStudentActor()) return record;
@@ -236,18 +244,19 @@ public class StudentQueryService {
     }
     private void requireSchoolStaff(String school) {
         access.requireStaff();
+        if(canonical!=null){canonical.label(school);return;}
         if (!access.sameSchool(school)) throw new org.springframework.security.access.AccessDeniedException("Access denied");
     }
     private List<Student> visible(List<Student> records, boolean archived) {
-        return new ArrayList<>(records.stream().filter(s -> access.sameSchool(s.getSchool()))
+        return new ArrayList<>(records.stream().filter(s -> inSchool(s))
                 .filter(s -> archived ? s.isArchived() : access.canReadStudent(s.getStudentEmail())).toList());
     }
 
     /** Enrollment lookup deliberately excludes contact details, case history and balances. */
     public List<StudentDirectoryEntry> enrollmentDirectory() {
         access.requireStaff();
-        return studentRepository.findByArchivedAndSchool(false, schoolUtils.fetchSchoolName()).stream()
-                .filter(s -> !s.isArchived() && access.sameSchool(s.getSchool()))
+        return (canonical==null?studentRepository.findByArchivedAndSchool(false, schoolUtils.fetchSchoolName()):scoped(field("archived",false))).stream()
+                .filter(s -> !s.isArchived() && inSchool(s))
                 .map(s -> new StudentDirectoryEntry(s.getStudentIdNumber(), s.getStudentEmail(), s.getFirstName(), s.getLastName())).toList();
     }
     public record StudentDirectoryEntry(String studentIdNumber, String studentEmail, String firstName, String lastName) {}

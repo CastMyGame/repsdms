@@ -18,6 +18,10 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class StudentDtoService {
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+
 
     private final PunishmentService punishmentService;
     private final StudentService studentService;
@@ -51,7 +55,7 @@ public class StudentDtoService {
             throw new IllegalStateException("Student not found: " + studentEmail);
         }
 
-        Optional<School> schoolOpt = schoolService.findSchoolByName(student.getSchool());
+        Optional<School> schoolOpt = (canonical==null?schoolService.findSchoolByName(student.getSchool()):Optional.of(canonical.school()));
 
         School ourSchool = schoolOpt.orElseThrow(() ->
                 new IllegalStateException("School not found: " + student.getSchool())

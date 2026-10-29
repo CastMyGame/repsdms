@@ -49,8 +49,12 @@ public class OfficeReferralService {
     private final EmailSenderService emailSenderService;
     private final com.reps.demogcloud.services.email.RequiredNotificationService requiredNotifications;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    private List<OfficeReferral> scoped(Criteria criteria){return mongoTemplate.find(canonical.query().addCriteria(criteria),OfficeReferral.class).stream().filter(r->canonical.canReadRecord(r,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE)).toList();}
     private OfficeReferral managedChange(String id, String event, String comment) {
-        OfficeReferral referral=officeReferralRepository.findByOfficeReferralId(id);
+        OfficeReferral referral=canonical==null?officeReferralRepository.findByOfficeReferralId(id):canonical.record(id,OfficeReferral.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE);
         if(referral==null) throw new ResourceNotFoundException("Case not found");
         if(("CLOSED".equals(event) && "CLOSED".equals(referral.getStatus()))
                 || ("REJECTED".equals(event) && "OPEN".equals(referral.getStatus()))
@@ -58,6 +62,7 @@ public class OfficeReferralService {
             requiredNotifications.requireActionAccess(referral,event); return referral;
         }
         if("SUBMITTED".equals(event) && "CLOSED".equals(referral.getStatus())) throw new IllegalStateException("Closed cases cannot be submitted again");
+        if(canonical!=null)canonical.action(referral,event);
         if(!requiredNotifications.prepare(referral,event)) return referral;
         if("CLOSED".equals(event)) {
             referral.setStatus("CLOSED"); referral.setTimeClosed(LocalDate.now());
@@ -76,6 +81,7 @@ public class OfficeReferralService {
         return officeReferralRepository.save(referral);
     }
     public List<OfficeReferral> createNewAdminReferralBulk(List<OfficeReferralRequest> officeReferralRequests) {
+        if(canonical!=null)return canonical.atomic(()->officeReferralRequests.stream().map(this::prepareCreation).toList().stream().map(this::persistCreation).toList());
         List<OfficeReferral> punishmentResponse = new ArrayList<>();
         // Prepare the whole batch before persisting any referral or notification.
         List<OfficeReferral> prepared = officeReferralRequests.stream().map(this::prepareCreation).toList();
@@ -86,13 +92,14 @@ public class OfficeReferralService {
     }
 
     public OfficeReferral createNewOfficeReferral(OfficeReferralRequest officeReferralRequest) {
+        if(canonical!=null)return canonical.atomic(()->persistCreation(prepareCreation(officeReferralRequest)));
         return persistCreation(prepareCreation(officeReferralRequest));
     }
 
     private OfficeReferral prepareCreation(OfficeReferralRequest officeReferralRequest) {
         LocalDate now = LocalDate.now();
 
-        Student findMe = studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail());
+        Student findMe = canonical==null?studentRepository.findByStudentEmailIgnoreCase(officeReferralRequest.getStudentEmail()):canonical.student(officeReferralRequest.getStudentEmail());
         if (findMe == null) {
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
         }
@@ -101,16 +108,17 @@ public class OfficeReferralService {
         userContextService.requireStaffInStudentSchool(actor, findMe);
         if (!userContextService.hasIndependentStudentAccess(actor, findMe))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        if(canonical!=null){canonical.staff();canonical.prepare(com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE,findMe);if(officeReferralRequest.getTeacherEmail()!=null && !officeReferralRequest.getTeacherEmail().isBlank() && !actor.equalsIgnoreCase(officeReferralRequest.getTeacherEmail()))throw new org.springframework.security.access.AccessDeniedException("Access denied");}
         officeReferralRequest.setTeacherEmail(actor);
 
-        Optional<School> ourSchoolOpt = schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool());
+        Optional<School> ourSchoolOpt = canonical==null?schoolRepository.findBySchoolNameIgnoreCase(findMe.getSchool()):Optional.of(canonical.school());
 
         School ourSchool = ourSchoolOpt.orElseThrow(() ->
                 new IllegalStateException("School not found: " + findMe.getSchool())
         );
 
         String managedId = null;
-        if(requiredNotifications.isEnabled()) {
+        if(canonical!=null || requiredNotifications.isEnabled()) {
             managedId = requiredNotifications.creationId("office", findMe.getStudentEmail(),java.util.Arrays.asList(
                     officeReferralRequest.getReferralCode(),officeReferralRequest.getClassPeriod(),officeReferralRequest.getReferralDescription(),officeReferralRequest.getCurrency()));
         }
@@ -127,11 +135,12 @@ public class OfficeReferralService {
         request.setReferralCode(officeReferralRequest.getReferralCode());
 
         if (managedId != null) request.setOfficeReferralId(managedId);
+        if(canonical!=null){var existing=requiredNotifications.existingCreation(request.getOfficeReferralId(),OfficeReferral.class);if(existing!=null)return existing;canonical.bindNew(request);}
         return request;
     }
 
     private OfficeReferral persistCreation(OfficeReferral request) {
-        if (requiredNotifications.isEnabled()) {
+        if (canonical!=null || requiredNotifications.isEnabled()) {
             OfficeReferral existing = requiredNotifications.existingCreation(request.getOfficeReferralId(), OfficeReferral.class);
             if (existing != null) return existing;
             return (OfficeReferral) requiredNotifications.saveCreated(request);
@@ -148,7 +157,7 @@ public class OfficeReferralService {
     }
 
     public List<OfficeReferral> findAll() {
-        return officeReferralRepository.findAll();
+        return canonical==null?officeReferralRepository.findAll():scoped(new Criteria());
     }
 
     // Methods that Need Global Filters Due for schools
@@ -157,11 +166,11 @@ public class OfficeReferralService {
     }
 
     public List<OfficeReferral> findByAdminEmail(String adminEmail) {
-        return officeReferralRepository.findByAdminEmail(adminEmail);
+        return canonical==null?officeReferralRepository.findByAdminEmail(adminEmail):scoped(Criteria.where("adminEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(adminEmail)));
     }
 
     public List<OfficeReferral> findByStudentEmail(String studentEmail) {
-        return officeReferralRepository.findByStudentEmailIgnoreCase(studentEmail);
+        return canonical==null?officeReferralRepository.findByStudentEmailIgnoreCase(studentEmail):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(studentEmail)));
     }
 
     public List<OfficeReferral> findByLoggedInStudent() {
@@ -170,16 +179,16 @@ public class OfficeReferralService {
             throw new IllegalStateException("No authenticated user found");
         }
 
-        Student findMe = studentRepository.findByStudentEmailIgnoreCase(authentication.getName());
+        Student findMe = canonical==null?studentRepository.findByStudentEmailIgnoreCase(authentication.getName()):canonical.student(authentication.getName());
         if (findMe == null) {
             throw new IllegalStateException("Student not found: " + authentication.getName());
         }
 
-        return officeReferralRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail());
+        return canonical==null?officeReferralRepository.findByStudentEmailIgnoreCase(findMe.getStudentEmail()):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(findMe.getStudentEmail())));
     }
 
     public OfficeReferral findByReferralId(String referralId) throws ResourceNotFoundException {
-        OfficeReferral fetchData = officeReferralRepository.findByOfficeReferralId(referralId);
+        OfficeReferral fetchData = canonical==null?officeReferralRepository.findByOfficeReferralId(referralId):canonical.record(referralId,OfficeReferral.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE);
         if (fetchData == null || fetchData.isArchived()) {
             throw new ResourceNotFoundException("No referrals with that ID exist");
         }
@@ -189,7 +198,12 @@ public class OfficeReferralService {
     }
 
     public OfficeReferralResponse closeByReferralId(OfficeReferralCloseRequest request) throws ResourceNotFoundException {
-        OfficeReferral checked=officeReferralRepository.findByOfficeReferralId(request.getId());
+        if(canonical!=null){canonical.admin();return canonical.atomic(()->{
+            var checked=canonical.record(request.getId(),OfficeReferral.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE);canonical.student(checked.getStudentEmail());
+            if(checked.isArchived())throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Archived referrals cannot be closed");
+            var response=new OfficeReferralResponse();response.setOfficeReferral(managedChange(request.getId(),"CLOSED",request.getComment()));return response;
+        });}
+        OfficeReferral checked=canonical==null?officeReferralRepository.findByOfficeReferralId(request.getId()):canonical.record(request.getId(),OfficeReferral.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE);
         if(checked==null) throw new ResourceNotFoundException("Case not found");
         userContextService.requireAdministratorInSchool(checked.getSchool());
         requiredNotifications.requireActionAccess(checked,"CLOSED");
@@ -229,6 +243,7 @@ public class OfficeReferralService {
     }
 
     public List<OfficeReferral> updateDescriptions() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<OfficeReferral> all = officeReferralRepository.findAll();
         List<OfficeReferral> saved = new ArrayList<>();
         for (OfficeReferral referral : all) {
@@ -256,8 +271,8 @@ public class OfficeReferralService {
                 .collect(Collectors.toList());
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("studentEmail").in(studentEmails)),
-                lookup("students", "studentEmail", "studentEmail", "studentInfo"),
+                match(canonical==null?Criteria.where("studentEmail").in(studentEmails):Criteria.where("tenantSchoolId").is(canonical.tenant()).and("_id").in(referralList.stream().filter(r->canonical.canReadRecord(r,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.OFFICE)).map(OfficeReferral::getOfficeReferralId).toList())),
+                canonical==null?lookup("students", "studentEmail", "studentEmail", "studentInfo"):canonical.studentLookup("studentInfo"),
                 unwind("studentInfo"),
                 project()
                         .and("studentInfo.studentEmail").as("studentEmail")

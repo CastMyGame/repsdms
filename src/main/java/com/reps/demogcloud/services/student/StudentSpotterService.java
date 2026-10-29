@@ -18,6 +18,10 @@ public class StudentSpotterService {
     private final UserContextService users;
     private final MongoTemplate mongo;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    private Student student(String email){return canonical==null?studentRepository.findByStudentEmailIgnoreCase(email):canonical.student(email);}
     public List<Student> addAsSpotter(UpdateSpottersRequest request) { return change(request, true); }
     public List<Student> deleteSpotters(UpdateSpottersRequest request) { return change(request, false); }
 
@@ -31,7 +35,7 @@ public class StudentSpotterService {
         List<String> staff = request.getSpotters().stream().map(this::normalize).distinct().toList();
         if (!admin && (staff.size() != 1 || !actor.equalsIgnoreCase(staff.get(0)))) denied();
         List<Student> targets = request.getStudentEmail().stream().map(this::normalize).distinct()
-                .map(studentRepository::findByStudentEmailIgnoreCase).toList();
+                .map(this::student).toList();
         // Validate the entire batch before updates. Spotter status itself is never authority.
         for (Student student : targets) {
             users.requireStaffInStudentSchool(actor, student);
@@ -46,7 +50,7 @@ public class StudentSpotterService {
         List<Student> results = new ArrayList<>();
         for (Student student : targets) {
             Query query = Query.query(Criteria.where("_id").is(student.getStudentIdNumber())
-                    .and("school").is(student.getSchool()).and("archived").ne(true));
+                    .and(canonical==null?"school":"tenantSchoolId").is(canonical==null?student.getSchool():canonical.tenant()).and("archived").ne(true));
             Update update = new Update();
             if (add) update.addToSet("spotters").each(staff.toArray());
             else {
@@ -66,7 +70,7 @@ public class StudentSpotterService {
 
     public Student removeSpotterByEmail(String email, Student input) {
         if (input == null || input.getStudentIdNumber() == null) throw new IllegalArgumentException("Student ID required");
-        Student student = studentRepository.findByStudentIdNumber(input.getStudentIdNumber());
+        Student student = canonical==null?studentRepository.findByStudentIdNumber(input.getStudentIdNumber()):canonical.one(input.getStudentIdNumber(),Student.class);
         if (student == null) { denied(); }
         users.requireStaffInStudentSchool(users.getCurrentStaffEmail(), student);
         UpdateSpottersRequest request = new UpdateSpottersRequest();
@@ -79,7 +83,7 @@ public class StudentSpotterService {
         String target = normalize(email);
         if (!actor.equalsIgnoreCase(target) && !users.isCurrentStaffAdministrator()) denied();
         String verified = users.getVerifiedStaffEmail(target);
-        return studentRepository.findBySpottersContainsIgnoreCase(verified).stream()
+        return (canonical==null?studentRepository.findBySpottersContainsIgnoreCase(verified):mongo.find(canonical.query(),Student.class)).stream()
                 .filter(s -> s.getSpotters()!=null && s.getSpotters().stream().anyMatch(verified::equalsIgnoreCase))
                 .filter(s -> users.hasIndependentStudentAccess(actor, s) && users.hasIndependentStudentAccess(verified, s)).toList();
     }

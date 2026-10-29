@@ -97,7 +97,7 @@ class CanonicalDomainMongoSecurityTest {
     }
     @AfterAll static void stop(){try{if(app!=null)app.close();if(mongo!=null && database.matches("reps_a7_domain_test_[0-9a-f]{32}"))mongo.getDb().drop();}finally{if(client!=null)client.close();}}
     @BeforeEach void seed(){
-        failSecond=false;inserts.set(0);reset(app.getBean(com.reps.demogcloud.services.WorkflowAccessService.class),app.getBean(com.reps.demogcloud.services.UserContextService.class),app.getBean(com.reps.demogcloud.services.EmailService.class),app.getBean(com.reps.demogcloud.services.email.RequiredNotificationService.class));
+        failSecond=false;inserts.set(0);reset(app.getBean(com.reps.demogcloud.services.WorkflowAccessService.class),app.getBean(com.reps.demogcloud.services.UserContextService.class),app.getBean(com.reps.demogcloud.services.EmailService.class));var notifications=app.getBean(com.reps.demogcloud.services.email.RequiredNotificationService.class);verify(notifications,atMostOnce()).isEnabled();verifyNoMoreInteractions(notifications);
         for(String name:mongo.getCollectionNames())mongo.getCollection(name).deleteMany(new Document());
         for(String school:List.of("A","B")){
             var s=new School();s.setSchoolIdNumber("school-"+school);s.setSchoolName("Same School");mongo.insert(s);
@@ -129,7 +129,7 @@ class CanonicalDomainMongoSecurityTest {
     org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder dput(String path,String name){return put("/__test__/domain/"+path).header("Authorization","Bearer "+token(name)).contentType(MediaType.APPLICATION_JSON);}
     org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder dget(String path,String name){return get("/__test__/domain/"+path).header("Authorization","Bearer "+token(name));}
     String event(String student,String consequence){return "{\"studentEmail\":\""+student+"@example.test\",\"behaviorCode\":\"PHONE_OUT\",\"consequenceCode\":\""+consequence+"\"}";}
-    @AfterEach void noLegacyAuthorityOrProviders(){verifyNoInteractions(app.getBean(com.reps.demogcloud.services.WorkflowAccessService.class),app.getBean(com.reps.demogcloud.services.UserContextService.class),app.getBean(com.reps.demogcloud.services.EmailService.class),app.getBean(com.reps.demogcloud.services.email.RequiredNotificationService.class));}
+    @AfterEach void noLegacyAuthorityOrProviders(){verifyNoInteractions(app.getBean(com.reps.demogcloud.services.WorkflowAccessService.class),app.getBean(com.reps.demogcloud.services.UserContextService.class),app.getBean(com.reps.demogcloud.services.EmailService.class));var notifications=app.getBean(com.reps.demogcloud.services.email.RequiredNotificationService.class);verify(notifications,atMostOnce()).isEnabled();verifyNoMoreInteractions(notifications);}
 
     @Test void actualGuidanceCreationDerivesOwnerAndPreservesHistoryOnNoteAndClosure()throws Exception{
         var response=mvc.perform(dpost("guidance","teacherA").content("{\"guidance\":{\"studentEmail\":\"childA@example.test\",\"referralDescription\":[\"Synthetic request\"]}}"))
