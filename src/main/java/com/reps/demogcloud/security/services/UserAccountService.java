@@ -22,6 +22,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UserAccountService {
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.data.mongodb.core.MongoTemplate mongo;
     private final PasswordEncoder passwordEncoder;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
@@ -39,9 +41,9 @@ public class UserAccountService {
 
     public List<UserModel> createUsersForSchool(String school) {
         school = administration.requireSchoolAdmin(school);
-        List<Student> schoolUsers = studentRepository.findBySchool(school);
+        List<Student> schoolUsers = canonical==null?studentRepository.findBySchool(school):mongo.find(canonical.query(),Student.class);
         final String verifiedSchool = school;
-        if (schoolUsers.stream().anyMatch(s -> s.getSchool() == null || !verifiedSchool.equalsIgnoreCase(s.getSchool())))
+        if (schoolUsers.stream().anyMatch(s -> canonical==null?s.getSchool() == null || !verifiedSchool.equalsIgnoreCase(s.getSchool()):!canonical.owns(s)))
             throw new org.springframework.security.access.AccessDeniedException("Access denied");
 
         Set<RoleModel> studentRoles = new HashSet<>();
@@ -64,6 +66,7 @@ public class UserAccountService {
                 newUser.setUsername(email);
                 newUser.setId(AuthService.studentProvisioningId(email));
                 newUser.setSchool(school);
+                if(canonical!=null)canonical.bindNew(newUser);
                 newUser.setFirstName(student.getFirstName());
                 newUser.setLastName(student.getLastName());
                 newUser.setRoles(studentRoles);
@@ -73,7 +76,7 @@ public class UserAccountService {
                 catch (org.springframework.dao.DuplicateKeyException concurrentProvisioning) {
                     // Another request owns this deterministic identity. Never save over it.
                     var saved = userRepository.findByUsernameIgnoreCase(email);
-                    if (saved == null || !school.equalsIgnoreCase(saved.getSchool()))
+                    if (saved == null || (canonical==null?!school.equalsIgnoreCase(saved.getSchool()):!canonical.owns(saved)))
                         throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
                                 "Student account provisioning requires administrator review");
                 }

@@ -99,8 +99,7 @@ public class AssignmentController {
             @PathVariable String id
     ) throws Exception {
         access.requireCase(id);
-        Punishment punishment = punishRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Punishment not found: " + id));
+        Punishment punishment = access.canonical()==null?punishRepository.findById(id).orElseThrow(()->new RuntimeException("Punishment unavailable")):access.requireCase(id);
 
         if (punishment.getAssignmentTemplateId() == null) {
             return ResponseEntity.notFound().build();

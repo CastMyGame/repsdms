@@ -1,3 +1,5 @@
+> Phase 4C update: see [real workflow integration](phase4c-integration.md), [historical snapshot policy](historical-access.md), and [route/worker matrix](phase4c-coverage.md). Earlier phase descriptions below remain historical except where explicitly superseded. No production activation is authorized.
+
 # A7 Phase 4B-2 email ownership preparation
 
 Base: dev 894b6cc, merged #181. This is isolated request-path preparation, not a dispatcher or production tenant cutover. Currency bridge work is reviewed separately in backend PR #182; approved checkout retirement is backend #183 / frontend #298. The supporting-system entry-point inventory is in the currency PR's docs/tenancy/supporting-systems.md.

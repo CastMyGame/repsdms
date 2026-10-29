@@ -32,6 +32,7 @@ public class EmployeeClassService {
         return change(email, request, true);
     }
     private Employee change(String email, ClassRequest request, boolean delete) {
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.transaction(()->change(email,request,delete));
         if (request == null || request.getClassToUpdate() == null) throw new IllegalArgumentException("Class is required");
         var input = request.getClassToUpdate();
         String name = text(input.getClassName()), period = text(input.getClassPeriod());

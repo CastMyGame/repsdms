@@ -23,6 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StripeProvisioningService {
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
     private final SchoolRepository schoolRepository;
@@ -83,7 +84,7 @@ public class StripeProvisioningService {
 
             // make sure school exists (you said you prefer fail fast if not)
             School school = requireSchoolExists(schoolIdNumber);
-            if (!schoolName.equalsIgnoreCase(school.getSchoolName()))
+            if (canonical==null && !schoolName.equalsIgnoreCase(school.getSchoolName()))
                 throw new IllegalStateException("Registration school does not match its identifier");
             // A public checkout may not transfer, reactivate or promote an existing account.
             UserModel existingUser = userRepository.findByUsername(email);
@@ -91,7 +92,7 @@ public class StripeProvisioningService {
             // Signed payment proves payment only. Never provision, activate, transfer or relink an account.
             if (existingUser == null || existingEmployee == null || existingEmployee.isArchived()
                     || !email.equalsIgnoreCase(existingUser.getUsername()) || !email.equalsIgnoreCase(existingEmployee.getEmail())
-                    || !schoolName.equalsIgnoreCase(existingUser.getSchool()) || !schoolName.equalsIgnoreCase(existingEmployee.getSchool())
+                    || canonical==null && (!schoolName.equalsIgnoreCase(existingUser.getSchool()) || !schoolName.equalsIgnoreCase(existingEmployee.getSchool()))
                     || existingUser.getRoles() == null || existingUser.getRoles().isEmpty()
                     || existingUser.getRoles().stream().anyMatch(r -> r == null || r.getRole() == null
                     || !Set.of("TEACHER", "GUIDANCE", "ADMIN").contains(r.getRole().toUpperCase(java.util.Locale.ROOT)))
@@ -100,14 +101,14 @@ public class StripeProvisioningService {
                     || !stripeSubscriptionId.equals(existingUser.getStripeSubscriptionId())
                     || !stripePriceId.equals(existingUser.getStripePriceId()))
                 throw new IllegalStateException("Existing billing association requires controlled review");
+            if(canonical!=null){var membership=canonical.provisioned(existingUser);if(!schoolIdNumber.equals(membership.tenantSchoolId()) || !existingEmployee.getEmployeeId().equals(membership.profileId()))throw new IllegalStateException("Billing tenant ownership requires controlled review");}
             String accountOwner=existingUser.getTenantSchoolId(), profileOwner=existingEmployee.getTenantSchoolId();
             if ((accountOwner != null || profileOwner != null)
                     && (!schoolIdNumber.equals(accountOwner) || !schoolIdNumber.equals(profileOwner)))
                 throw new IllegalStateException("Billing tenant ownership requires controlled review");
             // Legacy unbound billing is supported only for the exact already-recorded customer/subscription.
             // It grants no membership, role or activation and changes no billing identifiers.
-            if (existingUser.isEnabled() && userRepository.confirmExistingBilling(existingUser.getId(),
-                    stripeCustomerId, stripeSubscriptionId, Instant.now()) != 1)
+            if (existingUser.isEnabled() && (canonical==null?userRepository.confirmExistingBilling(existingUser.getId(),stripeCustomerId,stripeSubscriptionId,Instant.now()):userRepository.confirmCanonicalBilling(existingUser.getId(),schoolIdNumber,stripeCustomerId,stripeSubscriptionId,Instant.now())) != 1)
                 throw new IllegalStateException("Existing billing association changed concurrently");
 
             // ✅ mark completed atomically (also writes Stripe ids)

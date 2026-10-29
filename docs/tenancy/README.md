@@ -1,3 +1,5 @@
+> Phase 4C update: see [real workflow integration](phase4c-integration.md), [historical snapshot policy](historical-access.md), and [route/worker matrix](phase4c-coverage.md). Earlier phase descriptions below remain historical except where explicitly superseded. No production activation is authorized.
+
 # A7 School ID preparation
 
 Phase 4B-2 currency preparation adds an isolated versioned replay engine; read [currency-replay.md](currency-replay.md) and the [supporting-system inventory](supporting-systems.md). Production currency routes remain disconnected, historical receipts remain unchanged, and no cutover is enabled.

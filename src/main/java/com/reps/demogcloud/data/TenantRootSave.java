@@ -2,6 +2,7 @@ package com.reps.demogcloud.data;
 
 import com.reps.demogcloud.models.school.School;
 import org.bson.Document;
+import java.util.Objects;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.dao.*;
 import org.springframework.data.domain.Persistable;
@@ -18,18 +19,21 @@ public final class TenantRootSave {
         Document mapped=new Document();mongo.getConverter().write(entity,mapped);
         Object id=mapped.get("_id");String collection=mongo.getCollectionName(type);
         var version=metadata.getVersionProperty();
-        Query projection=Query.query(Criteria.where("_id").is(id));projection.fields().include(TenantOwnershipWriteGuard.FIELD);
+        Query projection=Query.query(Criteria.where("_id").is(id));projection.fields().include(TenantOwnershipWriteGuard.FIELD).include("historicalAccess");
         if(version!=null)projection.fields().include(version.getFieldName());
         Document before=id==null?null:mongo.findOne(projection,Document.class,collection);
         if(before==null) return insert(mongo,entity);
         if(entity instanceof Persistable<?> p && p.isNew()) throw new DuplicateKeyException("Case already exists; reload before retrying");
         Query query=Query.query(Criteria.where("_id").is(id)).addCriteria(TenantOwnershipWriteGuard.unchangedOwner(before,mapped));
+        Object history=mapped.get("historicalAccess");
+        if(history!=null && !Objects.equals(history,before.get("historicalAccess")))throw TenantOwnershipWriteGuard.conflict();
+        query.addCriteria(before.containsKey("historicalAccess")?Criteria.where("historicalAccess").is(before.get("historicalAccess")):Criteria.where("historicalAccess").exists(false));
         knownOwner(mongo,before.get(TenantOwnershipWriteGuard.FIELD));
         snapshots(mapped,before.get(TenantOwnershipWriteGuard.FIELD));
         Update update=new Update();
         for(var property:metadata) {
             String field=property.getFieldName();
-            if(property.isIdProperty() || property.isTransient() || property.isVersionProperty() || TenantOwnershipWriteGuard.FIELD.equals(field))continue;
+            if(property.isIdProperty() || property.isTransient() || property.isVersionProperty() || TenantOwnershipWriteGuard.FIELD.equals(field) || "historicalAccess".equals(field))continue;
             if(mapped.containsKey(field))update.set(field,mapped.get(field));else update.unset(field);
         }
         if(version!=null){
@@ -45,7 +49,7 @@ public final class TenantRootSave {
     public static <T> T insert(MongoTemplate mongo,T entity) {
         var bean=new BeanWrapperImpl(entity);
         if(bean.isReadableProperty(TenantOwnershipWriteGuard.FIELD))knownOwner(mongo,bean.getPropertyValue(TenantOwnershipWriteGuard.FIELD));
-        Document mapped=new Document();mongo.getConverter().write(entity,mapped);snapshots(mapped,mapped.get(TenantOwnershipWriteGuard.FIELD));
+        Document mapped=new Document();mongo.getConverter().write(entity,mapped);if(mapped.containsKey("historicalAccess") && mapped.get(TenantOwnershipWriteGuard.FIELD)==null)throw TenantOwnershipWriteGuard.conflict();snapshots(mapped,mapped.get(TenantOwnershipWriteGuard.FIELD));
         T saved=mongo.insert(entity);mark(entity);mark(saved);return saved;
     }
     private static void knownOwner(MongoTemplate mongo,Object owner){

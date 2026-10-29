@@ -39,8 +39,12 @@ public class PunishmentQueryService {
     private final SchoolUtils schoolUtils;
     private final UserContextService userContextService;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    private List<Punishment> scoped(Criteria criteria){return mongoTemplate.find(canonical.query().addCriteria(criteria),Punishment.class).stream().filter(p->canonical.canReadRecord(p,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT)).toList();}
     public Punishment findByPunishmentId(String punishmentId) {
-        Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
+        Punishment punishment = canonical==null?punishRepository.findByPunishmentId(punishmentId):canonical.record(punishmentId,Punishment.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT);
         if (punishment == null || punishment.isArchived()) {
             throw new ResourceNotFoundException("No punishment with that ID exists");
         }
@@ -48,17 +52,18 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findAllByArchived(boolean archived) {
-        return punishRepository.findByArchived(archived);
+        return canonical==null?punishRepository.findByArchived(archived):scoped(Criteria.where("archived").is(archived));
     }
 
     public List<Punishment> findAllForStudent(String studentEmail) {
-        return punishRepository.findByStudentEmailIgnoreCase(studentEmail)
+        return (canonical==null?punishRepository.findByStudentEmailIgnoreCase(studentEmail):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(studentEmail))))
                 .stream()
                 .filter(p -> !p.isArchived())
                 .toList();
     }
 
     public Punishment updateMapIndex(String id, int index) {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         Punishment punishment = punishRepository.findByPunishmentId(id);
         if (punishment == null) {
             throw new ResourceNotFoundException("No Punishment with Id " + id + " exists");
@@ -68,6 +73,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> updateDescriptions() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
@@ -80,6 +86,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> updateInfractionName() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
@@ -91,6 +98,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> updateInfractionLevel() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
@@ -102,6 +110,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> updateStudentEmails() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
@@ -112,6 +121,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> updateSchools() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy maintenance is unavailable");
         List<Punishment> all = punishRepository.findAll();
         List<Punishment> saved = new ArrayList<>();
         for (Punishment punishment : all) {
@@ -123,7 +133,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findByStudentEmailAndInfraction(String email, String infractionId) {
-        List<Punishment> results = punishRepository.findByStudentEmailAndInfractionId(email, infractionId)
+        List<Punishment> results = (canonical==null?punishRepository.findByStudentEmailAndInfractionId(email, infractionId):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(email)).and("infractionId").is(infractionId)))
                 .stream()
                 .filter(p -> !p.isArchived())
                 .toList();
@@ -135,11 +145,11 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findAll() {
-        return punishRepository.findByArchived(false);
+        return canonical==null?punishRepository.findByArchived(false):scoped(Criteria.where("archived").is(false));
     }
 
     public List<Punishment> findAllPunishmentArchived(boolean archived) {
-        List<Punishment> archivedRecords = punishRepository.findByArchived(archived);
+        List<Punishment> archivedRecords = canonical==null?punishRepository.findByArchived(archived):scoped(Criteria.where("archived").is(archived));
         if (archivedRecords.isEmpty()) {
             throw new ResourceNotFoundException("No Archived Records exist in punihsment table");
         }
@@ -147,16 +157,16 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> getAllPunishmentByStudentEmail(String studentEmail) {
-        return punishRepository.getAllPunishmentByStudentEmail(studentEmail);
+        return canonical==null?punishRepository.getAllPunishmentByStudentEmail(studentEmail):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(studentEmail)));
     }
 
     public List<Punishment> getAllPunishmentForStudent(String studentEmail) {
-        return punishRepository.findByStudentEmailIgnoreCase(studentEmail);
+        return (canonical==null?punishRepository.findByStudentEmailIgnoreCase(studentEmail):scoped(Criteria.where("studentEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(studentEmail))));
     }
 
     public List<Punishment> getAllOpenAssignments() {
         LocalDate now = LocalDate.now();
-        return punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now)
+        return (canonical==null?punishRepository.findByStatusAndTimeCreatedBefore("OPEN", now):scoped(Criteria.where("status").is("OPEN").and("timeCreated").lt(now)))
                 .stream()
                 .filter(p -> !p.isArchived())
                 .toList();
@@ -168,8 +178,8 @@ public class PunishmentQueryService {
                 .collect(Collectors.toList());
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("studentEmail").in(studentEmails)),
-                lookup("students", "studentEmail", "studentEmail", "studentInfo"),
+                match(canonical==null?Criteria.where("studentEmail").in(studentEmails):Criteria.where("tenantSchoolId").is(canonical.tenant()).and("_id").in(punishmentList.stream().filter(p->canonical.canReadRecord(p,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT)).map(Punishment::getPunishmentId).toList())),
+                canonical==null?lookup("students", "studentEmail", "studentEmail", "studentInfo"):canonical.studentLookup("studentInfo"),
                 unwind("studentInfo"),
                 project()
                         .and("studentInfo.studentEmail").as("studentEmail")
@@ -209,7 +219,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> findByArchivedAndSchool(boolean archived) {
-        return punishRepository.findByArchivedAndSchool(archived, userContextService.getCurrentUserSchool());
+        return canonical==null?punishRepository.findByArchivedAndSchool(archived, userContextService.getCurrentUserSchool()):scoped(Criteria.where("archived").is(archived));
     }
 
     public List<Punishment> findByArchivedStatusAndStatus(boolean archived, String status) {
@@ -239,6 +249,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> filterPunishmentObjBySchool(List<Punishment> punishments, String schoolName) {
+        if(canonical!=null){canonical.label(schoolName);return punishments.stream().filter(p->canonical.canReadRecord(p,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT)).toList();}
         return punishments.stream()
                 .filter(punishment -> {
                     Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
@@ -251,7 +262,7 @@ public class PunishmentQueryService {
 
     public List<Punishment> fetchPunishmentDataByArchivedAndSchool(boolean archived) {
         List<Punishment> archivedRecords =
-                punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName());
+                canonical==null?punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName()):scoped(Criteria.where("archived").is(archived));
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -266,11 +277,7 @@ public class PunishmentQueryService {
     }
 
     public List<Punishment> fetchPunishmentDataByInfractionNameAndArchived(String infractionId, boolean archived) {
-        List<Punishment> archivedRecords = punishRepository.findByInfractionIdAndArchivedAndSchool(
-                infractionId,
-                archived,
-                schoolUtils.fetchSchoolName()
-        );
+        List<Punishment> archivedRecords = canonical==null?punishRepository.findByInfractionIdAndArchivedAndSchool(infractionId,archived,schoolUtils.fetchSchoolName()):scoped(Criteria.where("infractionId").is(infractionId).and("archived").is(archived));
         if (archivedRecords.isEmpty()) {
             return new ArrayList<>();
         }
@@ -296,7 +303,7 @@ public class PunishmentQueryService {
     public List<Punishment> loggedInUserFetchPunishmentDataByArchivedAndSchool(boolean archived) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<Punishment> archivedRecords =
-                punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName());
+                canonical==null?punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName()):scoped(Criteria.where("archived").is(archived));
 
         return archivedRecords.stream()
                 .filter(x -> x.getTeacherEmail().equalsIgnoreCase(authentication.getName()))
@@ -306,7 +313,7 @@ public class PunishmentQueryService {
     public List<Punishment> loggedInStudentFetchPunishmentDataByArchivedAndSchool(boolean archived) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<Punishment> archivedRecords =
-                punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName());
+                canonical==null?punishRepository.findByArchivedAndSchool(archived, schoolUtils.fetchSchoolName()):scoped(Criteria.where("archived").is(archived));
 
         return archivedRecords.stream()
                 .filter(x -> x.getStudentEmail().equalsIgnoreCase(authentication.getName()))

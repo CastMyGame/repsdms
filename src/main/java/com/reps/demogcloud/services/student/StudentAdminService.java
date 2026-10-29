@@ -52,16 +52,17 @@ public class StudentAdminService {
                 new Update().set("timeBank",new Student.TimeBank(total/60,total%60)));
     }
     public List<Student> updateStudents(List<Student> inputs) {
-        if(canonical!=null)canonical.disconnected(); // Canonical profile field/relationship changes require 4B-2.
+
         access.requireStaff();
         if (inputs == null || inputs.isEmpty() || inputs.size() > 200) throw new IllegalArgumentException("Invalid student batch");
         List<Student> records = new ArrayList<>(); Set<String> ids = new HashSet<>();
         for (Student input : inputs) {
             if (input == null || input.getStudentIdNumber() == null || !ids.add(input.getStudentIdNumber()))
                 throw new IllegalArgumentException("Unique student IDs required");
-            Student old = studentRepository.findById(input.getStudentIdNumber()).orElseThrow(() -> new IllegalArgumentException("Student not found"));
-            if (!access.sameSchool(old.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            Student old = canonical==null?studentRepository.findById(input.getStudentIdNumber()).orElseThrow(() -> new IllegalArgumentException("Student not found")):canonical.studentId(input.getStudentIdNumber());
+            if (canonical==null && !access.sameSchool(old.getSchool())) throw new org.springframework.security.access.AccessDeniedException("Access denied");
             staffStudent(old.getStudentEmail());
+            if(input.getTenantSchoolId()!=null && !Objects.equals(input.getTenantSchoolId(),old.getTenantSchoolId()))throw new org.springframework.security.access.AccessDeniedException("Access denied");
             if ((input.getCurrency()!=null && !Objects.equals(input.getCurrency(),old.getCurrency()))
                     || (input.getPoints()!=null && !Objects.equals(input.getPoints(),old.getPoints()))
                     || (input.getSchool()!=null && !Objects.equals(input.getSchool(),old.getSchool()))

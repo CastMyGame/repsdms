@@ -1,3 +1,5 @@
+> Phase 4C update: see [real workflow integration](phase4c-integration.md), [historical snapshot policy](historical-access.md), and [route/worker matrix](phase4c-coverage.md). Earlier phase descriptions below remain historical except where explicitly superseded. No production activation is authorized.
+
 # A7 Phase 4B-2: versioned currency replay preparation
 
 Base: dev 894b6cc (merged #181). This is the approved Option 1 bridge, not a currency migration or route activation. Historical currency_operations documents, payload hashes, IDs and wallet balances are never rewritten by the bridge. CurrencyTransactions and CurrencyService remain unchanged and disconnected from this new engine.

@@ -13,6 +13,9 @@ public interface UserRepository extends UserInsertOnlyRepository<UserModel>, Mon
     @org.springframework.data.mongodb.repository.Update("{'$set': {'paid': true, 'stripeStatus': 'active', 'lastPaymentAt': ?3}}")
     long confirmExistingBilling(String id, String customerId, String subscriptionId, java.time.Instant paidAt);
 
+    @org.springframework.data.mongodb.repository.Query("{'_id': ?0, 'tenantSchoolId': ?1, 'stripeCustomerId': ?2, 'stripeSubscriptionId': ?3, 'enabled': {'$ne': false}}")
+    @org.springframework.data.mongodb.repository.Update("{'$set': {'paid': true, 'stripeStatus': 'active', 'lastPaymentAt': ?4}}")
+    long confirmCanonicalBilling(String id,String tenant,String customer,String subscription,java.time.Instant paidAt);
     List<UserModel> findBySchool(String school);
 UserModel findByUsername(String username);
 UserModel findByUsernameIgnoreCase(String username);

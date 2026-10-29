@@ -20,6 +20,7 @@ import java.util.Collection;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -33,6 +34,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("User account is disabled: " + username);
         }
 
+        if(canonical!=null)try{canonical.provisioned(foundUser);}catch(org.springframework.security.access.AccessDeniedException denied){throw new UsernameNotFoundException("Account membership is unavailable");}
         Collection<GrantedAuthority> authorities = new ArrayList<>();
         if (foundUser.getRoles() != null) {
             for (RoleModel role : foundUser.getRoles()) {

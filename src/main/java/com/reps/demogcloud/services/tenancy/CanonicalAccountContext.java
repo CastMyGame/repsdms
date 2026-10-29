@@ -46,6 +46,7 @@ public class CanonicalAccountContext {
 
     /** Validate immutable recorded IDs for internal jobs; not authentication or student-access authority. */
     public Actor requireRecorded(String accountId,String tenantSchoolId,String profileId) {
+        if(!valid(accountId) || !valid(tenantSchoolId) || !valid(profileId))throw denied();
         try {
             var account=users.findById(accountId).orElseThrow(CanonicalAccountContext::denied);
             var actor=membership(account);
@@ -53,9 +54,19 @@ public class CanonicalAccountContext {
             return actor;
         } catch(IncorrectResultSizeDataAccessException ambiguous) { throw denied(); }
     }
-    private Actor membership(UserModel account) {
+    public Actor requireProvisioned(UserModel account) {
+        try {
+            if(account==null || !valid(account.getId()))throw denied();
+            var stored=users.findById(account.getId()).orElseThrow(CanonicalAccountContext::denied);
+            if(!Objects.equals(account.getUsername(),stored.getUsername()) || !Objects.equals(account.getTenantSchoolId(),stored.getTenantSchoolId()))throw denied();
+            return membership(stored,true);
+        } catch(IncorrectResultSizeDataAccessException ambiguous){throw denied();}
+    }
+    private Actor membership(UserModel account) {return membership(account,false);}
+    private Actor membership(UserModel account,boolean allowPending) {
+        if(account==null)throw denied();
         String username=account.getUsername();
-        if(username==null || username.isBlank() || !valid(account.getId()) || !account.isEnabled() || account.isPasswordSetupRequired())throw denied();
+        if(username==null || username.isBlank() || !valid(account.getId()) || !account.isEnabled() || !allowPending && account.isPasswordSetupRequired())throw denied();
         Set<String> roles=roles(account.getRoles());
         boolean student=roles.equals(Set.of("STUDENT"));
         if (!student && !Set.of("TEACHER","GUIDANCE","ADMIN").containsAll(roles)) throw denied();

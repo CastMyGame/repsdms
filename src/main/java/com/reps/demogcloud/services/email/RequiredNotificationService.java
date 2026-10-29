@@ -32,6 +32,7 @@ public class RequiredNotificationService {
     private final UserContextService users;
     private final EmailRoutingService router;
     private final EmailTemplateBuilderService templates;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess workflow;
     private com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership canonical;
     @org.springframework.beans.factory.annotation.Autowired(required=false)
     public void setCanonicalEmailOwnership(com.reps.demogcloud.services.tenancy.CanonicalEmailOwnership value){canonical=value;}
@@ -76,14 +77,15 @@ public class RequiredNotificationService {
         response.setSubject(punishment.getConversationId()!=null && punishment.getConversationId().length()>=8
                 ? "REPS case "+punishment.getConversationId().substring(0,8)+" update" : "REPS case update");
         try {
-            Student student=students.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
-            if(student!=null && Objects.equals(student.getSchool(),punishment.getSchool())) response.setParentToEmail(student.getParentEmail());
+            Student student=canonical==null?students.findByStudentEmailIgnoreCase(punishment.getStudentEmail()):canonical.caseAccess(punishment,"STATUS",false);
+            if(student!=null && (canonical!=null || Objects.equals(student.getSchool(),punishment.getSchool()))) response.setParentToEmail(student.getParentEmail());
         } catch(org.springframework.dao.DataAccessException ignored) { /* Optional display metadata cannot invalidate the accepted action. */ }
         response.setMessage("Action saved. Required email status is tracked separately."); return response;
     }
     public boolean prepare(Object entity,String event) { return prepare(entity,event,actionId(),null); }
     public String currentStaff() { return canonical==null?users.getCurrentStaffEmail():canonical.email(true); }
     public void requireActionAccess(Object entity,String event) {
+        if(workflow!=null)workflow.action(entity,event);
         if(canonical!=null){canonical.caseAccess(entity,event,false);return;}
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
         if(student==null || !Objects.equals(student.getSchool(),text(entity,"school"))) throw new AccessDeniedException("Case school mismatch");
@@ -107,7 +109,9 @@ public class RequiredNotificationService {
         return prepareInternal(entity,event,action,body,false);
     }
     private boolean prepareInternal(Object entity,String event,String action,String body,boolean currency) {
+        if(workflow!=null)workflow.action(entity,event);
         if(!currency && !isEnabled()) return true;
+        if(workflow!=null && canonical==null)throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Canonical notification ownership verification is required");
         if(canonical!=null)return prepareCanonical(entity,event,action,body);
         String author=text(entity,"originalAuthorEmail"); if(author.isBlank()) author=text(entity,"teacherEmail");
         Student student=students.findByStudentEmailIgnoreCase(text(entity,"studentEmail"));
@@ -135,11 +139,15 @@ public class RequiredNotificationService {
         intents(entity).add(intent); return true;
     }
     private boolean prepareCanonical(Object entity,String event,String action,String body){
-        if(event.startsWith("REMINDER_"))canonical.disconnectedWorker();
-        canonical.caseAccess(entity,event,false);
+        if(event.startsWith("REMINDER_"))canonical.requireAdmin();
+        Student target=canonical.caseAccess(entity,event,false);
+        String author=text(entity,"originalAuthorEmail");if(author.isBlank())author=text(entity,"teacherEmail");
+        String owner=text(entity,"responsibleStaffEmail");if(owner.isBlank())owner=entity instanceof OfficeReferral?target.getAdminEmail():entity instanceof GuidanceReferral?text(entity,"guidanceEmail"):author;
+        if(owner==null || owner.isBlank())owner=author;
+        set(entity,"originalAuthorEmail",author);set(entity,"responsibleStaffEmail",owner);
         String id=stable(kind(entity)+":"+text(entity,"id")+":"+event+":"+action);
         if(intents(entity).stream().anyMatch(n->id.equals(n.getNotificationId())))return false;
-        boolean system=canonical.actor().roles().contains("STUDENT");
+        boolean system=event.startsWith("REMINDER_") || canonical.actor().roles().contains("STUDENT");
         var intent=new RequiredNotification();intent.setNotificationId(id);intent.setActionId(action);intent.setEvent(event);
         intent.setSystem(system);intent.setActor(system?null:canonical.email(true));intent.setBody(body);
         intent.setRfcMessageId("<"+id+"@notifications.repsdiscipline.com>");canonical.bind(intent);
@@ -269,7 +277,7 @@ public class RequiredNotificationService {
         Criteria match=Criteria.where("notificationId").is(id).and("state").is(state);
         if(attempt!=null) match=match.and("attemptId").is(attempt);
         Query query=Query.query(Criteria.where("_id").is(caseId).and("requiredNotifications").elemMatch(match));
-        if(canonical!=null)query.addCriteria(Criteria.where("tenantSchoolId").is(canonical.actor().tenantSchoolId()));return query;
+        if(canonical!=null){query.addCriteria(Criteria.where("tenantSchoolId").is(canonical.actor().tenantSchoolId()));var recorded=canonical.recordedActor();if(recorded!=null)match.and("tenantSchoolId").is(recorded.tenantSchoolId()).and("actorAccountId").is(recorded.accountId()).and("actorProfileId").is(recorded.profileId());}return query;
     }
     private void update(String kind,String caseId,String id,String state,String attempt,Update update) {
         var result=mongo.updateFirst(notificationQuery(caseId,id,state,attempt),update.inc("revision",1),COLLECTIONS.get(kind));
@@ -279,7 +287,26 @@ public class RequiredNotificationService {
     @Scheduled(fixedDelayString="${reps.email.notifications.poll-ms:30000}")
     public void dispatchPending() {
         if(!isEnabled() || !Boolean.parseBoolean(env.getProperty("reps.email.notifications.dispatch-enabled","false"))) return;
-        if(canonical!=null)canonical.disconnectedWorker();
+        if(workflow!=null && canonical==null)throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Canonical worker ownership verification is required");
+        if(canonical!=null){
+            for(String kind:TYPES.keySet())for(Object entity:mongo.find(Query.query(Criteria.where("tenantSchoolId").exists(true).and("requiredNotifications").elemMatch(Criteria.where("state").in("PENDING","DISPATCHING").and("tenantSchoolId").type(2).and("actorAccountId").type(2).and("actorProfileId").type(2).and("actorCredentialVersion").exists(true))).limit(25),TYPES.get(kind))){
+                for(var intent:List.copyOf(intents(entity)))try{
+                    if("PENDING".equals(intent.getState()))dispatchOne(kind,text(entity,"id"),intent.getNotificationId());
+                    else if("DISPATCHING".equals(intent.getState()) && intent.getClaimedAt()!=null && intent.getClaimedAt().isBefore(Instant.now().minusSeconds(300)))
+                        recoverCanonicalClaim(kind,entity,intent);
+                }catch(AccessDeniedException unavailable){
+                    // A pending obligation has not attempted a provider. Record known, already-owned
+                    // intent failure without adopting missing/legacy ownership or touching an in-flight claim.
+                    String owner=text(entity,"tenantSchoolId");
+                    if("PENDING".equals(intent.getState()) && !owner.isBlank() && owner.equals(intent.getTenantSchoolId())
+                        && intent.getActorAccountId()!=null && intent.getActorProfileId()!=null && intent.getActorCredentialVersion()!=null){
+                        var expected=Criteria.where("notificationId").is(intent.getNotificationId()).and("state").is("PENDING").and("tenantSchoolId").is(owner).and("actorAccountId").is(intent.getActorAccountId()).and("actorProfileId").is(intent.getActorProfileId()).and("actorCredentialVersion").is(intent.getActorCredentialVersion());
+                        mongo.updateFirst(Query.query(Criteria.where("_id").is(text(entity,"id")).and("tenantSchoolId").is(owner).and("requiredNotifications").elemMatch(expected)),new Update().set("requiredNotifications.$.state","FAILED").set("requiredNotifications.$.retrySafe",true).set("requiredNotifications.$.reason","RECORDED_ACTOR_OR_RELATIONSHIP_UNAVAILABLE").inc("revision",1),TYPES.get(kind));
+                    }
+                }catch(org.springframework.web.server.ResponseStatusException | IllegalStateException unavailable){/* Preserve unresolved ownership/claims; never adopt or resend. */}
+            }
+            return;
+        }
         for(String kind:TYPES.keySet()) {
             Query query=Query.query(Criteria.where("requiredNotifications.state").in("PENDING","DISPATCHING")).limit(25);
             for(Object entity:mongo.find(query,TYPES.get(kind))) {
@@ -295,10 +322,27 @@ public class RequiredNotificationService {
             }
         }
     }
+    /** Recovery does not send or grant data access: a recorded in-flight attempt is uncertain even
+     * when its actor has since been disabled. Missing ownership is never reconstructed here. */
+    private void recoverCanonicalClaim(String kind,Object entity,RequiredNotification intent){
+        String tenant=text(entity,"tenantSchoolId");
+        if(tenant.isBlank() || !tenant.equals(intent.getTenantSchoolId()) || intent.getActorAccountId()==null
+            || intent.getActorProfileId()==null || intent.getActorCredentialVersion()==null || intent.getAttemptId()==null)return;
+        var match=Criteria.where("notificationId").is(intent.getNotificationId()).and("state").is("DISPATCHING")
+            .and("attemptId").is(intent.getAttemptId()).and("tenantSchoolId").is(tenant).and("actorAccountId").is(intent.getActorAccountId())
+            .and("actorProfileId").is(intent.getActorProfileId()).and("actorCredentialVersion").is(intent.getActorCredentialVersion());
+        mongo.updateFirst(Query.query(Criteria.where("_id").is(text(entity,"id")).and("tenantSchoolId").is(tenant).and("requiredNotifications").elemMatch(match)),
+            new Update().set("requiredNotifications.$.state","UNCERTAIN").set("requiredNotifications.$.retrySafe",false).set("requiredNotifications.$.reason","WORKER_INTERRUPTED").inc("revision",1),TYPES.get(kind));
+    }
     public void dispatchOne(String kind,String caseId,String notificationId) {
         requireEnabled();
         if(!Boolean.parseBoolean(env.getProperty("reps.email.notifications.dispatch-enabled","false"))) return;
-        if(canonical!=null)canonical.disconnectedWorker();
+        if(canonical!=null && canonical.recordedActor()==null){
+            Class<?> type=TYPES.get(kind);if(type==null)throw new IllegalArgumentException("Unsupported case type");
+            Object entity=mongo.findOne(Query.query(Criteria.where("_id").is(caseId).and("tenantSchoolId").exists(true)),type);if(entity==null)return;
+            var intent=intents(entity).stream().filter(n->notificationId.equals(n.getNotificationId())).findFirst().orElseThrow();
+            canonical.withWorker(entity,intent,()->{dispatchOne(kind,caseId,notificationId);return null;});return;
+        }
         String attempt=UUID.randomUUID().toString();
         Update claim=new Update().set("requiredNotifications.$.state","DISPATCHING").set("requiredNotifications.$.attemptId",attempt)
                 .set("requiredNotifications.$.claimedAt",Date.from(Instant.now())).inc("requiredNotifications.$.attempts",1).inc("revision",1);
@@ -308,8 +352,8 @@ public class RequiredNotificationService {
         RequiredNotification intent=intents(claimed).stream().filter(n->notificationId.equals(n.getNotificationId())).findFirst().orElseThrow();
         boolean attempted=false;
         try {
-            Student student=students.findByStudentEmailIgnoreCase(text(claimed,"studentEmail"));
-            if(student==null || student.isArchived() || !Objects.equals(student.getSchool(),text(claimed,"school"))) throw new AccessDeniedException("Student is unavailable");
+            Student student=canonical==null?students.findByStudentEmailIgnoreCase(text(claimed,"studentEmail")):canonical.workerStudent(claimed,intent);
+            if(student==null || student.isArchived() || (canonical==null && !Objects.equals(student.getSchool(),text(claimed,"school")))) throw new AccessDeniedException("Student is unavailable");
             String author=text(claimed,"originalAuthorEmail"), owner=text(claimed,"responsibleStaffEmail");
             if(!intent.isSystem()) {
                 if(claimed instanceof GuidanceReferral guidance) users.requireRecordedGuidanceAccess(intent.getActor(),guidance);
@@ -318,7 +362,7 @@ public class RequiredNotificationService {
             String actor=intent.isSystem()?null:users.getVerifiedStaffEmail(intent.getActor());
             String sendingIdentity=actor;
             if(intent.isSystem()) {
-                try { users.requireStaffInStudentSchool(author,student); sendingIdentity=users.getVerifiedStaffEmail(author); }
+                try { if(canonical!=null && !users.hasIndependentStudentAccess(author,student))throw new AccessDeniedException("Sender relationship is unavailable");users.requireStaffInStudentSchool(author,student); sendingIdentity=users.getVerifiedStaffEmail(author); }
                 catch(AccessDeniedException ignored) { /* System SMTP can use its configured default Reply-To. */ }
             }
             List<String> cc=new ArrayList<>(); List<String> bcc=new ArrayList<>();
@@ -344,7 +388,7 @@ public class RequiredNotificationService {
             cc.removeIf(email->email.equalsIgnoreCase(to)); bcc.removeIf(email->email.equalsIgnoreCase(to));
             var recipients=new TreeSet<String>(); recipients.add(to); recipients.addAll(cc); recipients.addAll(bcc);
             intent.setRecipients(new ArrayList<>(recipients));
-            String subject="REPS case "+text(claimed,"conversationId").substring(0,8)+" — "+templates.buildManagedSubject(kind,intent.getContent()==null?Map.of():intent.getContent(),student.getPreferredLanguage());
+            String subject="REPS case "+text(claimed,"conversationId").substring(0,8)+" â€” "+templates.buildManagedSubject(kind,intent.getContent()==null?Map.of():intent.getContent(),student.getPreferredLanguage());
             String parent=null,thread=null;
             for(var previous:intents(claimed)) {
                 if("ACCEPTED".equals(previous.getState()) && Objects.equals(previous.getRecipients(),new ArrayList<>(recipients))) {
@@ -398,7 +442,7 @@ public class RequiredNotificationService {
     }
     private void addStaff(List<String> recipients,String staff,Student student) {
         if(staff==null || staff.isBlank()) return;
-        try { users.requireStaffInStudentSchool(staff,student); String verified=address(users.getVerifiedStaffEmail(staff)); if(!recipients.contains(verified)) recipients.add(verified); }
+        try { if(canonical!=null && !users.hasIndependentStudentAccess(staff,student))return;users.requireStaffInStudentSchool(staff,student); String verified=address(users.getVerifiedStaffEmail(staff)); if(!recipients.contains(verified)) recipients.add(verified); }
         catch(Exception ignored) { /* A removed/unauthorized participant is never copied from prior mail. */ }
     }
     private Map<String,String> partialOutcomes(Throwable error) {

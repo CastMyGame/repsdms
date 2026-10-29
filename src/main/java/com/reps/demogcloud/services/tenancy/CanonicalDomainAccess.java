@@ -33,13 +33,15 @@ public class CanonicalDomainAccess {
         if(!Arrays.asList(environment.getActiveProfiles()).contains("tenant-isolated-verification"))
             throw new IllegalStateException("Canonical domain preparation is restricted to the isolated verification profile until coordinated cutover");
     }
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private HistoricalCaseAccess historical;
+    public void ownNew(Object entity){new org.springframework.beans.BeanWrapperImpl(entity).setPropertyValue("tenantSchoolId",actor().tenantSchoolId());if(historical!=null)historical.captureInitial(entity);}
     public CanonicalAccountContext.Actor actor(){return context.requireCurrent();}
     public String email(boolean staff){var actor=actor();if(staff && actor.roles().contains("STUDENT"))throw denied();
         var account=mongo.findOne(owned(actor.accountId(),actor),UserModel.class);if(account==null)throw denied();return account.getUsername();}
     public Student student(String email,boolean staff){
         var actor=actor();if(staff && actor.roles().contains("STUDENT"))throw denied();
         var matches=mongo.find(Query.query(Criteria.where("tenantSchoolId").is(actor.tenantSchoolId()).and("studentEmail").regex(exact(email))).limit(2),Student.class);
-        if(matches.size()!=1)throw denied();return core.readStudent(matches.get(0).getStudentIdNumber());
+        if(matches.size()!=1)throw denied();var student=core.readStudent(matches.get(0).getStudentIdNumber());CanonicalAuthorizationFence.student(mongo,student,actor.tenantSchoolId());return student;
     }
     public Student studentId(String id){if(actor().roles().contains("STUDENT"))throw denied();return core.readStudent(id);}
     public Employee roster(String email,ClassRequest request){
@@ -47,7 +49,12 @@ public class CanonicalDomainAccess {
         if(teachers.size()!=1 || request==null || request.getClassToUpdate()==null)throw denied();
         var ids=new ArrayList<String>();var emails=request.getClassToUpdate().getClassRoster();
         if(emails!=null)for(String item:emails){var rows=mongo.find(Query.query(Criteria.where("tenantSchoolId").is(actor.tenantSchoolId()).and("studentEmail").regex(exact(item))).limit(2),Student.class);if(rows.size()!=1)throw denied();ids.add(rows.get(0).getStudentIdNumber());}
-        core.validateRoster(teachers.get(0).getEmployeeId(),ids);return teachers.get(0);
+        core.validateRoster(teachers.get(0).getEmployeeId(),ids);
+        for(String id:ids)CanonicalAuthorizationFence.student(mongo,mongo.findOne(owned(id,actor),Student.class),actor.tenantSchoolId());
+        var teacherAccounts=mongo.find(Query.query(Criteria.where("tenantSchoolId").is(actor.tenantSchoolId()).and("username").regex(exact(teachers.get(0).getEmail()))).limit(2),UserModel.class);
+        if(teacherAccounts.size()!=1)throw denied();
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive() && mongo.updateFirst(owned(teacherAccounts.get(0).getId(),actor).addCriteria(Criteria.where("enabled").ne(false)),new Update().inc("authorizationFence",1L),UserModel.class).getMatchedCount()!=1)throw denied();
+        return teachers.get(0);
     }
     public GuidanceReferral guidance(String id,boolean manage){
         Document raw=core.readRecord(CanonicalCoreWorkflows.Kind.GUIDANCE,id);
@@ -73,7 +80,7 @@ public class CanonicalDomainAccess {
         Document hello=mongo.executeCommand(new Document("hello",1));
         if((!hello.containsKey("setName") && !"isdbgrid".equals(hello.getString("msg"))) || !hello.containsKey("logicalSessionTimeoutMinutes"))throw unavailable();
         var options=com.mongodb.TransactionOptions.builder().readConcern(com.mongodb.ReadConcern.SNAPSHOT).writeConcern(com.mongodb.WriteConcern.MAJORITY).build();
-        return new TransactionTemplate(new MongoTransactionManager(mongo.getMongoDatabaseFactory(),options)).execute(s->work.get());
+        try{return new TransactionTemplate(new MongoTransactionManager(mongo.getMongoDatabaseFactory(),options)).execute(s->{CanonicalAuthorizationFence.actor(mongo,actor());return work.get();});}catch(RuntimeException failure){throw CanonicalAuthorizationFence.failure(failure);}
     }
     public void disconnected(){throw unavailable();}
     private static ResponseStatusException unavailable(){return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Canonical workflow dependency is not ready");}

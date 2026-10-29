@@ -11,6 +11,7 @@ public class RequiredNotification {
     @com.fasterxml.jackson.annotation.JsonIgnore private String tenantSchoolId;
     @com.fasterxml.jackson.annotation.JsonIgnore private String actorAccountId;
     @com.fasterxml.jackson.annotation.JsonIgnore private String actorProfileId;
+    @com.fasterxml.jackson.annotation.JsonIgnore private Long actorCredentialVersion;
     private String notificationId;
     private String actionId;
     private String event;

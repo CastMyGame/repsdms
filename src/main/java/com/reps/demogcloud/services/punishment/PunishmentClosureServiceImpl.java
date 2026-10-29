@@ -24,6 +24,11 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PunishmentClosureServiceImpl implements PunishmentClosureService {
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    private Punishment owned(String id,String event){var p=canonical.record(id,Punishment.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT);canonical.action(p,event);return p;}
+
 
     private final PunishRepository punishRepository;
     private final StudentRepository studentRepository;
@@ -42,6 +47,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
             requiredNotifications.requireActionAccess(punishment, event);
             return punishment;
         }
+        if (canonical!=null) canonical.action(punishment,event);
         if (!requiredNotifications.prepare(punishment, event)) return punishment;
         switch (event) {
             case "CLOSED", "COMPLETED" -> {
@@ -76,7 +82,8 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public PunishmentResponse closeByPunishmentId(String punishmentId) throws MessagingException {
-        Punishment checked = punishRepository.findByPunishmentId(punishmentId);
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.atomic(()->{try{return closeByPunishmentId(punishmentId);}catch(MessagingException failure){throw new IllegalStateException("Canonical action failed",failure);}});
+        Punishment checked = (canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"CLOSED"));
         if(checked==null) throw new ResourceNotFoundException("Case not found");
         requiredNotifications.requireActionAccess(checked,"CLOSED");
         if("CLOSED".equals(checked.getStatus())) {
@@ -84,8 +91,8 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
         }
         if(checked.getAssignmentWork()!=null) throw new org.springframework.web.server.ResponseStatusException(
                 org.springframework.http.HttpStatus.CONFLICT,"Review this assignment through its case page");
-        if (requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(
-                punishRepository.findByPunishmentId(punishmentId), "CLOSED", null, null));
+        if (canonical!=null || requiredNotifications.isEnabled()) return requiredNotifications.response(managedChange(
+                (canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"CLOSED")), "CLOSED", null, null));
         Punishment punishment = checked;
         if (punishment == null) throw new ResourceNotFoundException("No punishment with ID " + punishmentId);
 
@@ -129,7 +136,7 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment rejectLevelThree(String punishmentId) {
-        Punishment checked=punishRepository.findByPunishmentId(punishmentId);
+        Punishment checked=(canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"CLOSED"));
         if(checked==null) throw new ResourceNotFoundException("Case not found");
         requiredNotifications.requireActionAccess(checked,"REJECTED");
         throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
@@ -138,8 +145,9 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment archiveRecord(String punishmentId, String userId, String explanation) throws MessagingException {
-        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "ARCHIVED", null, explanation);
-        Punishment punishment = punishRepository.findByPunishmentId(punishmentId);
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.atomic(()->{try{return archiveRecord(punishmentId, userId, explanation);}catch(MessagingException failure){throw new IllegalStateException("Canonical action failed",failure);}});
+        if (canonical!=null || requiredNotifications.isEnabled()) return managedChange((canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"ARCHIVED")), "ARCHIVED", null, explanation);
+        Punishment punishment = (canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"CLOSED"));
         if (punishment == null) throw new ResourceNotFoundException("Punishment not found");
 
         Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
@@ -167,7 +175,8 @@ public class PunishmentClosureServiceImpl implements PunishmentClosureService {
 
     @Override
     public Punishment restoreRecord(String punishmentId) throws MessagingException {
-        if (requiredNotifications.isEnabled()) return managedChange(punishRepository.findByPunishmentId(punishmentId), "RESTORED", null, null);
+        if(canonical!=null && !org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())return canonical.atomic(()->{try{return restoreRecord(punishmentId);}catch(MessagingException failure){throw new IllegalStateException("Canonical action failed",failure);}});
+        if (canonical!=null || requiredNotifications.isEnabled()) return managedChange((canonical==null?punishRepository.findByPunishmentId(punishmentId):owned(punishmentId,"RESTORED")), "RESTORED", null, null);
         Punishment punishment = punishRepository.findByPunishmentIdAndArchived(punishmentId, true);
         if (punishment == null) throw new ResourceNotFoundException("Archived punishment not found");
 

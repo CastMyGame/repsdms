@@ -32,6 +32,21 @@ public class AssignmentService {
     private final PunishRepository punishRepository;
     private final AssignmentResolver resolver;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.data.mongodb.core.MongoTemplate mongo;
+    private List<AssignmentTemplate> scopedTemplates(){
+        canonical.staff();var global=new org.springframework.data.mongodb.core.query.Criteria().andOperator(org.springframework.data.mongodb.core.query.Criteria.where("tenantSchoolId").exists(false),org.springframework.data.mongodb.core.query.Criteria.where("createdBySystem").is(true),org.springframework.data.mongodb.core.query.Criteria.where("scope").is("SYSTEM_DEFAULT"));
+        return mongo.find(org.springframework.data.mongodb.core.query.Query.query(new org.springframework.data.mongodb.core.query.Criteria().orOperator(org.springframework.data.mongodb.core.query.Criteria.where("tenantSchoolId").is(canonical.tenant()),global)),AssignmentTemplate.class).stream().filter(canonical::templateRead).toList();
+    }
+    private void ownedTeacher(String teacher){canonical.staff();if(teacher==null || !canonical.email().equalsIgnoreCase(teacher))throw new org.springframework.security.access.AccessDeniedException("Access denied");}
+    private List<AssignmentTemplateBinding> bindings(String teacher,String infraction,int level){
+        var legacy=org.springframework.data.mongodb.core.query.Query.query(org.springframework.data.mongodb.core.query.Criteria.where("tenantSchoolId").exists(false).and("teacherEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(teacher)).and("infractionName").is(infraction).and("level").is(level).and("active").ne(false));
+        if(mongo.exists(legacy,AssignmentTemplateBinding.class))throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Legacy binding ownership requires reviewed resolution");
+        return mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("teacherEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(teacher)).and("infractionName").is(infraction).and("level").is(level).and("active").is(true)),AssignmentTemplateBinding.class);
+    }
+    private void bindingFence(){if(mongo.updateFirst(canonical.id(canonical.actor().profileId()),new org.springframework.data.mongodb.core.query.Update().inc("bindingRevision",1),com.reps.demogcloud.models.employee.Employee.class).getMatchedCount()!=1)throw new org.springframework.dao.OptimisticLockingFailureException("Binding owner changed");}
     public AssignmentTemplate resolveForCase(String teacher, String school, String infraction, int level) {
         return resolver.resolve(teacher,school,infraction,level);
     }
@@ -43,14 +58,17 @@ public class AssignmentService {
     }
 
     public Assignment createNewAssignment(Assignment assignment) {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy assignment mutation is unavailable");
         return assignmentRepository.save(assignment);
     }
 
     public Assignment deleteAssignment(String assignmentName) {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy assignment mutation is unavailable");
         return assignmentRepository.deleteByInfractionName(assignmentName);
     }
 
     public Assignment updateNewAssignment(Assignment assignment, String id) throws Exception {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy assignment mutation is unavailable");
         Assignment existingAssignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new Exception("Assignment with ID " + id + " not found"));
 
@@ -71,6 +89,7 @@ public class AssignmentService {
      * Returns the count migrated.
      */
     public int migrateLegacyAssignmentsToTemplates() {
+        if(canonical!=null)throw new org.springframework.security.access.AccessDeniedException("Legacy assignment mutation is unavailable");
         List<Assignment> legacyAssignments = assignmentRepository.findAll();
         log.info("Found {} legacy assignments to migrate", legacyAssignments.size());
 
@@ -90,19 +109,19 @@ public class AssignmentService {
     // ================= V2: TEMPLATE METHODS (canonical going forward) =================
 
     public List<AssignmentTemplate> getAllTemplates() {
-        return assignmentTemplateRepository.findAll();
+        return canonical==null?assignmentTemplateRepository.findAll():scopedTemplates();
     }
 
     public AssignmentTemplate getTemplateById(String id) throws Exception {
-        return assignmentTemplateRepository.findById(id)
-                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+        return canonical==null?assignmentTemplateRepository.findById(id).orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found")):canonical.template(id);
     }
 
     public List<AssignmentTemplate> getTemplatesByInfractionAndLevel(String infractionName, int level) {
-        return assignmentTemplateRepository.findByInfractionNameAndLevel(infractionName, level);
+        return canonical==null?assignmentTemplateRepository.findByInfractionNameAndLevel(infractionName, level):scopedTemplates().stream().filter(t->java.util.Objects.equals(t.getInfractionName(),infractionName) && t.getLevel()==level).toList();
     }
 
     public AssignmentTemplate createAssignmentTemplate(AssignmentTemplate template) {
+        if(canonical!=null)canonical.prepareTemplate(template);
         if (template.getId() != null) {
             template.setId(null);
         }
@@ -129,8 +148,8 @@ public class AssignmentService {
     }
 
     public AssignmentTemplate updateAssignmentTemplate(String id, AssignmentTemplate updated) throws Exception {
-        AssignmentTemplate existing = assignmentTemplateRepository.findById(id)
-                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+        AssignmentTemplate existing = canonical==null?assignmentTemplateRepository.findById(id).orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found")):canonical.template(id);
+        if(canonical!=null)canonical.templateWrite(existing);
 
         existing.setInfractionName(updated.getInfractionName());
         existing.setLevel(updated.getLevel());
@@ -141,9 +160,10 @@ public class AssignmentService {
     }
 
     public void deleteAssignmentTemplate(String id) throws Exception {
-        AssignmentTemplate existing = assignmentTemplateRepository.findById(id)
-                .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found"));
+        AssignmentTemplate existing = canonical==null?assignmentTemplateRepository.findById(id).orElseThrow(() -> new Exception("AssignmentTemplate with ID " + id + " not found")):canonical.template(id);
+        if(canonical!=null)canonical.templateWrite(existing);
 
+        if(canonical!=null){existing.setActive(false);existing.setUpdatedAt(Instant.now());assignmentTemplateRepository.save(existing);return;}
         assignmentTemplateRepository.delete(existing);
     }
 
@@ -171,6 +191,17 @@ public class AssignmentService {
             String assignmentTemplateId
     ) throws Exception {
 
+        if(canonical!=null){
+            ownedTeacher(teacherEmail);if(schoolId!=null && !schoolId.isBlank())canonical.label(schoolId);
+            var selected=canonical.template(assignmentTemplateId);if(!canonical.templateRead(selected) || !selected.isActive())throw new org.springframework.security.access.AccessDeniedException("Access denied");
+            return canonical.atomic(()->{
+                bindingFence();var previous=bindings(teacherEmail,infractionName,level);
+                if(previous.size()>1)throw new org.springframework.dao.OptimisticLockingFailureException("Conflicting bindings require review");
+                if(previous.size()==1 && assignmentTemplateId.equals(previous.get(0).getAssignmentTemplateId()))return previous.get(0);
+                for(var old:previous){old.setActive(false);old.setUpdatedAt(Instant.now());bindingRepository.save(old);}
+                var created=new AssignmentTemplateBinding();created.setTeacherEmail(canonical.email());created.setSchoolId(canonical.school().getSchoolName());created.setInfractionName(infractionName);created.setLevel(level);created.setAssignmentTemplateId(assignmentTemplateId);created.setActive(true);created.setCreatedAt(Instant.now());created.setUpdatedAt(Instant.now());canonical.bindNew(created);return bindingRepository.save(created);
+            });
+        }
         // Ensure the template exists
         AssignmentTemplate template = assignmentTemplateRepository.findById(assignmentTemplateId)
                 .orElseThrow(() -> new Exception("AssignmentTemplate with ID " + assignmentTemplateId + " not found"));
@@ -205,6 +236,7 @@ public class AssignmentService {
             String infractionName,
             int level
     ) {
+        if(canonical!=null){ownedTeacher(teacherEmail);canonical.atomic(()->{bindingFence();for(var old:bindings(teacherEmail,infractionName,level)){old.setActive(false);old.setUpdatedAt(Instant.now());bindingRepository.save(old);}return null;});return;}
         Instant now = Instant.now();
 
         bindingRepository.findFirstByTeacherEmailAndInfractionNameAndLevelAndActiveTrue(
@@ -217,11 +249,11 @@ public class AssignmentService {
     }
 
     public List<AssignmentTemplateBinding> getActiveBindingsForTeacher(String teacherEmail) {
-        return bindingRepository.findByTeacherEmailAndActiveTrue(teacherEmail);
+        if(canonical!=null){ownedTeacher(teacherEmail);return mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("teacherEmail").regex(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess.exact(teacherEmail)).and("active").is(true)),AssignmentTemplateBinding.class);}return bindingRepository.findByTeacherEmailAndActiveTrue(teacherEmail);
     }
 
     public List<AssignmentTemplateBinding> getActiveBindingsForTemplate(String templateId) {
-        return bindingRepository.findByAssignmentTemplateIdAndActiveTrue(templateId);
+        if(canonical!=null){canonical.templateWrite(canonical.template(templateId));return mongo.find(canonical.query().addCriteria(org.springframework.data.mongodb.core.query.Criteria.where("assignmentTemplateId").is(templateId).and("active").is(true)),AssignmentTemplateBinding.class);}return bindingRepository.findByAssignmentTemplateIdAndActiveTrue(templateId);
     }
 
     public List<AssignmentTemplateSummaryDTO> searchTemplates(
@@ -231,7 +263,7 @@ public class AssignmentService {
             Boolean createdBySystem,
             String textQuery
     ) {
-        List<AssignmentTemplate> all = assignmentTemplateRepository.findAll();
+        List<AssignmentTemplate> all = canonical==null?assignmentTemplateRepository.findAll():scopedTemplates();
 
         if (all.isEmpty()) {
             return List.of();
@@ -339,8 +371,7 @@ public class AssignmentService {
     }
 
     public AssignmentTemplate buildAssignmentForPunishment(String punishmentId) throws Exception {
-        Punishment punishment = punishRepository.findById(punishmentId)
-                .orElseThrow(() -> new Exception("Punishment not found: " + punishmentId));
+        Punishment punishment = canonical==null?punishRepository.findById(punishmentId).orElseThrow(() -> new Exception("Punishment not found: " + punishmentId)):canonical.record(punishmentId,Punishment.class,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.PUNISHMENT);
 
         return resolveTemplateForPunishment(punishment);
     }

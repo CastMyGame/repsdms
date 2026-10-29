@@ -1,3 +1,5 @@
+> Phase 4C update: see [real workflow integration](phase4c-integration.md), [historical snapshot policy](historical-access.md), and [route/worker matrix](phase4c-coverage.md). Earlier phase descriptions below remain historical except where explicitly superseded. No production activation is authorized.
+
 # A7 Phase 4B-1: root persistence and isolated domain integration
 
 Baseline: `origin/dev` 0d05c50, including merged PR #180. The 144-route/alias inventory in [core-endpoints.md](core-endpoints.md) remains the route inventory; this document records the narrower implementation boundary. No deployed data was inspected. No backfill, provider call, frontend change, currency receipt bridge, Gmail grant migration or Stripe cutover is included.

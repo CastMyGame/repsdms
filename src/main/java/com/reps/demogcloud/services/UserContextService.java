@@ -25,7 +25,11 @@ public class UserContextService {
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
 
+    private com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess canonical;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setCanonicalWorkflowAccess(com.reps.demogcloud.services.tenancy.CanonicalWorkflowAccess value){canonical=value;}
     public String getCurrentUserSchool() {
+        if(canonical!=null)return canonical.school().getSchoolName();
         UserModel user = getCurrentUserModel();
         String email = user.getUsername();
 
@@ -45,6 +49,7 @@ public class UserContextService {
     }
 
     public String getCurrentUserEmail() {
+        if(canonical!=null)return canonical.email();
         return getRequiredAuthentication().getName();
     }
 
@@ -53,6 +58,7 @@ public class UserContextService {
     }
 
     public String getCurrentUsername() {
+        if(canonical!=null)return canonical.email();
         return getRequiredAuthentication().getName();
     }
 
@@ -70,6 +76,7 @@ public class UserContextService {
     }
 
     public String getVerifiedStaffEmail(String email) {
+        if(canonical!=null)return canonical.employee(email).getEmail();
         if (email == null || email.isBlank()) {
             throw new AccessDeniedException("A verified staff sender is required");
         }
@@ -100,6 +107,7 @@ public class UserContextService {
 
     /** Spotters are subscriptions, never proof of student access. Recheck persisted relationships. */
     public boolean hasIndependentStudentAccess(String email, Student student) {
+        if(canonical!=null)return canonical.independent(email,student);
         try {
             requireStaffInStudentSchool(email, student);
             if (student.isArchived()) return false;
@@ -131,6 +139,7 @@ public class UserContextService {
     }
 
     public void requireStaffInStudentSchool(String staffEmail, Student student) {
+        if(canonical!=null){canonical.employee(staffEmail);if(!canonical.owns(student))throw new AccessDeniedException("Access denied");return;}
         getVerifiedStaffEmail(staffEmail);
         Employee employee = employeeRepository.findByEmailIgnoreCase(staffEmail);
         if (student == null || student.getSchool() == null
@@ -140,6 +149,7 @@ public class UserContextService {
     }
 
     public void requireCaseCommunicationAccess(String originalTeacher, Student student) {
+        if(canonical!=null){if(!canonical.independent(canonical.email(),student))throw new AccessDeniedException("Access denied");return;}
         String actor = getCurrentStaffEmail();
         requireStaffInStudentSchool(actor, student);
         UserModel user = getCurrentUserModel();
@@ -153,6 +163,13 @@ public class UserContextService {
     }
 
     public void requireRecordedCaseCommunicationAccess(String actor, String originalTeacher, String owner, Student student) {
+        if(canonical!=null){
+            if(!canonical.independent(actor,student))throw new AccessDeniedException("Access denied");
+            var employee=canonical.employee(actor);
+            boolean admin=employee.getRoles().stream().anyMatch(r->r!=null && "ADMIN".equalsIgnoreCase(r.getRole()));
+            boolean guide=employee.getRoles().stream().anyMatch(r->r!=null && "GUIDANCE".equalsIgnoreCase(r.getRole())) && actor.equalsIgnoreCase(student.getGuidanceEmail());
+            if(!admin && !guide && !actor.equalsIgnoreCase(originalTeacher) && !actor.equalsIgnoreCase(owner) && (student.getSpotters()==null || student.getSpotters().stream().noneMatch(actor::equalsIgnoreCase)))throw new AccessDeniedException("Access denied");return;
+        }
         requireStaffInStudentSchool(actor, student);
         UserModel user = userRepository.findByUsername(actor);
         boolean admin = user.getRoles().stream().anyMatch(role -> role != null && "ADMIN".equalsIgnoreCase(role.getRole()));
@@ -163,6 +180,7 @@ public class UserContextService {
 
     /** Guidance notes are not a general student-record or spotter permission. */
     public boolean canReadGuidance(com.reps.demogcloud.models.guidance.GuidanceReferral record) {
+        if(canonical!=null)return canonical.canReadRecord(record,com.reps.demogcloud.services.tenancy.CanonicalCoreWorkflows.Kind.GUIDANCE);
         return canReadGuidanceFor(getCurrentStaffEmail(), record);
     }
 
@@ -183,6 +201,7 @@ public class UserContextService {
     }
 
     public void requireGuidanceAccess(com.reps.demogcloud.models.guidance.GuidanceReferral record, boolean manage) {
+        if(canonical!=null){if(!canReadGuidance(record))throw new AccessDeniedException("Access denied");if(manage && !canonical.role("ADMIN") && (!canonical.role("GUIDANCE") || !canonical.email().equalsIgnoreCase(canonical.student(record.getStudentEmail()).getGuidanceEmail())))throw new AccessDeniedException("Access denied");return;}
         String actor = getCurrentStaffEmail();
         requireRecordedGuidanceAccess(actor, record);
         if (manage && !hasRole(userRepository.findByUsername(actor),"ADMIN")) {
@@ -193,10 +212,19 @@ public class UserContextService {
     }
 
     public void requireRecordedGuidanceAccess(String actor, com.reps.demogcloud.models.guidance.GuidanceReferral record) {
+        if(canonical!=null){
+            var student=canonical.lookupStudent(record.getStudentEmail());
+            if(!canonical.owns(record) || !canonical.independent(actor,student))throw new AccessDeniedException("Access denied");
+            var staff=canonical.employee(actor);
+            boolean admin=staff.getRoles().stream().anyMatch(r->r!=null && "ADMIN".equalsIgnoreCase(r.getRole()));
+            boolean guide=staff.getRoles().stream().anyMatch(r->r!=null && "GUIDANCE".equalsIgnoreCase(r.getRole())) && actor.equalsIgnoreCase(student.getGuidanceEmail());
+            if(!admin && !guide && !actor.equalsIgnoreCase(record.getTeacherEmail()) && !actor.equalsIgnoreCase(record.getOriginalAuthorEmail()))throw new AccessDeniedException("Access denied");return;
+        }
         if (!canReadGuidanceFor(actor,record)) throw new AccessDeniedException("Access denied");
     }
 
     public void requireAdministratorInSchool(String school) {
+        if(canonical!=null){canonical.admin();canonical.label(school);return;}
         String actor = getCurrentStaffEmail();
         UserModel user = userRepository.findByUsername(actor);
         if (!school.equalsIgnoreCase(user.getSchool()) || user.getRoles().stream()
@@ -205,6 +233,7 @@ public class UserContextService {
     }
 
     private UserModel getCurrentUserModel() {
+        if(canonical!=null)return canonical.account();
         String username = getRequiredAuthentication().getName();
         return userRepository.findByUsername(username);
     }
