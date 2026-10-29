@@ -23,6 +23,12 @@ class EmailSenderServiceTest {
     @Mock
     private EmailRoutingService emailRoutingService;
 
+    @Mock private ClassAnnouncementAccess announcementAccess;
+
+    @org.junit.jupiter.api.BeforeEach void announcementBoundary() {
+        lenient().when(announcementAccess.requireRecipients(anyString(),anyList())).thenAnswer(i -> i.getArgument(0));
+    }
+
     @InjectMocks
     private EmailSenderService service;
 

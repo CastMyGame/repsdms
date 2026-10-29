@@ -10,7 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.util.*;
 
-/** Opt-in context, intentionally not called by runtime routes/login/workers before coordinated A7 cutover.
+/** Canonical membership validator. General route/login/worker integration remains opt-in until A7 cutover.
+ * The urgent class-announcement boundary reuses this context independently of the A7 flags.
  * Both password and Google login issue the existing REPS JWT/AccountPrincipal. Raw OIDC sessions are
  * deliberately not canonical actors: their subject is not the persisted, versioned REPS identity. */
 @Service

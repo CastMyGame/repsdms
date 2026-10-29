@@ -51,8 +51,6 @@ public class EmailController {
 
     @PostMapping("/classAnnouncement")
     public void sendClassAnnouncement(@RequestBody List<ClassAnnouncementRequest> classAnnouncementRequestList) throws MessagingException {
-        for (ClassAnnouncementRequest request : classAnnouncementRequestList) {
-            emailService.sendClassAnnouncement(request);
-        }
+        emailService.sendClassAnnouncements(classAnnouncementRequestList);
     }
 }

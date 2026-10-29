@@ -94,6 +94,10 @@ public class EmailService {
         emailNotificationService.sendClassAnnouncement(request);
     }
 
+    public void sendClassAnnouncements(List<ClassAnnouncementRequest> requests) throws MessagingException {
+        emailNotificationService.sendClassAnnouncements(requests);
+    }
+
     public PunishmentResponse sendEmailBasedOnType(
             PunishmentFormRequest formRequest,
             Punishment punishment,
