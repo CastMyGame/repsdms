@@ -1,3 +1,5 @@
+> Phase 5B migration contract: [v2 preservation and review rules](migration-contracts.md) supersede generic v1 planning/adoption instructions. No receipt, embedded history or cipher writes are proposed; no executor or activation is authorized.
+
 > Phase 4C update: see [real workflow integration](phase4c-integration.md), [historical snapshot policy](historical-access.md), and [route/worker matrix](phase4c-coverage.md). Earlier phase descriptions below remain historical except where explicitly superseded. No production activation is authorized.
 
 # A7 Phase 4B-2: versioned currency replay preparation
