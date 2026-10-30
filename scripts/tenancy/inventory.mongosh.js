@@ -25,11 +25,7 @@
     const privileges=status.authInfo?.authenticatedUserPrivileges;
     const readActions=new Set(["find","listCollections","listIndexes","collStats","dbStats","dbHash","planCacheRead","killCursors","changeStream","listSearchIndexes"]);
     if(!Array.isArray(privileges) || !privileges.length || privileges.some(p=>!Array.isArray(p.actions) || p.actions.some(a=>!readActions.has(a))))throw new Error();
-    const projection={_id:1,tenantSchoolId:1,school:1,schoolName:1,schoolId:1,schoolIdNumber:1,username:1,email:1,studentEmail:1,
-      teacherEmail:1,originalAuthorEmail:1,responsibleStaffEmail:1,guidanceEmail:1,adminEmail:1,spotters:1,"roles.role":1,"classes.classRoster":1,
-      createdByUserId:1,createdBySystem:1,scope:1,assignmentTemplateId:1,linkToPunishment:1,
-      revision:1,persistenceRevision:1,profileRevision:1,rosterRevision:1,credentialVersion:1,ownerAccountId:1,ownerProfileId:1,
-      stripeCustomerId:1,stripeSubscriptionId:1,stripeCheckoutSessionId:1,priceId:1,createdAt:1,currency:1,status:1,enabled:1,archived:1,assignmentWork:1,requiredNotifications:1,historicalAccess:1,gmailAuthorization:1};
+    const {projection}=require(path.join(directory,"source-contract.cjs"));
     // Protected assignment/notification/grant content is read ONLY into memory for HMAC fingerprints.
     // No plaintext passwords, reset/setup tickets or decryption keys are selected. Ciphertext is never decrypted.
     // Currency receipts need the FULL typed record fingerprint, including unknown historical fields.
