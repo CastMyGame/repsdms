@@ -43,3 +43,7 @@ node scripts/tenancy/plan.cjs plan '<private-directory>\inventory-v2.json' '<pri
 No execute/apply/backfill command exists. Root update descriptors permit only `tenantSchoolId` on nine named collections. Receipts, Gmail grants and registration intents are compatibility-only; protected embedded structures are review-only. Plans report counts, component holds and transitive quarantine and always declare `executable:false`, `activationReady:false`.
 
 Offline `rehearse` uses copies of sanitized inventory, not actual MongoDB records or a migration executor. It cannot generate an award, claim a notification, change a cipher or prove deployed data readiness. Separate approvals and remaining gates are listed in [migration-contracts.md](migration-contracts.md).
+
+## Phase 5C local-only conditional executor
+
+See [local-executor.md](local-executor.md) for fixed disposable-target guards, separate signed authorization, default dry-run, real MongoDB rehearsal, journal/partial-progress semantics and remaining deployed gates. The offline v2 plan itself still grants no execution permission. No deployed executor or canonical activation is enabled.

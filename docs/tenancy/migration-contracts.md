@@ -1,3 +1,5 @@
+> Phase 5C: a [local-only executor/rehearsal](local-executor.md) now validates and conditionally applies reviewed root additions on marked disposable databases. Deployed execution, protected-data adoption and canonical activation remain unapproved and unsupported.
+
 # A7 Phase 5B — offline migration contracts v2
 
 Baseline: merged backend #186 (`61eb924`). This document supersedes v1 generic-planner instructions. No deployed inventory, database executor, runtime activation, provider call or migration is included. All application Java, replay algorithms and feature defaults remain unchanged.

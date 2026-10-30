@@ -146,4 +146,4 @@ function rehearse(snapshot,prepared) {
   return {plan:current,after};
 }
 function simulate(snapshot,manifest){return rehearse(snapshot,plan(snapshot,manifest));}
-module.exports={COLLECTIONS,ROOTS,VERSION,MANIFEST,buildSnapshot,validateSnapshot,summarize,plan,rehearse,simulate};
+module.exports={stable,sha,COLLECTIONS,ROOTS,VERSION,MANIFEST,buildSnapshot,validateSnapshot,summarize,plan,rehearse,simulate};
