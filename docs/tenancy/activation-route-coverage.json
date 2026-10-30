@@ -1,0 +1,127 @@
+{
+  "sourceMappings": 172,
+  "runtimeMappings": 172,
+  "controllers": 19,
+  "originalInventoryMappings": 144,
+  "missingOriginal": [],
+  "addedSince144": [
+    [
+      "DELETE",
+      "/infraction/v1"
+    ],
+    [
+      "DELETE",
+      "/infraction/v1/**"
+    ],
+    [
+      "DELETE",
+      "/school/v1"
+    ],
+    [
+      "DELETE",
+      "/school/v1/**"
+    ],
+    [
+      "GET",
+      "/history/v1/cases"
+    ],
+    [
+      "GET",
+      "/history/v1/cases/{kind}/{id}"
+    ],
+    [
+      "GET",
+      "/infraction/v1/all"
+    ],
+    [
+      "GET",
+      "/infraction/v1/infractionId/{infractionId}"
+    ],
+    [
+      "GET",
+      "/infraction/v1/infractionName/{infractionName}"
+    ],
+    [
+      "GET",
+      "/school/v1/all"
+    ],
+    [
+      "GET",
+      "/school/v1/search"
+    ],
+    [
+      "PATCH",
+      "/infraction/v1"
+    ],
+    [
+      "PATCH",
+      "/infraction/v1/**"
+    ],
+    [
+      "PATCH",
+      "/school/v1"
+    ],
+    [
+      "PATCH",
+      "/school/v1/**"
+    ],
+    [
+      "POST",
+      "/gmail/send-test"
+    ],
+    [
+      "POST",
+      "/infraction/v1"
+    ],
+    [
+      "POST",
+      "/infraction/v1/**"
+    ],
+    [
+      "POST",
+      "/school/v1"
+    ],
+    [
+      "POST",
+      "/school/v1/**"
+    ],
+    [
+      "POST",
+      "/school/v1/newSchool"
+    ],
+    [
+      "POST",
+      "/stripe/v1/create-checkout-session"
+    ],
+    [
+      "POST",
+      "/stripe/v1/webhook"
+    ],
+    [
+      "PUT",
+      "/infraction/v1"
+    ],
+    [
+      "PUT",
+      "/infraction/v1/**"
+    ],
+    [
+      "PUT",
+      "/school/v1"
+    ],
+    [
+      "PUT",
+      "/school/v1/**"
+    ],
+    [
+      "PUT",
+      "/school/v1/{schoolName}"
+    ]
+  ],
+  "categoryCounts": {
+    "Integrated; acceptance incomplete": 107,
+    "Intentional global/public or retired": 48,
+    "Integrated; selected workflow verified": 17
+  },
+  "warning": "Binding probes are discovery evidence, not exhaustive security acceptance. Global deployed activation stays prohibited."
+}
