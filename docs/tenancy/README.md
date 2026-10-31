@@ -47,3 +47,7 @@ Offline `rehearse` uses copies of sanitized inventory, not actual MongoDB record
 ## Phase 5C local-only conditional executor
 
 See [local-executor.md](local-executor.md) for fixed disposable-target guards, separate signed authorization, default dry-run, real MongoDB rehearsal, journal/partial-progress semantics and remaining deployed gates. The offline v2 plan itself still grants no execution permission. No deployed executor or canonical activation is enabled.
+
+## Isolated activation verification
+
+[Full application verification and cutover blockers](isolated-activation-verification.md) distinguishes runtime mapping probes from valid-payload security/Mongo acceptance. [The reconciled 172-mapping matrix](activation-route-coverage.csv) includes explicit gaps and intentional global/retired routes. Production enforcement remains inactive; test-only composition is not a deployed activation switch.

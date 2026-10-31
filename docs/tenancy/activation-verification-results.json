@@ -1,0 +1,113 @@
+{
+  "backendBase": "cb2d99844cd0797cb557da41b48e3941c4a86ca6",
+  "frontendBase": "bd5eac0db6770fc1aa6c182a702a898edbe547e2",
+  "environment": "Java 17; disposable MongoDB 6.0.6 replica set; mocked/intercepted external providers",
+  "backendTotals": {
+    "tests": 1745,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "mongoOptInSuites": [
+    {
+      "suite": "TenantOwnershipWriterMongoIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "EmailCommunicationSecurityTest",
+      "tests": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "StripeBillingMongoIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalCurrencyMongoSecurityTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CurrencyMongoIntegrationTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalAccountMongoIntegrationTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalCoreMongoSecurityTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalDomainMongoSecurityTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalEmailMongoSecurityTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalFullWorkflowMongoSecurityTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "CanonicalStudentHistoryMongoSecurityTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "FullApplicationCanonicalMongoTest",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "TenantMetadataMongoIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "offlineToolTests": {
+    "tests": 127,
+    "passed": 127,
+    "failed": 0
+  },
+  "frontend": "Not run; unchanged; no browser acceptance claimed",
+  "migrationExecutor": "Not executed in this task; guards unchanged",
+  "deployedAccess": "None",
+  "liveProviderCalls": "None"
+}
