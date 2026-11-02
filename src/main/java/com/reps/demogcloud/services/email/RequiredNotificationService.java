@@ -222,6 +222,7 @@ public class RequiredNotificationService {
         Object entity=load(kind,id); Student student=authorizedViewer(entity);
         List<Map<String,Object>> rows=new ArrayList<>();
         for(var n:intents(entity)) {
+            if(canonical!=null)canonical.requireIntentOwnership(n);
             Map<String,Object> row=new LinkedHashMap<>(); row.put("id",n.getNotificationId()); row.put("event",n.getEvent()); row.put("state",n.getState());
             row.put("actor",Objects.toString(n.getActor(),"SYSTEM")); row.put("attempts",n.getAttempts()); row.put("retrySafe",n.isRetrySafe());
             row.put("reason",Objects.toString(n.getReason(),"")); row.put("recipientOutcomes",n.getRecipientOutcomes()==null?Map.of():n.getRecipientOutcomes()); rows.add(row);
@@ -258,6 +259,7 @@ public class RequiredNotificationService {
         if(canonical==null)users.requireAdministratorInSchool(student.getSchool());else canonical.requireAdmin();
         if(note==null || note.isBlank() || note.length()>500) throw new IllegalArgumentException("A resolution explanation is required (maximum 500 characters)");
         var n=intents(entity).stream().filter(value->notificationId.equals(value.getNotificationId())).findFirst().orElseThrow();
+        if(canonical!=null)canonical.requireIntentOwnership(n);
         if(!Set.of("UNCERTAIN","FAILED","RECONNECT_REQUIRED").contains(n.getState())) throw new IllegalStateException("Only unresolved outcomes may be resolved");
         update(kind,id,n.getNotificationId(),n.getState(),n.getAttemptId(),new Update().set("requiredNotifications.$.state","RESOLVED")
                 .set("requiredNotifications.$.resolvedBy",currentStaff()).set("requiredNotifications.$.resolution",note));

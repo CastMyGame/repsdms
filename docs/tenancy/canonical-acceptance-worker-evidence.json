@@ -1,0 +1,74 @@
+[
+  {
+    "authorized": "New worker sends pending once; subsequent run skips accepted",
+    "limitation": "SMTP boundary mocked, no live email",
+    "denied": "Revoked/forged ownership cases tested separately",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#notificationStatusRetryResolutionAndRestartAreActualOwnedPaths",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Recorded actor/version + exact parent/student/intent ownership"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed tenant never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed actor never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed student never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed disabled never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed revoked never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "authorized": "Valid owner acceptance in companion test",
+    "limitation": "Malformed ownership can remain quarantined rather than rewritten",
+    "denied": "Changed credential-version never reaches transport or consumes send attempt",
+    "method": "WORKER",
+    "test": "CanonicalCommunicationAcceptanceMongoTest#restartedWorkerFailsClosedForChangedOwnershipAndRelationships",
+    "path": "RequiredNotificationService.dispatchPending",
+    "policy": "Revalidate persisted actor/student/intent and relationships on every claim"
+  },
+  {
+    "path": "CanonicalCurrencyTransactions.historicalReplay",
+    "test": "CanonicalAccountCurrencyAcceptanceMongoTest#historicalAwardReplayTraversesRealProductionRouteWithoutChangingReceiptOrBalances",
+    "method": "WORKER",
+    "denied": "Other-school actor cannot borrow receipt/target",
+    "limitation": "Fixture preparation changes only synthetic test data; historical receipt is byte-identical throughout replay",
+    "authorized": "Historical receipt replay returns prior owned recognition three times",
+    "policy": "Pinned reviewed historical ownership/hash + exact tenant; real award controller"
+  }
+]

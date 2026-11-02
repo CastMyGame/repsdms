@@ -2,6 +2,7 @@ package com.reps.demogcloud.services.tenancy;
 
 import com.reps.demogcloud.models.email.RequiredNotification;
 import com.reps.demogcloud.models.student.Student;
+import com.reps.demogcloud.models.employee.Employee;
 import com.reps.demogcloud.security.models.UserModel;
 import org.bson.Document;
 import org.springframework.beans.BeanWrapperImpl;
@@ -100,13 +101,25 @@ public class CanonicalEmailOwnership {
                 entity instanceof com.reps.demogcloud.models.guidance.GuidanceReferral?CanonicalCoreWorkflows.Kind.GUIDANCE:null;
         if(kind==null)throw denied();
         String id=Objects.toString(bean.getPropertyValue("id"),"");
-        if(mongo.exists(Query.query(Criteria.where("_id").is(id)),entity.getClass())){var stored="STATUS".equals(event)?core.readAccessibleRecord(kind,id):core.readRecord(kind,id);if(!student.getStudentEmail().equalsIgnoreCase(stored.getString("studentEmail")))throw denied();}
+        if(mongo.exists(Query.query(Criteria.where("_id").is(id)),entity.getClass())){var stored=Set.of("STATUS","RESTORED").contains(event)?core.readAccessibleRecord(kind,id):core.readRecord(kind,id);if(!student.getStudentEmail().equalsIgnoreCase(stored.getString("studentEmail")))throw denied();}
         else core.prepareCreations(List.of(new CanonicalCoreWorkflows.Draft(kind,student.getStudentIdNumber(),null)));
         if(actor.roles().contains("STUDENT") && !Set.of("SUBMITTED","COMPLETED").contains(event))throw denied();
         return student;
     }
     public Query caseQuery(String id){return Query.query(Criteria.where("_id").is(id).and("tenantSchoolId").is(actor().tenantSchoolId()));}
     public void bind(RequiredNotification intent){var actor=actor();intent.setTenantSchoolId(actor.tenantSchoolId());intent.setActorAccountId(actor.accountId());intent.setActorProfileId(actor.profileId());var user=mongo.findById(actor.accountId(),UserModel.class);if(user==null)throw denied();intent.setActorCredentialVersion(user.getCredentialVersion());}
+    /** Read/resolve ownership metadata without granting delivery authority to a former/disabled sender. */
+    public void requireIntentOwnership(RequiredNotification intent){
+        var viewer=actor();
+        if(!viewer.tenantSchoolId().equals(intent.getTenantSchoolId()) || intent.getActorAccountId()==null || intent.getActorProfileId()==null)throw unavailable();
+        var account=mongo.findById(intent.getActorAccountId(),UserModel.class);
+        if(account==null || !viewer.tenantSchoolId().equals(account.getTenantSchoolId()) || account.getUsername()==null)throw unavailable();
+        var employee=mongo.findById(intent.getActorProfileId(),Employee.class);
+        var student=mongo.findById(intent.getActorProfileId(),Student.class);
+        boolean staffOwner=employee!=null && viewer.tenantSchoolId().equals(employee.getTenantSchoolId()) && account.getUsername().equalsIgnoreCase(employee.getEmail());
+        boolean studentOwner=student!=null && viewer.tenantSchoolId().equals(student.getTenantSchoolId()) && account.getUsername().equalsIgnoreCase(student.getStudentEmail());
+        if(staffOwner==studentOwner)throw unavailable();
+    }
     public void requireIntent(RequiredNotification intent){
         var actor=actor();if(!actor.tenantSchoolId().equals(intent.getTenantSchoolId()) || intent.getActorAccountId()==null || intent.getActorProfileId()==null)throw unavailable();
         accounts.requireRecorded(intent.getActorAccountId(),intent.getTenantSchoolId(),intent.getActorProfileId());
