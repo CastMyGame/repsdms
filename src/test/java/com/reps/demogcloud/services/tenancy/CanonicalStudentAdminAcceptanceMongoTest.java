@@ -18,8 +18,12 @@ class CanonicalStudentAdminAcceptanceMongoTest extends CanonicalAcceptanceFixtur
   var parts=spec.split("\\|");String path=parts[0],actor=parts[1],kind=parts[2];
   mongo.getCollection("students").updateOne(new Document("_id","childA"),new Document("$set",new Document("spotters",List.of("teacherA@example.test"))));
   if(kind.equals("archived")){mongo.getCollection("students").updateMany(new Document(),new Document("$set",new Document("archived",true)));}
+  if(path.contains("detentionList")||path.contains("issList")){
+   int expectedDays=path.contains("issList")?2:1;var utils=app.getBean(com.reps.demogcloud.utils.StudentUtils.class);var today=java.time.LocalDate.now();var created=today.minusDays(1);while(utils.getWorkDaysBetweenTwoDates(created,today)!=expectedDays)created=created.minusDays(1);
+   mongo.getCollection("Punishments").updateMany(new Document(),new Document("$set",new Document("timeCreated",java.util.Date.from(created.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant()))));
+  }
   var own=call("GET",path,actor,null);success(own);assertFalse(own.getResponse().getContentAsString().toLowerCase(Locale.ROOT).contains("childb@example.test"));
-  if(!path.equals("/student/v1/")&&!path.contains("detentionList")&&!path.contains("issList"))assertTrue(own.getResponse().getContentAsString().toLowerCase(Locale.ROOT).contains(path.startsWith("/employees")||path.startsWith("/users")?"teachera@example.test":"childa@example.test"),"Positive fixture must return owned data");
+  if(!path.equals("/student/v1/"))assertTrue(own.getResponse().getContentAsString().toLowerCase(Locale.ROOT).contains(path.startsWith("/employees")||path.startsWith("/users")?"teachera@example.test":"childa@example.test"),"Positive fixture must return owned data");
   String other=actor.startsWith("admin")?"adminB":actor.startsWith("child")?"childB":"teacherB";
   if(kind.equals("object"))denied("GET",path,other,null);else{var foreign=call("GET",path,other,null);success(foreign);assertFalse(foreign.getResponse().getContentAsString().contains("childA@example.test"));}
   denied("GET",path,null,null);
