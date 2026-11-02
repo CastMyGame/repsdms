@@ -81,12 +81,12 @@ public class StudentQueryService {
 
     public List<PunishmentDTO> getDetentionList(String school) {
         requireSchoolStaff(school);
-        List<Punishment> punishments = punishRepository.findAllBySchoolAndArchived(school, false);
+        List<Punishment> punishments = canonical==null?punishRepository.findAllBySchoolAndArchived(school, false):mongo.find(canonical.query().addCriteria(field("archived",false)),Punishment.class);
         Set<String> uniqueStudentEmails = new HashSet<>(); // Set to keep track of unique student names
         List<PunishmentDTO> punishedStudents = new ArrayList<>();
 
         for (Punishment punishment : punishments) {
-            if (!access.canReadStudent(punishment.getStudentEmail())) continue;
+            if (!access.canReadStudent(punishment.getStudentEmail()) || canonical!=null && !access.canReadCase(punishment)) continue;
             if (punishment.getStatus().equals("OPEN")) {
                 PunishmentDTO dto = new PunishmentDTO();
                 LocalDate today = LocalDate.now();
@@ -95,7 +95,7 @@ public class StudentQueryService {
                 int days = studentUtils.getWorkDaysBetweenTwoDates(punishmentTime, today);
 
                 if (days == 1) {
-                    Student student = studentRepository.findByStudentEmailIgnoreCase(punishment.getStudentEmail());
+                    Student student = email(punishment.getStudentEmail());
                     String studentEmail = punishment.getStudentEmail();
                     dto.setStudentFirstName(student.getFirstName());
                     dto.setStudentLastName(student.getLastName());
