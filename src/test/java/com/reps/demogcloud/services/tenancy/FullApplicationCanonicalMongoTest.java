@@ -359,4 +359,16 @@ class FullApplicationCanonicalMongoTest {
         assertEquals(IsolatedCanonicalBootstrap.marker,mongo.getCollection("a7_activation_control").find().first());
     }
 
+
+    @Test void detentionReportNeverReturnsForeignCaseThatReferencesAnAuthorizedStudent()throws Exception{
+        var utils=app.getBean(com.reps.demogcloud.utils.StudentUtils.class);var today=java.time.LocalDate.now();var day=today.minusDays(1);
+        while(utils.getWorkDaysBetweenTwoDates(day,today)!=1)day=day.minusDays(1);
+        for(String owner:List.of("A","B"))mongo.getCollection("Punishments").insertOne(new Document("_id","detention-case-"+owner).append("tenantSchoolId","school-"+owner)
+                .append("school","Same School").append("studentEmail","childA@example.test").append("teacherEmail","teacher"+owner+"@example.test")
+                .append("status","OPEN").append("archived",false).append("timeCreated",Date.from(day.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())));
+        var response=mvc.perform(getAs("/student/v1/detentionList/Same School","teacherA")).andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        assertTrue(response.contains("detention-case-A"));assertFalse(response.contains("detention-case-B"));
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        verify(smtp,never()).send(any(jakarta.mail.internet.MimeMessage.class));
+    }
 }
