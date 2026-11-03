@@ -198,7 +198,7 @@ public class AuthControllers {
         catch (org.springframework.security.access.AccessDeniedException | IllegalStateException ex) { staffEligible = false; }
         boolean googlePermission = staffEligible && googleOAuthTokenStore.hasUsableGmailSendToken(username);
         boolean canSendAsUser = googlePermission && emailRoutingService.isStaffGmailPolicyEnabled();
-        GoogleOAuthTokenStore.ConnectionState state = googleOAuthTokenStore.getConnectionState(username);
+        GoogleOAuthTokenStore.ConnectionState state = staffEligible ? googleOAuthTokenStore.getConnectionState(username) : GoogleOAuthTokenStore.ConnectionState.NEVER_CONNECTED;
         boolean blocked = staffEligible && emailRoutingService.isPhase1RoutingEnabled() && emailRoutingService.isStaffGmailPolicyEnabled()
                 && (state == GoogleOAuthTokenStore.ConnectionState.CONNECTED
                 || state == GoogleOAuthTokenStore.ConnectionState.RECONNECT_REQUIRED || state == GoogleOAuthTokenStore.ConnectionState.UNKNOWN)

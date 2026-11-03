@@ -1,5 +1,7 @@
 # A7 isolated canonical activation verification
 
+> Phase 5C follow-up: see [canonical-route-worker-acceptance.md](canonical-route-worker-acceptance.md) and [the current acceptance matrix](canonical-acceptance-route-coverage.csv). The counts and 107-route gap below are the historical PR #189 baseline.
+
 Baseline: backend `cb2d99844cd0797cb557da41b48e3941c4a86ca6` (merged #188), frontend `bd5eac0db6770fc1aa6c182a702a898edbe547e2` (merged #299). Both remote dev refs fetched on 2026-10-30. No deployed records were inspected.
 
 ## Readiness decision

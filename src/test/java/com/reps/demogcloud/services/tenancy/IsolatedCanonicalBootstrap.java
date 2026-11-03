@@ -11,6 +11,7 @@ import java.util.*;
 
 /** TEST CLASSPATH ONLY. Cannot be enabled by any property in the deployed application JAR. */
 public final class IsolatedCanonicalBootstrap implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+    static java.net.ProxySelector previousProxy;
     static MongoClient client; static String database; static Document marker;
     static final Map<String,Object> PROPERTIES=new HashMap<>();
     static synchronized void prepare(){
@@ -18,6 +19,12 @@ public final class IsolatedCanonicalBootstrap implements ApplicationContextIniti
         for(String key:List.of("GAE_ENV","GAE_APPLICATION","GAE_SERVICE","K_SERVICE","K_REVISION","GOOGLE_APPLICATION_CREDENTIALS"))if(System.getenv(key)!=null&&!System.getenv(key).isBlank())throw new IllegalStateException("Isolated activation refuses hosted/credential-bearing environment");
         String source=System.getenv("REPS_TENANCY_TEST_MONGODB_URI");
         if(!"mongodb://127.0.0.1:27029/?replicaSet=a7activation&directConnection=true&serverSelectionTimeoutMS=5000".equals(source))throw new IllegalStateException("Use the explicit disposable activation replica set");
+        previousProxy=java.net.ProxySelector.getDefault();
+        // Any accidental provider HTTP call reaches only a closed loopback port, never a real provider.
+        java.net.ProxySelector.setDefault(new java.net.ProxySelector(){
+            public java.util.List<java.net.Proxy> select(java.net.URI uri){return java.util.List.of(java.util.Set.of("localhost","127.0.0.1","::1").contains(java.util.Objects.toString(uri.getHost(),""))?java.net.Proxy.NO_PROXY:new java.net.Proxy(java.net.Proxy.Type.HTTP,new java.net.InetSocketAddress("127.0.0.1",1)));}
+            public void connectFailed(java.net.URI uri,java.net.SocketAddress address,java.io.IOException failure){}
+        });
         client=MongoClients.create(new ConnectionString(source));database="reps_a7_activation_"+UUID.randomUUID().toString().replace("-","");
         var db=client.getDatabase(database);var hello=db.runCommand(new Document("hello",1));
         if(!"a7activation".equals(hello.getString("setName"))||!hello.getList("hosts",String.class).equals(List.of("127.0.0.1:27029")))throw new IllegalStateException("Unknown activation replica set");

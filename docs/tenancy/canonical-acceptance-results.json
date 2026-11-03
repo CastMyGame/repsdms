@@ -1,0 +1,81 @@
+{
+  "backendBase": "9c7ea874c652abd738830cd614ea5263e684fa33",
+  "frontendDev": "bd5eac0db6770fc1aa6c182a702a898edbe547e2",
+  "backendRegression": {
+    "tests": 1718,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "fullCompositionAcceptance": {
+    "Students": 43,
+    "Cases": 52,
+    "Communication": 12,
+    "Accounts": 11,
+    "Google": 4,
+    "Full": 28
+  },
+  "otherMongoSuites": [
+    {
+      "suite": "TenantOwnershipWriterMongoIntegrationTest",
+      "tests": 7
+    },
+    {
+      "suite": "EmailCommunicationSecurityTest",
+      "tests": 41
+    },
+    {
+      "suite": "StripeBillingMongoIntegrationTest",
+      "tests": 3
+    },
+    {
+      "suite": "CanonicalCurrencyMongoSecurityTest",
+      "tests": 19
+    },
+    {
+      "suite": "CurrencyMongoIntegrationTest",
+      "tests": 24
+    },
+    {
+      "suite": "CanonicalAccountMongoIntegrationTest",
+      "tests": 9
+    },
+    {
+      "suite": "CanonicalCoreMongoSecurityTest",
+      "tests": 23
+    },
+    {
+      "suite": "CanonicalDomainMongoSecurityTest",
+      "tests": 19
+    },
+    {
+      "suite": "CanonicalEmailMongoSecurityTest",
+      "tests": 10
+    },
+    {
+      "suite": "CanonicalFullWorkflowMongoSecurityTest",
+      "tests": 12
+    },
+    {
+      "suite": "CanonicalStudentHistoryMongoSecurityTest",
+      "tests": 9
+    },
+    {
+      "suite": "TenantMetadataMongoIntegrationTest",
+      "tests": 6
+    }
+  ],
+  "otherMongoTotal": 182,
+  "offlineContracts": {
+    "tests": 127,
+    "failures": 0,
+    "skipped": 0
+  },
+  "frontend": "Not run; no frontend changes",
+  "providers": "Mocked/intercepted; no deployed data or provider calls",
+  "limitations": [
+    "Grouped representative route acceptance, not exhaustive every role/state combination",
+    "Scheduler invoked deliberately; worker object restart, not OS/App Engine restart",
+    "No deployed inventory, migration, flags, provider authorization, emails or payments"
+  ]
+}

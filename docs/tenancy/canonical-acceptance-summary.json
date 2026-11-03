@@ -1,0 +1,21 @@
+{
+  "routes": 172,
+  "categories": {
+    "Accepted actual route/domain/Mongo": 101,
+    "Accepted global metadata/no tenant data": 3,
+    "Intentional global/public or retired": 48,
+    "Accepted retained full workflow/Mongo": 14,
+    "Accepted intentional unsupported operation": 6
+  },
+  "mongoCohorts": {
+    "Students": 43,
+    "Cases": 52,
+    "Communication": 12,
+    "Accounts": 11,
+    "Google": 4,
+    "Full": 28
+  },
+  "mongoTotal": 150,
+  "unverified": [],
+  "warning": "Local synthetic evidence only; deployed activation prohibited."
+}
