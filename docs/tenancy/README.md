@@ -12,24 +12,27 @@ node --test scripts/tenancy/*.test.cjs
 
 Synthetic fixtures contain identical-name schools and deliberate dummy credentials/content solely to verify redaction. Never reuse the public fixture HMAC key for real evidence. No test source contains a real credential.
 
-## Future inventory — requires separate owner approval
+## Phase 5D-1 aggregate inventory
 
-The v2 read scope includes protected assignment/notification/history/grant subtrees and full receipt bytes **in memory for HMAC only**. No plaintext passwords/setup tickets or encryption keys are selected; no token is decrypted. Approve that scope explicitly in addition to the exact host/database/read-only principal, private output/key custody and retention. Do not use application/cloud credential discovery.
+The checked-in target policy permits only `reps_inventory_fixture` at `127.0.0.1:27031`, with direct routing to the single member of replica set `repsinventory`. The URI must match the full policy, including database and options. The MongoDB hello response must identify the expected primary and membership. There is no caller-supplied host approval. The policy has no deployed targets.
 
-Use an approved privacy-compatible `mongosh`; the prior cached shell failed privacy preflight, which remains unresolved. Before supplying URI/key, configure and verify all required settings in a separate `--nodb --norc` session: `disableLogging=true`, `enableTelemetry=false`, `disableSchemaSampling=true`, `historyLength=0`, `updateURL=""`, `snippetAutoload=false`, `browser=false`. The tool verifies these without changing them, refuses `MONGODB_LOG_*`, then checks authenticated read-only privileges before collection reads. Unknown/write-capable privileges abort.
+The launcher authenticates the dedicated fixture reader and verifies MongoDB's effective privileges from `connectionStatus`. Each approved collection must have exactly one matching resource with only `find`. Missing metadata, wildcard resources, unexpected identities, extra collections, cross-database grants and administrative or write actions cause refusal. Inherited grants are checked through the server's effective privileges. No application or provider starts.
 
-Provide the approved URI and a private random 32-byte canonical-Base64 **audit HMAC key** through process environment variables `REPS_TENANT_AUDIT_URI` / `REPS_TENANT_AUDIT_KEY`; do not place values in arguments, history, logs or Git. This is separate from Gmail/JWT keys. Output must be in a private existing directory outside repositories. Never print key/URI values.
-
-Only after both read approvals, using owner-selected nonpersonal placeholders:
+Use the cached MongoDB 6.0.6 image and the official Linux x64 mongosh 2.14.1 archive. The cached image shell lacks required privacy settings. Download the archive from the [mongosh 2.14.1 release](https://github.com/mongodb-js/mongosh/releases/tag/v2.14.1). The rehearsal verifies SHA-256 `8d24940ebe3675959b518fd41ea16b4e2182d6a75c09777db09cfa64e18834a1` before extraction. Run the fixture with Docker networking disabled from the repository root in PowerShell.
 
 ```powershell
-.\scripts\tenancy\Invoke-TenantInventory.ps1 `
-  -Database '<approved-database>' -SourceId '<opaque-source-label>' `
-  -ExpectedHost '<approved-host[:port]>' -OutputPath '<private-existing-directory>\inventory-v2.json' `
-  -ReadOnlyInventoryApproved -ProtectedFingerprintReadApproved
+$inventoryTools = (Resolve-Path -LiteralPath '.\scripts\tenancy').Path
+$inventoryShell = (Resolve-Path -LiteralPath '<path to mongosh-2.14.1-linux-x64.tgz>').Path
+docker run --pull never --rm --network none --tmpfs /data/db --tmpfs /data/configdb --tmpfs /tmp --mount "type=bind,source=$inventoryTools,target=/tools,readonly" --mount "type=bind,source=$inventoryShell,target=/opt/inventory-mongosh.tgz,readonly" --entrypoint /bin/bash mongo:6.0.6 /tools/inventory-rehearsal.sh
 ```
 
-Single-host DNS/IPv4 `mongodb://` and `mongodb+srv://` forms are supported; unsupported hosts/typed IDs fail closed. No database writes, automatic school lookup/adoption, cloud imports, token decryption, migrations or provider calls exist. Projection and full-receipt coverage are specified in `inventory.mongosh.js`; output contains sanitized metadata only, but still stays private. Output is exclusive and never overwrites prior evidence.
+The rehearsal creates synthetic data and roles only inside its disposable container. It exercises the actual mongosh entry point, read and index denial, malformed and excessive privileges, atomic publication and interrupted staging. The output and synthetic credentials are discarded with the container. The Node suite additionally spies on connection construction to confirm refusal before connection for disallowed URI forms and host overrides.
+
+The aggregate schema is defined by `inventory-aggregate.cjs`. It has fixed version, consistency and readiness labels. All other leaves are nonnegative integer counts under fixed collection or category keys. It reports collection totals, ownership and relationship gaps, collisions, notification state and incomplete evidence. A quarantine count includes records that still require human review. The separate replay manifest and Stripe event log scans count records without interpreting private evidence. A nontransactional count does not establish cutover readiness.
+
+Publication requires a caller-owned private POSIX directory outside Git. The tool validates the full aggregate shape, stages a mode-0600 file, synchronizes it, then publishes with an exclusive atomic hard link. Recoverable failures remove the staging file. A process kill can leave a private staging file. Remove such remnants and reports after the approved retention interval, including backup copies under the applicable retention policy. Store aggregate output outside synced folders. The launcher declines Windows publication because POSIX mode checks cannot attest its ACL.
+
+A future deployed run needs an independently reviewed environment and cluster identity, exact database and collection scope, dedicated read-only credentials, verified privacy settings, approved retention and a separate owner authorization. Adding a deployed target requires code review and verification of the actual routing mechanism. Private mapping and fingerprint collection require separate approval and a separate restricted artifact. This launcher produces no migration input.
 
 ## Reviewed manifest and non-executable plan
 

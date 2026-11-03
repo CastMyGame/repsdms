@@ -15,19 +15,64 @@ test("orphaned and duplicate identities are reported, never first-match resolved
 test("historical cases are not reassigned using a student's current school",()=>{const f=fixture();f.docs.students[0].tenantSchoolId="school-B";const snapshot=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic","mongodb://synthetic:27017/synthetic");assert.throws(()=>core.plan(snapshot,{...f.manifest,inventoryDigest:snapshot.inventoryDigest}));});
 test("changed records, counts, target and review binding fail closed",()=>{const f=fixture(),p=core.plan(f.snapshot,f.manifest);const other=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic","mongodb://OTHER:27017/synthetic");assert.throws(()=>core.plan(other,f.manifest));assert.throws(()=>core.rehearse(other,p));f.docs.employee[0].rosterRevision=99;const changed=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic","mongodb://synthetic:27017/synthetic");assert.throws(()=>core.rehearse(changed,p));f.docs.students.pop();const missing=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic","mongodb://synthetic:27017/synthetic");assert.throws(()=>core.rehearse(missing,p));});
 test("genuine global defaults remain global; malformed global ownership rejected",()=>{const f=fixture();f.docs.assignment_templates.push({_id:"global",createdBySystem:true,scope:"SYSTEM_DEFAULT"});let s=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic");assert.ok(s.records.find(r=>r.recordKey===f.key("assignment_templates","global")).globalEligible);f.docs.assignment_templates.at(-1).schoolId="school-B";s=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic");assert.equal(s.records.find(r=>r.recordKey===f.key("assignment_templates","global")).globalEligible,false);});
-function project(value,tree){if(tree===true)return structuredClone(value);if(Array.isArray(value))return value.map(v=>project(v,tree));const out={};for(const [key,node]of Object.entries(tree))if(value&&Object.hasOwn(value,key))out[key]=project(value[key],node);return out;}
-async function exporter({privileges=[{actions:["find","listCollections","listIndexes"]}],approved=true,host="synthetic:27017",fail=false,privacy=true,protectedApproved=true}={}){
- const f=fixture(),directory=fs.mkdtempSync(path.join(os.tmpdir(),"reps-a7-")),output=path.join(directory,"inventory.json"),logs=[],reads=[];let connections=0;
- const fakeDb={runCommand(command){assert.deepEqual(Object.keys(command),["connectionStatus","showPrivileges"]);return{authInfo:{authenticatedUserPrivileges:privileges}};},getCollection(collection){assert.ok(collection==="schools"||core.COLLECTIONS.includes(collection));return{find(filter,fields){assert.deepEqual(Object.keys(filter),[]);for(const field of Object.keys(fields))assert.ok(!/password|reset|setupTicket|encryptionKey/i.test(field),field);assert.ok(collection==="currency_operations"||Object.keys(fields).length>0);reads.push(collection);if(fail)throw Error("synthetic credential must never be echoed");const tree={};for(const field of Object.keys(fields)){let node=tree;const parts=field.split(".");parts.forEach((part,i)=>{if(i===parts.length-1)node[part]=true;else node=node[part]??=( {} );});}return{limit(){return this;},maxTimeMS(){return this;},toArray(){return(collection==="schools"?f.schools:f.docs[collection]).map(d=>Object.keys(fields).length?project(d,tree):structuredClone(d));}};}};}};
- const env={REPS_TENANT_AUDIT_APPROVED:approved?"read-only-inventory-approved":"",REPS_TENANT_AUDIT_CONTENT_APPROVED:protectedApproved?"protected-fingerprint-read-approved":"",REPS_TENANT_AUDIT_TOOL_DIR:__dirname,REPS_TENANT_AUDIT_URI:"mongodb://synthetic:27017/synthetic",REPS_TENANT_AUDIT_DATABASE:"synthetic",REPS_TENANT_AUDIT_EXPECTED_HOST:host,REPS_TENANT_AUDIT_KEY:KEY.toString("base64"),REPS_TENANT_AUDIT_OUT:output,REPS_TENANT_AUDIT_SOURCE_ID:"synthetic"};
- const context={config:{get:name=>privacy?({disableLogging:true,enableTelemetry:false,disableSchemaSampling:true,historyLength:0,updateURL:"",snippetAutoload:false,browser:false})[name]:null},require,process:{env},Buffer,Mongo:class{constructor(){connections++;}getDB(name){assert.equal(name,"synthetic");return fakeDb;}},EJSON:{serialize:v=>v},print:text=>logs.push(text),exit:()=>{throw Error("expected safe exit");}};
- let rejected=false;try{await vm.runInNewContext(fs.readFileSync(path.join(__dirname,"inventory.mongosh.js"),"utf8"),context);}catch(_){rejected=true;}
- const content=fs.existsSync(output)?fs.readFileSync(output,"utf8"):null;removeTemp(directory);return{logs,reads,connections,rejected,content};
+async function exporter({fail=false, privacy=true, approved=true}={}) {
+ const safety=require("./inventory-safety.cjs"),inventory=require("./inventory-aggregate.cjs");
+ const reads=[],logs=[];
+ let report,code,connections=0;
+ const fakeDb={
+   auth(){return {ok:1};},
+   runCommand(command){
+     if(command.hello)return {setName:"repsinventory",isWritablePrimary:true,hosts:["127.0.0.1:27031"]};
+     assert.equal(command.connectionStatus,1);
+     assert.equal(command.showPrivileges,true);
+     return {ok:1,authInfo:{
+       authenticatedUsers:[{user:safety.principal,db:safety.database}],
+       authenticatedUserPrivileges:inventory.collections.map(collection=>({resource:{db:safety.database,collection},actions:["find"]}))
+     }};
+   },
+   getCollection(collection){
+     return {find(filter,fields){
+       assert.equal(Object.keys(filter).length,0);
+       assert.ok(Object.keys(fields).length);
+       assert.ok(!Object.keys(fields).some(field=>/password|reset|setupTicket|encryptionKey|answers|ciphertext/i.test(field)));
+       reads.push(collection);
+       if(fail)throw Error("synthetic credential must never be echoed");
+       return {limit(){return this;},maxTimeMS(){return this;},toArray(){return [];}};
+     }};
+   }
+ };
+ const env={REPS_TENANT_AUDIT_APPROVED:approved?"read-only-inventory-approved":"",
+   REPS_TENANT_AUDIT_TOOL_DIR:__dirname,REPS_TENANT_AUDIT_URI:safety.uri,REPS_TENANT_AUDIT_DATABASE:safety.database,
+   REPS_TENANT_AUDIT_PASSWORD:"synthetic",REPS_TENANT_AUDIT_OUT:"synthetic-output"};
+ const context={
+   config:{get:name=>privacy?({disableLogging:true,enableTelemetry:false,disableSchemaSampling:true,historyLength:0,updateURL:"",snippetAutoload:false,browser:false})[name]:null},
+   require:name=>name.endsWith("inventory-safety.cjs")?{...safety,publish:(_output,value)=>{report=value;}}:require(name),
+   process:{env},Mongo:class{constructor(){connections++;}getDB(name){assert.equal(name,safety.database);return fakeDb;}},
+   EJSON:{serialize:value=>value},print:text=>logs.push(text),exit:value=>{code=value;}
+ };
+ await vm.runInNewContext(fs.readFileSync(path.join(__dirname,"inventory.mongosh.js"),"utf8"),context);
+ return {reads,logs,connections,report,code};
 }
-test("exporter uses only projected finds and produces redacted evidence with fake MongoDB",async()=>{const r=await exporter();assert.equal(r.rejected,false);assert.equal(r.reads.length,core.COLLECTIONS.length+1);assert.ok(!r.content.includes("@example.test"));assert.ok(!r.content.includes("PrivateSynthetic"));assert.ok(!r.logs.join("").includes("synthetic-credential"));core.validateSnapshot(JSON.parse(r.content));});
-test("write-capable, unknown or anonymous privileges refused before collection reads",async()=>{for(const privileges of [[{actions:["find","update"]}],[{actions:["find","unknownAction"]}],[]]){const r=await exporter({privileges});assert.equal(r.rejected,true);assert.equal(r.reads.length,0);assert.equal(r.content,null);}});
-test("missing approval and mismatched host refused before connecting",async()=>{for(const options of [{approved:false},{host:"other:27017"},{privacy:false},{protectedApproved:false}]){const r=await exporter(options);assert.equal(r.connections,0);assert.equal(r.rejected,true);}});
-test("provider/connection errors are sanitized and do not produce partial artifacts",async()=>{const r=await exporter({fail:true});assert.equal(r.content,null);assert.ok(!r.logs.join("").includes("credential must never"));});
+test("inventory uses bounded projected finds and publishes aggregate counts",async()=>{
+ const result=await exporter();
+ assert.equal(result.code,undefined);
+ assert.deepEqual(result.reads,require("./inventory-aggregate.cjs").collections);
+ assert.equal(result.report.schemaVersion,"reps-inventory-aggregate/v1");
+});
+test("missing approval or shell privacy refuses before connecting",async()=>{
+ for(const options of [{approved:false},{privacy:false}]){
+   const result=await exporter(options);
+   assert.equal(result.connections,0);
+   assert.equal(result.code,1);
+ }
+});
+test("database errors are sanitized and leave no published artifact",async()=>{
+ const result=await exporter({fail:true});
+ assert.equal(result.connections,1);
+ assert.equal(result.code,1);
+ assert.equal(result.report,undefined);
+ assert.ok(!result.logs.join("").includes("credential must never"));
+});
 test("offline CLI only writes non-executable plans outside repository",()=>{const f=fixture(),dir=fs.mkdtempSync(path.join(os.tmpdir(),"reps-a7-cli-"));try{fs.writeFileSync(path.join(dir,"snapshot.json"),JSON.stringify(f.snapshot));fs.writeFileSync(path.join(dir,"manifest.json"),JSON.stringify(f.manifest));const result=cp.spawnSync(process.execPath,[path.join(__dirname,"plan.cjs"),"plan",path.join(dir,"snapshot.json"),path.join(dir,"manifest.json"),path.join(dir,"plan.json")],{encoding:"utf8"});assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(fs.readFileSync(path.join(dir,"plan.json"))).executable,false);const repeat=cp.spawnSync(process.execPath,[path.join(__dirname,"plan.cjs"),"plan",path.join(dir,"snapshot.json"),path.join(dir,"manifest.json"),path.join(dir,"plan.json")],{encoding:"utf8"});assert.notEqual(repeat.status,0);}finally{removeTemp(dir);}});
 
 test("case and whitespace variants are flagged without becoming authority",()=>{const f=fixture();f.schools[1].schoolName=" same   school ";const snapshot=core.buildSnapshot(f.schools,f.docs,KEY,"synthetic");assert.equal(core.summarize(snapshot).duplicateSchoolNameGroups.length,1);assert.ok(snapshot.records.every(r=>!r.tenantSchoolId));});
