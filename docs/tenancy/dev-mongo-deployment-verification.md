@@ -1,0 +1,15 @@
+# Development MongoDB pin verification
+
+The historical effective secret version for App Engine revision `20261103t140551` is **Unknown**. The owner attested the contents of numeric version 1 separately. The development configuration uses `projects/repsdev31/secrets/reps-dev-mongodb-uri/versions/1` and requires the SRV seed `repsdevdb.xgrmfbb.mongodb.net` and database `repsdevdb`. The DMS endpoint and all other database names are refused.
+
+The guard runs under the Spring `dev` profile. It checks the effective property reference, obtains the value from the Secret Manager resolver, rejects alternate Spring MongoDB connection properties, and constructs the MongoDB client with validated settings. The supported URI is a password-authenticated Atlas SRV URI with the approved database path and a narrow option list. Unsupported TLS, proxy, direct connection and load balancer options fail closed. The startup message identifies the approved resource, seed, database and validation policy. It never includes the URI or resolver or parser exception text.
+
+Before client creation the guard verifies the configured TLS and hostname checks using the default JVM trust configuration. Actual certificate validation occurs during the handshake. The approved SRV seed is the trust anchor for driver discovery. This guard does not attest a deployed Atlas cluster ID, pin member addresses, or establish the actual network path, peer certificate, or a separate inventory allowlist. Independent network and JVM trust configuration review remains required.
+
+## Separate deployment checklist
+
+1. Obtain explicit approval for a development application rollout and its ordinary database access. Review pending dispatch jobs and the environment's existing mail and integration configuration before starting the candidate revision.
+2. Verify the reviewed release digest, App Engine project `repsdev31`, service `default`, active Spring profile `dev`, and the expected numeric secret reference. Verify the approved Atlas seed, database and TLS trust settings. Review revision environment, JVM flags and external configuration for overrides. Preserve A7 flags and production settings.
+3. Check that the runtime service account can access the exact approved secret resource and version. Confirm that available Secret Manager audit metadata and App Engine revision logs can be correlated under the approved audit procedure. Keep secret values and URI parameters out of release notes and logs.
+4. In the approved rollout, verify the candidate's credential-free startup diagnostic and its App Engine revision label. Confirm version 1, the approved seed and database, and required TLS and hostname verification. Treat a refusal, missing diagnostic, unexpected effective property origin, or handshake failure as a rollout failure. Keep traffic on the current approved revision until the checks pass.
+5. Record the final revision, release digest, effective binding, verification evidence and approval. Approval of this application configuration does not authorize an inventory, migration, or A7 activation.
