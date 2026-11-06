@@ -1,7 +1,6 @@
 "use strict";
 const dns = require("node:dns").promises;
 const tls = require("node:tls");
-const crypto = require("node:crypto");
 
 const policy = Object.freeze({
     organization:"65674bdb19ad1d08d6473d15",project:"65674bdb87e3bc06eba69262",
@@ -10,7 +9,6 @@ const policy = Object.freeze({
     principal:"reps_a7_inventory_reader",
     members:Object.freeze([0,1,2].map(i=>"ac-fykprpn-shard-00-0"+i+".xgrmfbb.mongodb.net"))
 });
-const digest = crypto.createHash("sha256").update(JSON.stringify(policy)).digest("hex");
 const exact = (left,right)=>JSON.stringify([...left].sort())===JSON.stringify([...right].sort());
 
 async function validateDns(resolver=dns) {
@@ -28,19 +26,6 @@ async function validateDns(resolver=dns) {
         addresses[host] = rows;
     }
     return addresses;
-}
-
-function approvalValid(approval, now=Date.now()) {
-    const fields = ["version","policyDigest","runId","reviewerRef","attestationDigest","issuedAt","expiresAt","clusterRestrictedTemporaryUser"];
-    if (!approval || !exact(Object.keys(approval),fields) || approval.version!=="reps-atlas-approval/v1" ||
-        approval.policyDigest!==digest || !/^[a-zA-Z0-9-]{8,80}$/.test(approval.runId) ||
-        !/^[a-zA-Z0-9-]{3,80}$/.test(approval.reviewerRef) ||
-        !/^[a-f0-9]{64}$/.test(approval.attestationDigest) || approval.clusterRestrictedTemporaryUser!==true ||
-        !Number.isFinite(Date.parse(approval.issuedAt)) || !Number.isFinite(Date.parse(approval.expiresAt)) ||
-        Date.parse(approval.issuedAt)>now || Date.parse(approval.expiresAt)<=now ||
-        Date.parse(approval.expiresAt)-Date.parse(approval.issuedAt)>3600000) {
-        throw Error("Run approval refused");
-    }
 }
 
 function connectionOptions(addresses,password,abort,resolver=dns) {
@@ -83,4 +68,4 @@ function topologyValid(description, requireFull=false) {
     }
     return true;
 }
-module.exports = {policy,digest,validateDns,approvalValid,connectionOptions,topologyValid};
+module.exports = {policy,validateDns,connectionOptions,topologyValid};

@@ -20,18 +20,25 @@ Effective privileges must consist of exactly `find` on `schools`, `users`, `empl
 
 The existing closed-schema publisher requires an owner-private POSIX directory outside Git. It validates and fsyncs a private staging file, publishes without overwriting an existing report, and removes the staging file on failure. Reports are nontransactional counts, not a backup, ownership manifest or migration approval. Proposed retention is 30 days, subject to owner approval and storage-specific deletion procedures.
 
-## Separate approvals before any live execution
+## Owner-controlled procedure for each live run
 
-1. Review the exact commit, policy digest, control-plane attestation and current SRV/TXT/member/address evidence. Cluster name and database must reconcile with PR #193.
-2. Separately approve network configuration and provisioning a temporary database user restricted to this cluster. Use the shortest supported expiry and revoke promptly after the run. Runtime `connectionStatus` verifies effective data grants, but does not establish Atlas user expiry or cluster restrictions. Owner control-plane evidence must establish those.
-3. Approve one operator, run ID, one-hour-or-shorter window, metrics, query/load budget, audit evidence and private output location. Atlas Free has no database auditing, private endpoints or peering. A synthetic MongoDB hash check is not available as proof of no writes on Atlas Free.
-4. Have the approving operator create a private approval artifact outside Git. It records `version: reps-atlas-approval/v1`, the policy digest, run ID, reviewer reference, attestation SHA-256, issued/expiry timestamps and `clusterRestrictedTemporaryUser: true`. This is an operator-controlled approval record, not a cryptographic signature or independent proof of its assertions. The tool refuses to reuse its run ID, even after failure. Do not remove the run marker to retry.
+1. Record explicit owner approval for the exact reviewed commit, target attestation, operator, counts-only scope, execution window, network path, private report location and retention. The operator checks that approval before starting. Each retry requires renewed owner approval.
+2. Have the Atlas administrator confirm a temporary user restricted to the reviewed development cluster, with exactly the ten collection-specific find grants. Use the shortest supported lifetime. Runtime connectionStatus verifies effective data grants, but cannot prove Atlas user expiry or cluster restrictions. Retain the administrator's credential-free evidence separately.
+3. Confirm current DNS/member evidence and restricted egress, then execute once from the reviewed checkout. The explicit --owner-approved-run acknowledgement is an accidental-run safeguard, not proof of authorization.
+4. Review the sanitized status and validated report. On failure, stop and obtain a new execution decision. Do not treat an existing or partial file as a successful result.
+5. Have the Atlas administrator revoke the credential promptly after completion or abandonment. Retain the aggregate report for the owner-approved period, proposed as 30 days, then delete it under the storage-specific procedure.
 
-No approval artifact, deployed credential, or live connection has been created by this implementation.
+**Local controls do not guarantee one run.** The operator can invoke the tool again. Atlas expiry, privilege scope, cluster restriction and revocation are the enforceable access boundaries. Report overwrite refusal protects the output file; it does not prevent another invocation using a different output path. Collection-scoped find credentials can technically read documents through other clients. Replica-set verification may follow authentication.
 
-After those separate approvals, on an approved POSIX operator host with Python 3 and Node 24, install the locked tooling dependencies with `npm ci --ignore-scripts --prefix scripts/tenancy/atlas-runtime`. The private launcher is `python3 scripts/tenancy/atlas-inventory-launch.py <private-approval.json> <private-report.json>`. It prompts without echo and pipes the password to Node stdin. Credentials never enter command-line arguments or tracked files. Rejects environment overrides for targets, credentials, TLS key logging, extra CA trust and Node injection. Memory reclamation is managed by the runtimes; secure zeroization of managed strings is not promised.
+After those separate approvals, use an approved POSIX operator host with Python 3 and Node 24. Install locked tooling dependencies with npm ci --ignore-scripts --prefix scripts/tenancy/atlas-runtime. The private launcher is:
 
-Abort on missing/stale approval, mismatched DNS/routing/TLS/topology, uncertain identity or grants, provider/network failure, expired deadline, invalid output, or unsafe storage permissions. Accept no partial report. A new run requires separate review and a new approval record.
+```sh
+python3 scripts/tenancy/atlas-inventory-launch.py --owner-approved-run /absolute/private/report.json
+```
+
+The launcher prompts without echo and pipes the password to Node stdin. Credentials never enter command-line arguments or tracked files. The entry point rejects environment overrides for targets, credentials, TLS key logging, extra CA trust and Node injection. Memory reclamation is managed by the runtimes; secure zeroization of managed strings is not promised. The tool checks output permissions before accepting input or opening a database connection. It creates no approval artifact or run marker.
+
+The operator stops if owner approval is missing or its run window has ended. The tool aborts on missing acknowledgement, mismatched DNS/routing/TLS/topology, uncertain identity or grants, provider/network failure, deadline expiration, invalid output or unsafe storage permissions. No partial report is published. Atlas Free has no database auditing, private endpoints or peering. A synthetic MongoDB hash check is not available as proof of no writes on Atlas Free.
 
 ## Synthetic verification and limitations
 

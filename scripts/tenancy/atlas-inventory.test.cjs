@@ -5,9 +5,6 @@ const {EventEmitter}=require("node:events");
 const p=require("./atlas-inventory-policy.cjs");
 const {run,grantsValid,schema}=require("./atlas-inventory.cjs");
 const collections=["schools",...Object.keys(schema.ownership)];
-const approval=()=>({version:"reps-atlas-approval/v1",policyDigest:p.digest,runId:"synthetic-run",
-    reviewerRef:"test-reviewer",attestationDigest:"a".repeat(64),issuedAt:new Date(Date.now()-1000).toISOString(),
-    expiresAt:new Date(Date.now()+60000).toISOString(),clusterRestrictedTemporaryUser:true});
 const resolver=()=>({
     resolveSrv:async()=>p.policy.members.map(name=>({name,port:27017})),
     resolveTxt:async()=>[["replicaSet="+p.policy.replicaSet+"&authSource=admin"]],
@@ -27,12 +24,9 @@ test("exact SRV/TXT policy rejects routing changes",async()=>{
     ]) await assert.rejects(p.validateDns({...resolver(),...changed}));
 });
 
-test("run approval pins policy and short validity without granting blanket execution",()=>{
-    p.approvalValid(approval());
-    for(const changed of [{policyDigest:"wrong"},{expiresAt:"invalid"},{clusterRestrictedTemporaryUser:false},
-        {expiresAt:new Date(Date.now()-1).toISOString()},{target:"reps.risjic2.mongodb.net"}]) {
-        assert.throws(()=>p.approvalValid({...approval(),...changed}));
-    }
+test("missing operator acknowledgement refuses before DNS or connections",async()=>{
+    await assert.rejects(run({resolver:{resolveSrv(){assert.fail("DNS accessed");}},
+        makeClient(){assert.fail("connected");}}),{message:"Inventory failed during preflight."});
 });
 
 test("all socket lookups reject unknown hosts and changed IPs",async()=>{
@@ -77,6 +71,6 @@ test("unexpected report fields are sanitized and cannot publish",async()=>{
             me:p.policy.members[0]+":27017",hosts:p.policy.members.map(host=>host+":27017")}:status(),
             collection:()=>({aggregate:()=>({toArray:async()=>[{privateMarker:"never-publish"}]})})};}
     }
-    await assert.rejects(run({approval:approval(),password:"fixture",resolver:resolver(),makeClient:()=>new Client(),
+    await assert.rejects(run({acknowledged:true,password:"fixture",resolver:resolver(),makeClient:()=>new Client(),
         publishReport(){assert.fail("published");}}),{message:"Inventory failed during aggregate scan."});
 });

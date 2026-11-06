@@ -1,6 +1,6 @@
 async function runFixture(){
     const assert=require("node:assert/strict"),fs=require("node:fs"),dns=require("node:dns");
-    const {policy,digest}=require("/tools/atlas-inventory-policy.cjs");
+    const {policy}=require("/tools/atlas-inventory-policy.cjs");
     // Synthetic DNS injection is confined to this offline test process.
     dns.promises.resolveSrv=async()=>policy.members.map(name=>({name,port:27017,priority:0,weight:0}));
     dns.promises.resolveTxt=async()=>[["authSource=admin&replicaSet="+policy.replicaSet]];
@@ -41,21 +41,16 @@ async function runFixture(){
         const snapshot=async()=>JSON.stringify({hash:(await db.command({dbHash:1})).md5,
             indexes:await Promise.all(collections.map(name=>db.collection(name).listIndexes().toArray()))});
         const before=await snapshot();
-        const approval={version:"reps-atlas-approval/v1",policyDigest:digest,runId:"synthetic-run",
-            reviewerRef:"test-reviewer",attestationDigest:"a".repeat(64),issuedAt:new Date(Date.now()-1000).toISOString(),
-            expiresAt:new Date(Date.now()+60000).toISOString(),clusterRestrictedTemporaryUser:true};
-        fs.mkdirSync("/tmp/atlas-approval",{mode:0o700});
-        const {reserve}=require("/tools/atlas-run-files.cjs");
-        reserve(approval,"/tmp/atlas-approval/approval.json","/tmp/atlas-output/report.json");
-        assert.throws(()=>reserve(approval,"/tmp/atlas-approval/approval.json","/tmp/atlas-output/report.json"));
-        assert.equal(fs.statSync("/tmp/atlas-approval/.run-"+approval.runId).mode&0o777,0o600);
-        const args={approval,password:process.env.REPS_ATLAS_FIXTURE_READER,output:"/tmp/atlas-output/report.json",
+        const {checkOutput}=require("/tools/atlas-output-files.cjs");
+        checkOutput("/tmp/atlas-output/report.json");
+        const args={acknowledged:true,password:process.env.REPS_ATLAS_FIXTURE_READER,output:"/tmp/atlas-output/report.json",
             makeClient:(uri,options)=>new MongoClient(uri,{...options,ca})};
         await run(args);
         const raw=fs.readFileSync(args.output,"utf8"),report=JSON.parse(raw);
         assert(!raw.includes("private-marker"));
         assert.deepEqual(report.ownership.students,{total:4,missing:1,invalid:1,conflicting:0,present:2});
         assert.equal(fs.statSync(args.output).mode&0o777,0o600);
+        assert.throws(()=>checkOutput(args.output));
         await assert.rejects(run(args),{message:"Inventory failed during publication."});
         assert.equal(raw,fs.readFileSync(args.output,"utf8"));
         assert(!fs.readdirSync("/tmp/atlas-output").some(name=>name.startsWith(".inventory-")));

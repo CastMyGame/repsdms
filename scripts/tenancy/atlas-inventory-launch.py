@@ -7,7 +7,8 @@ import warnings
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 3 or not sys.stdin.isatty():
+        if (len(sys.argv) != 3 or sys.argv[1] != "--owner-approved-run"
+                or not sys.stdin.isatty()):
             raise ValueError()
         with warnings.catch_warnings():
             warnings.simplefilter("error", getpass.GetPassWarning)
