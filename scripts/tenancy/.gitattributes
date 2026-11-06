@@ -1,2 +1,3 @@
 inventory-rehearsal.sh text eol=lf
 dev-inventory-rehearsal.sh text eol=lf
+atlas-inventory-rehearsal.sh text eol=lf
